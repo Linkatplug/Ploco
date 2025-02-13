@@ -40,7 +40,7 @@ Ploco est une application Windows permettant de gérer un parc de locomotives de
 4. Ouvrez une Pull Request.
 
 ## Auteur
-Développé par **Max**
+Développé par **LinkAtPlug**
 
 ## Licence
 Ce projet est sous licence MIT. Consultez `LICENSE` pour plus d'informations.
