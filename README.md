@@ -45,3 +45,8 @@ Développé par **LinkAtPlug**
 ## Licence
 Ce projet est sous licence MIT. Consultez `LICENSE` pour plus d'informations.
 
+![4ZPhFxkmIV](https://github.com/user-attachments/assets/e6ea7714-d27d-4161-bafc-e0b1cda9cd02)
+![I3ZE7NencD](https://github.com/user-attachments/assets/2c7a75b1-df1c-4406-9842-6beda22c6273)
+![MhSGAG2G5y](https://github.com/user-attachments/assets/6d6feb56-54b7-416d-94d9-3def87f3667b)
+![pL4ddoc27S](https://github.com/user-attachments/assets/e31b6228-eba9-4320-bc53-e3cbd2a0549c)
+![RjI4oKo6OI](https://github.com/user-attachments/assets/915f17ec-e473-420e-8225-cc263ff78348)
