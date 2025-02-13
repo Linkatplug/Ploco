@@ -1,0 +1,47 @@
+﻿<Window x:Class="Ploco.SwapDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Swap" Height="300" Width="400">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Loco Source -->
+            <RowDefinition Height="Auto"/>
+            <!-- ComboBox -->
+            <RowDefinition Height="Auto"/>
+            <!-- Date/Heure -->
+            <RowDefinition Height="Auto"/>
+            <!-- Message -->
+            <RowDefinition Height="Auto"/>
+            <!-- Boutons -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Loco source -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Swap de la loco:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="tbLocoSibelit" FontWeight="Bold" VerticalAlignment="Center"/>
+
+        <!-- ComboBox pour loco de la pool Lineas -->
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Avec:" VerticalAlignment="Center" Margin="0,10,5,0"/>
+        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cbLineas" Margin="0,10,0,0"/>
+
+        <!-- Date/Heure -->
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Date/Heure:" VerticalAlignment="Center" Margin="0,10,5,0"/>
+        <TextBox Grid.Row="2" Grid.Column="1" x:Name="tbDateTime" Margin="0,10,0,0" IsReadOnly="True"/>
+        <Button Grid.Row="2" Grid.Column="2" Content="Modifier" Margin="5,10,0,0" Click="btnModifier_Click"/>
+
+        <!-- Message libre -->
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Message:" VerticalAlignment="Top" Margin="0,10,5,0"/>
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="tbMessage" AcceptsReturn="True" Height="80" Margin="0,10,0,0"/>
+
+        <!-- Boutons Swap et Annuler -->
+        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Swap" Width="80" Margin="5" Click="btnSwap_Click"/>
+            <Button Content="Annuler" Width="80" Margin="5" Click="btnCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

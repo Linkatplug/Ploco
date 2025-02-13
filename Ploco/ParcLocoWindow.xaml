@@ -1,0 +1,76 @@
+﻿<Window x:Class="Ploco.ParcLocoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Ploco.Converters"
+        Title="Parc Loco" Height="600" Width="800">
+    <Window.Resources>
+        <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
+        <ContextMenu x:Key="LocomotivesContextMenu">
+            <MenuItem Header="Swap" Click="MenuItem_Swap_Click"/>
+            <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
+        </ContextMenu>
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="20"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Titres -->
+        <TextBlock Grid.Column="0" Grid.Row="0" Text="Pool Sibelit" FontWeight="Bold" Margin="5"/>
+        <TextBlock Grid.Column="2" Grid.Row="0" Text="Pool Lineas" FontWeight="Bold" Margin="5" HorizontalAlignment="Right"/>
+
+        <!-- Pool Sibelit -->
+        <ScrollViewer Grid.Column="0" Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="ItemsControlSibelit">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Width="40" Height="30" Margin="5"
+                                Background="{Binding Statut, Converter={StaticResource StatutToBrushConverter}}"
+                                ContextMenu="{StaticResource LocomotivesContextMenu}">
+                            <TextBlock Text="{Binding NumeroSerie}" 
+                                       Foreground="White" 
+                                       VerticalAlignment="Center" 
+                                       HorizontalAlignment="Center" 
+                                       FontWeight="Bold"/>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Pool Lineas -->
+        <ScrollViewer Grid.Column="2" Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="ItemsControlLineas">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Width="40" Height="30" Margin="5"
+                                Background="{Binding Statut, Converter={StaticResource StatutToBrushConverter}}"
+                                ContextMenu="{StaticResource LocomotivesContextMenu}">
+                            <TextBlock Text="{Binding NumeroSerie}" 
+                                       Foreground="White" 
+                                       VerticalAlignment="Center" 
+                                       HorizontalAlignment="Center" 
+                                       FontWeight="Bold"/>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</Window>

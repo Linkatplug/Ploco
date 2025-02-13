@@ -1,0 +1,92 @@
+﻿<Window x:Class="Ploco.ModifierStatutDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Modifier Statut" Height="400" Width="450">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Loco Info -->
+            <RowDefinition Height="Auto"/>
+            <!-- Nouveau statut -->
+            <RowDefinition Height="Auto"/>
+            <!-- Défaut moteur -->
+            <RowDefinition Height="Auto"/>
+            <!-- EM -->
+            <RowDefinition Height="Auto"/>
+            <!-- ATE/VAP -->
+            <RowDefinition Height="*"/>
+            <!-- Notes -->
+            <RowDefinition Height="Auto"/>
+            <!-- Boutons -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Loco Info -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Modifier statut de:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="tbLocoInfo" FontWeight="Bold" VerticalAlignment="Center"/>
+
+        <!-- Nouveau statut -->
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Nouveau statut:" VerticalAlignment="Center" Margin="0,10,5,0"/>
+        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cbStatut" Margin="0,10,0,0">
+            <ComboBoxItem Content="Ok" Tag="Ok"/>
+            <ComboBoxItem Content="Défaut Mineur" Tag="DefautMineur"/>
+            <ComboBoxItem Content="AControler" Tag="AControler"/>
+            <ComboBoxItem Content="HS" Tag="HS"/>
+        </ComboBox>
+
+        <!-- Défaut moteur -->
+        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
+            <CheckBox x:Name="chkDefautMoteur" Content="Défaut moteur" Checked="chkDefautMoteur_Checked" Unchecked="chkDefautMoteur_Unchecked"/>
+            <StackPanel x:Name="spDefautMoteurDetails" Orientation="Horizontal" Visibility="Collapsed" Margin="20,5,0,0">
+                <CheckBox x:Name="chk75" Content="75%" Margin="0,0,10,0"/>
+                <CheckBox x:Name="chk50" Content="50%" Margin="0,0,10,0"/>
+                <CheckBox x:Name="chkPRP1" Content="PRP1" Margin="0,0,10,0"/>
+                <CheckBox x:Name="chkPRP2" Content="PRP2" Margin="0,0,10,0"/>
+                <CheckBox x:Name="chkCVS1" Content="CVS1" Margin="0,0,10,0"/>
+                <CheckBox x:Name="chkCVS2" Content="CVS2" Margin="0,0,10,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- EM -->
+        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
+            <CheckBox x:Name="chkEM" Content="EM" Checked="chkEM_Checked" Unchecked="chkEM_Unchecked"/>
+            <StackPanel x:Name="spEMDetails" Orientation="Vertical" Visibility="Collapsed" Margin="20,5,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Date/Heure:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox x:Name="tbEMDateTime" Width="150" IsReadOnly="True"/>
+                    <Button Content="Modifier" Click="btnEMModifier_Click" Margin="5,0,0,0"/>
+                </StackPanel>
+                <TextBox x:Name="tbEMNote" Height="30" Margin="0,5,0,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- ATE/VAP -->
+        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
+            <CheckBox x:Name="chkATEVAP" Content="ATE/VAP" Checked="chkATEVAP_Checked" Unchecked="chkATEVAP_Unchecked"/>
+            <StackPanel x:Name="spATEVAPDetails" Orientation="Vertical" Visibility="Collapsed" Margin="20,5,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Date/Heure:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox x:Name="tbATEVAPDateTime" Width="150" IsReadOnly="True"/>
+                    <Button Content="Modifier" Click="btnATEVAPModifier_Click" Margin="5,0,0,0"/>
+                </StackPanel>
+                <TextBox x:Name="tbATEVAPNote" Height="30" Margin="0,5,0,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Notes complémentaires -->
+        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
+            <TextBlock Text="Notes complémentaires:"/>
+            <TextBox x:Name="tbNotesLibres" AcceptsReturn="True" Height="60"/>
+        </StackPanel>
+
+        <!-- Boutons -->
+        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Valider" Width="80" Margin="5" Click="btnValider_Click"/>
+            <Button Content="Annuler" Width="80" Margin="5" Click="btnAnnuler_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
