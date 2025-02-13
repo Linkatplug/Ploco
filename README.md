@@ -1,7 +1,8 @@
 # Ploco - Gestion des Locomotives
 
 ## Description
-Ploco est une application Windows permettant de gérer un parc de locomotives de manière visuelle. L'interface propose un système de glisser-déposer permettant de placer et déplacer les locomotives sur un tapis représentant les voies.
+Ploco est une application en cours de dev sur Windows qui permettant de gérer un parc de locomotives de manière visuelle.
+L'interface propose un système de glisser-déposer permettant de placer et déplacer les locomotives sur un tapis représentant les voies.
 
 ## Fonctionnalités
 - Gestion des locomotives avec un suivi de leur statut
@@ -11,15 +12,7 @@ Ploco est une application Windows permettant de gérer un parc de locomotives de
 - Sauvegarde et chargement de l'état du logiciel
 - Menu de gestion des locomotives et options avancées
 - Image de fond représentant les voies ferrées
-
-## Installation
-1. Clonez le dépôt GitHub :
-   ```sh
-   git clone https://github.com/votre-utilisateur/ploco.git
-   ```
-2. Ouvrez le projet dans **Visual Studio**.
-3. Assurez-vous que les dépendances NuGet sont restaurées.
-4. Compilez et exécutez l'application en mode Debug ou Release.
+- En cours de dev... et ca va être long XD 
 
 ## Dépendances
 - .NET 8.0
@@ -31,13 +24,8 @@ Ploco est une application Windows permettant de gérer un parc de locomotives de
 2. **Modifier le statut** : Clic droit sur une locomotive puis "Modifier statut".
 3. **Swap de pool** : Clic droit et "Swap" pour changer une locomotive de pool.
 4. **Sauvegarde et chargement** : Utilisez le menu "Fichier".
-5. **Réinitialisation** : Via "Options > Reset", remet toutes les locomotives en état initial.
+5. **Réinitialisation** : Via "Options > Reset", remet toutes les locomotives en état initial. (Fonction débug)
 
-## Contribuer
-1. Forkez le projet.
-2. Créez une branche (`feature/ma-nouvelle-fonction`).
-3. Effectuez vos modifications et poussez vos commits.
-4. Ouvrez une Pull Request.
 
 ## Auteur
 Développé par **LinkAtPlug**
