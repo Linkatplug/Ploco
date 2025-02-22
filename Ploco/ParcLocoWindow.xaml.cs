@@ -45,5 +45,9 @@ namespace Ploco
                 // Mettre à jour l'interface après modification du statut si nécessaire.
             });
         }
+        private void MenuItem_VoirHistorique_Click(object sender, RoutedEventArgs e)
+        {
+            ContextMenuHelper.HandleVoirHistorique(sender, this);
+        }
     }
 }

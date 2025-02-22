@@ -1,0 +1,13 @@
+﻿<Window x:Class="Ploco.HistoriqueWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Historique des modifications" Height="400" Width="600"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <TextBox x:Name="tbHistorique" 
+                 IsReadOnly="True" 
+                 TextWrapping="Wrap" 
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto"/>
+    </Grid>
+</Window>

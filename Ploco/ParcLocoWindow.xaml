@@ -8,6 +8,7 @@
         <ContextMenu x:Key="LocomotivesContextMenu">
             <MenuItem Header="Swap" Click="MenuItem_Swap_Click"/>
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
+            <MenuItem Header="Voir historique" Click="MenuItem_VoirHistorique_Click"/>
         </ContextMenu>
     </Window.Resources>
     <Grid Margin="10">

@@ -1,0 +1,16 @@
+﻿<Window x:Class="Ploco.HistoriqueDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Historique de Modification" Height="300" Width="400">
+    <Grid Margin="10">
+        <StackPanel>
+            <TextBlock Text="Détails de la dernière modification :" FontWeight="Bold" Margin="0,0,0,10"/>
+            <TextBlock Text="{Binding DefautMoteurDetails}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+            <TextBlock Text="{Binding EMDetails}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+            <TextBlock Text="{Binding ATEVAPDetails}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+            <TextBlock Text="{Binding ModificationNotes}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+            <TextBlock Text="{Binding LastModificationDate, StringFormat='Dernière modification : {0:G}'}" Margin="0,0,0,10"/>
+            <Button Content="Fermer" Width="80" HorizontalAlignment="Right" Click="btnFermer_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

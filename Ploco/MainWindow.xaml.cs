@@ -554,7 +554,11 @@ namespace Ploco
 
         private void MenuItem_Historique_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Fonction Historique en cours de développement.", "Historique", MessageBoxButton.OK, MessageBoxImage.Information);
+            HistoriqueWindow historiqueWindow = new HistoriqueWindow
+            {
+                Owner = this
+            };
+            historiqueWindow.ShowDialog();
         }
 
         private void MenuItem_Reset_Click(object sender, RoutedEventArgs e)
@@ -625,6 +629,10 @@ namespace Ploco
                 locoHeight = settingsWindow.LocoHeight;
                 // Optionnel : Vous pouvez déclencher un recalcul du placement des locomotives ou mettre à jour l'interface
             }
+        }
+        private void MenuItem_VoirHistorique_Click(object sender, RoutedEventArgs e)
+        {
+            ContextMenuHelper.HandleVoirHistorique(sender, this);
         }
     }
 }

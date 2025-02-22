@@ -62,6 +62,7 @@ namespace Ploco
                 }
             }
 
+            // Préparer les infos pour "Défaut moteur"
             string defautMoteur = "";
             if (chkDefautMoteur.IsChecked == true)
             {
@@ -74,12 +75,14 @@ namespace Ploco
                 if (chkCVS2.IsChecked == true) defautMoteur += "CVS2 ";
             }
 
+            // Préparer les infos pour EM
             string emInfo = "";
             if (chkEM.IsChecked == true)
             {
                 emInfo = $"EM: Date/Heure={tbEMDateTime.Text}, Note={tbEMNote.Text}";
             }
 
+            // Préparer les infos pour ATE/VAP
             string atevapInfo = "";
             if (chkATEVAP.IsChecked == true)
             {
@@ -87,8 +90,16 @@ namespace Ploco
             }
 
             string notesLibres = tbNotesLibres.Text;
-            string archiveEntry = $"Action: Modifier Statut, Loco: {tbLocoInfo.Text}, Nouveau Statut: {NewStatut}, {defautMoteur}, {emInfo}, {atevapInfo}, Notes: {notesLibres}, Créé le: {DateTime.Now:G}";
 
+            // Mettre à jour la locomotive avec ces informations
+            loco.DefautMoteurDetails = defautMoteur;
+            loco.EMDetails = emInfo;
+            loco.ATEVAPDetails = atevapInfo;
+            loco.ModificationNotes = notesLibres;
+            loco.LastModificationDate = DateTime.Now;
+
+            // (Optionnel) Créer une entrée d'archive dans un fichier log, si vous le souhaitez toujours.
+            string archiveEntry = $"Action: Modifier Statut, Loco: {tbLocoInfo.Text}, Nouveau Statut: {NewStatut}, {defautMoteur}, {emInfo}, {atevapInfo}, Notes: {notesLibres}, Créé le: {DateTime.Now:G}";
             try
             {
                 System.IO.File.AppendAllText("StatutModificationLog.txt", archiveEntry + Environment.NewLine);

@@ -114,5 +114,19 @@ namespace Ploco.Helpers
                 updateInfoZone?.Invoke();
             }
         }
+        public static void HandleVoirHistorique(object sender, Window owner)
+        {
+            MenuItem menuItem = sender as MenuItem;
+            if (menuItem?.Parent is ContextMenu contextMenu && contextMenu.PlacementTarget is Border border)
+            {
+                Locomotive loco = border.DataContext as Locomotive ?? border.Tag as Locomotive;
+                if (loco != null)
+                {
+                    HistoriqueDialog dialog = new HistoriqueDialog(loco);
+                    dialog.Owner = owner;
+                    dialog.ShowDialog();
+                }
+            }
+        }
     }
 }
