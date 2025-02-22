@@ -10,21 +10,21 @@ namespace Ploco.Helpers
     public static class ContextMenuHelper
     {
         /// <summary>
-        /// Gère le clic droit pour le swap des locomotives.
+        /// Gère le clic droit pour échanger (swap) deux locomotives.
         /// </summary>
         /// <param name="sender">L'objet sender (MenuItem)</param>
-        /// <param name="lineasPool">La collection de locomotives du pool Lineas.</param>
-        /// <param name="sibelitPool">La collection de locomotives du pool Sibelit.</param>
-        /// <param name="canvas">Le Canvas dans lequel chercher/supprimer l'élément visuel.</param>
+        /// <param name="lineasPool">La collection des locomotives du pool Lineas.</param>
+        /// <param name="sibelitPool">La collection des locomotives du pool Sibelit.</param>
         /// <param name="findCanvasItemForLoco">
-        /// Une fonction permettant de retrouver l'élément Border associé à une locomotive.
+        /// Une fonction permettant de retrouver l'élément Border associé à une locomotive sur le Canvas.
+        /// Si tu n'utilises pas de Canvas dans la fenêtre, tu peux passer null.
         /// </param>
         /// <param name="updateInfoZone">
-        /// Une action à appeler pour mettre à jour la zone d'information après un swap.
+        /// Une action à appeler pour mettre à jour l'interface après l'échange.
         /// </param>
-        public static void HandleSwap(object sender, ObservableCollection<Locomotive> lineasPool,
+        public static void HandleSwap(object sender,
+                                      ObservableCollection<Locomotive> lineasPool,
                                       ObservableCollection<Locomotive> sibelitPool,
-                                      Canvas canvas,
                                       Func<Locomotive, Border> findCanvasItemForLoco,
                                       Action updateInfoZone)
         {
@@ -36,34 +36,37 @@ namespace Ploco.Helpers
             if (contextMenu == null)
                 return;
 
-            // Le PlacementTarget du ContextMenu est l'élément visuel sur lequel on a cliqué.
+            // Le PlacementTarget est l'élément sur lequel on a cliqué
             Border border = contextMenu.PlacementTarget as Border;
             if (border == null)
                 return;
 
-            // Récupérer la locomotive depuis DataContext ou Tag
+            // Récupérer la locomotive depuis le DataContext ou le Tag
             Locomotive locoFromSibelit = border.DataContext as Locomotive ?? border.Tag as Locomotive;
             if (locoFromSibelit == null)
                 return;
 
-            // Ouvrir la fenêtre de swap en passant la loco et le pool Lineas.
+            // Ouvrir la fenêtre de swap en passant la locomotive de Sibelit et le pool Lineas
             SwapDialog dialog = new SwapDialog(locoFromSibelit, lineasPool);
             bool? result = dialog.ShowDialog();
             if (result == true)
             {
-                // Récupérer la locomotive sélectionnée dans le dialog.
+                // Récupérer la locomotive sélectionnée dans le SwapDialog
                 Locomotive locoFromLineas = dialog.SelectedLoco;
                 if (locoFromLineas != null)
                 {
-                    // Si la loco est sur le Canvas, la supprimer.
-                    Border canvasItem = findCanvasItemForLoco(locoFromSibelit);
-                    if (canvasItem != null)
+                    // Si la locomotive de Sibelit est sur le Canvas, la supprimer
+                    if (findCanvasItemForLoco != null)
                     {
-                        canvas.Children.Remove(canvasItem);
-                        locoFromSibelit.IsOnCanvas = false;
+                        Border canvasItem = findCanvasItemForLoco(locoFromSibelit);
+                        if (canvasItem != null && canvasItem.Parent is Canvas canvas)
+                        {
+                            canvas.Children.Remove(canvasItem);
+                            locoFromSibelit.IsOnCanvas = false;
+                        }
                     }
 
-                    // Échanger les locomotives entre les pools.
+                    // Échanger les locomotives entre les pools :
                     if (sibelitPool.Contains(locoFromSibelit))
                         sibelitPool.Remove(locoFromSibelit);
                     if (!lineasPool.Contains(locoFromSibelit))
@@ -84,7 +87,7 @@ namespace Ploco.Helpers
         /// </summary>
         /// <param name="sender">L'objet sender (MenuItem)</param>
         /// <param name="updateInfoZone">
-        /// Une action à appeler pour mettre à jour la zone d'information après modification.
+        /// Une action à appeler pour mettre à jour l'interface après modification du statut.
         /// </param>
         public static void HandleModifierStatut(object sender, Action updateInfoZone)
         {

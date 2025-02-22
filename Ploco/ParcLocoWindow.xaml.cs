@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
 using Ploco.Models;
+using Ploco.Helpers;
 
 namespace Ploco
 {
@@ -29,12 +30,20 @@ namespace Ploco
 
         private void MenuItem_Swap_Click(object sender, RoutedEventArgs e)
         {
-            // Réutiliser la logique de MainWindow si souhaité.
+            // Comme ParcLocoWindow n'utilise pas de Canvas pour les locomotives,
+            // on passe 'null' pour la fonction findCanvasItemForLoco.
+            ContextMenuHelper.HandleSwap(sender, LineasPool, SibelitPool, null, () =>
+            {
+                // Ici, vous pouvez mettre à jour l'interface de ParcLocoWindow si besoin.
+            });
         }
 
         private void MenuItem_ModifierStatut_Click(object sender, RoutedEventArgs e)
         {
-            // Réutiliser la logique de MainWindow si souhaité.
+            ContextMenuHelper.HandleModifierStatut(sender, () =>
+            {
+                // Mettre à jour l'interface après modification du statut si nécessaire.
+            });
         }
     }
 }
