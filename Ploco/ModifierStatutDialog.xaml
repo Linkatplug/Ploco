@@ -1,7 +1,8 @@
 ﻿<Window x:Class="Ploco.ModifierStatutDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Modifier Statut" Height="400" Width="450">
+        Title="Modifier Statut" Height="400" Width="450"
+        WindowStartupLocation="CenterOwner">
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

@@ -1,0 +1,24 @@
+﻿<Window x:Class="Ploco.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Paramètres" Height="250" Width="300">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <Label Content="Décalage grille (Y) :" VerticalAlignment="Center" />
+            <TextBox x:Name="tbGridOffset" Width="50" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,0,0,10">
+            <Label Content="Taille loco (W x H) :" VerticalAlignment="Center" />
+            <TextBox x:Name="tbLocoWidth" Width="50" Margin="5,0,0,0"/>
+            <Label Content="x" VerticalAlignment="Center" Margin="5,0,0,0"/>
+            <TextBox x:Name="tbLocoHeight" Width="50" Margin="5,0,0,0"/>
+        </StackPanel>
+        <Button Grid.Row="2" Content="Valider" HorizontalAlignment="Right" Width="80" Click="Button_Validate_Click"/>
+    </Grid>
+</Window>

@@ -5,11 +5,14 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Newtonsoft.Json;
 using Ploco.Models;
+using Ploco.Helpers;
 
 namespace Ploco
 {
@@ -21,10 +24,18 @@ namespace Ploco
     }
 
     // Classe pour sauvegarder/charger l'état de l'application.
+    public class LocomotiveOnCanvas
+    {
+        public int NumeroSerie { get; set; }
+        public double PositionX { get; set; }
+        public double PositionY { get; set; }
+    }
+
     public class AppState
     {
-        public ObservableCollection<Locomotive> LineasPool { get; set; }
-        public ObservableCollection<Locomotive> SibelitPool { get; set; }
+        public ObservableCollection<Locomotive> LineasPool { get; set; } = new ObservableCollection<Locomotive>();
+        public ObservableCollection<Locomotive> SibelitPool { get; set; } = new ObservableCollection<Locomotive>();
+        public List<LocomotiveOnCanvas> LocosOnCanvas { get; set; } = new List<LocomotiveOnCanvas>(); // ✅ Toujours initialisé
     }
 
     public partial class MainWindow : Window
@@ -37,13 +48,16 @@ namespace Ploco
         {
             InitializeComponent();
 
+            sibelitPool.CollectionChanged += SibelitPool_CollectionChanged;
+            UpdateInfoZone(); // Met à jour au démarrage
+
             // Charger l'état sauvegardé
             ChargerEtat();
 
             // Si les collections sont vides, initialiser par défaut.
             if (lineasPool.Count == 0 || sibelitPool.Count == 0)
             {
-                for (int i = 1301; i <= 1320; i++)
+                for (int i = 1301; i <= 1349; i++)
                 {
                     lineasPool.Add(new Locomotive { NumeroSerie = i, IsOnCanvas = false, Statut = StatutLocomotive.Ok });
                 }
@@ -58,9 +72,45 @@ namespace Ploco
             CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(sibelitPool);
             view.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
         }
+        private bool IsCellOccupied(Point position)
+        {
+            // On vérifie si un Border (contenant une loco) existe déjà à cette position
+            foreach (UIElement element in MonCanvas.Children)
+            {
+                if (element is Border border && border.Tag is Locomotive)
+                {
+                    double left = Canvas.GetLeft(border);
+                    double top = Canvas.GetTop(border);
+                    // On considère que la cellule est occupée si le coin supérieur gauche est à la même position (tolérance de 1 pixel)
+                    if (Math.Abs(left - position.X) < 1 && Math.Abs(top - position.Y) < 1)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+
+        private void SibelitPool_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            UpdateInfoZone();
+        }
+
+        private void UpdateInfoZone()
+        {
+            int total = sibelitPool.Count;
+            int hsCount = sibelitPool.Count(loco => loco.Statut == StatutLocomotive.HS);
+            InfoZone.Inlines.Clear();
+            InfoZone.Inlines.Add(new Run($"Sibelit Pool: {total}    ") { Foreground = System.Windows.Media.Brushes.Black });
+            InfoZone.Inlines.Add(new Run($"HS: {hsCount}") { Foreground = System.Windows.Media.Brushes.Red });
+        }
+
+
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+
         }
 
         private void Window_Closing(object sender, CancelEventArgs e)
@@ -73,8 +123,19 @@ namespace Ploco
             var state = new AppState
             {
                 LineasPool = lineasPool,
-                SibelitPool = sibelitPool
+                SibelitPool = sibelitPool,
+                LocosOnCanvas = MonCanvas.Children
+                    .OfType<Border>() // Prendre tous les Borders sur le Canvas
+                    .Where(b => b.Tag is Locomotive)
+                    .Select(b => new LocomotiveOnCanvas
+                    {
+                        NumeroSerie = ((Locomotive)b.Tag).NumeroSerie,
+                        PositionX = Canvas.GetLeft(b),
+                        PositionY = Canvas.GetTop(b)
+                    })
+                    .ToList()
             };
+
             string json = JsonConvert.SerializeObject(state, Newtonsoft.Json.Formatting.Indented);
             System.IO.File.WriteAllText("etat.json", json);
         }
@@ -87,12 +148,76 @@ namespace Ploco
                 AppState state = JsonConvert.DeserializeObject<AppState>(json);
                 if (state != null)
                 {
+                    // Vider tous les éléments du Canvas
+                    MonCanvas.Children.Clear();
+
+                    // Réinsérer l'image de fond avec les paramètres corrects
+                    Image bgImage = new Image
+                    {
+                        Source = new BitmapImage(new Uri("pack://application:,,,/img/spoor.png")),
+                        Width = 704,
+                        Height = 84,
+                        Stretch = Stretch.Fill
+                    };
+                    // Positionner l'image (comme dans votre XAML : Canvas.Top="64", et ici Canvas.Left à 0)
+                    Canvas.SetLeft(bgImage, 0);
+                    Canvas.SetTop(bgImage, 64);
+                    // Ajouter l'image en première position dans le Canvas
+                    MonCanvas.Children.Insert(0, bgImage);
+
+                    // Réinitialiser les pools
                     lineasPool.Clear();
                     sibelitPool.Clear();
+
+                    // Rechargez ensuite vos locomotives à partir de l'état sauvegardé
                     foreach (var loco in state.LineasPool)
                         lineasPool.Add(loco);
                     foreach (var loco in state.SibelitPool)
                         sibelitPool.Add(loco);
+
+                    if (state.LocosOnCanvas != null)
+                    {
+                        foreach (var locoCanvas in state.LocosOnCanvas)
+                        {
+                            var loco = lineasPool.Concat(sibelitPool)
+                                .FirstOrDefault(l => l.NumeroSerie == locoCanvas.NumeroSerie);
+
+                            if (loco != null)
+                            {
+                                Border canvasItem = new Border
+                                {
+                                    Width = 40,
+                                    Height = 30,
+                                    Tag = loco,
+                                    ContextMenu = (ContextMenu)this.Resources["LocomotivesContextMenu"]
+                                };
+
+                                var converter = this.Resources["StatutToBrushConverter"] as IValueConverter;
+                                Binding binding = new Binding("Statut")
+                                {
+                                    Source = loco,
+                                    Converter = converter
+                                };
+                                canvasItem.SetBinding(Border.BackgroundProperty, binding);
+
+                                TextBlock tb = new TextBlock
+                                {
+                                    Text = loco.NumeroSerie.ToString(),
+                                    Foreground = Brushes.White,
+                                    VerticalAlignment = VerticalAlignment.Center,
+                                    HorizontalAlignment = HorizontalAlignment.Center,
+                                    FontWeight = FontWeights.Bold
+                                };
+                                canvasItem.Child = tb;
+                                canvasItem.MouseLeftButtonDown += CanvasItem_MouseLeftButtonDown;
+                                canvasItem.MouseMove += CanvasItem_MouseMove;
+
+                                MonCanvas.Children.Add(canvasItem);
+                                Canvas.SetLeft(canvasItem, locoCanvas.PositionX);
+                                Canvas.SetTop(canvasItem, locoCanvas.PositionY);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -170,7 +295,36 @@ namespace Ploco
 
         private void MonCanvas_Drop(object sender, DragEventArgs e)
         {
+            // Obtenir la position du drop dans le Canvas
             Point dropPosition = e.GetPosition(MonCanvas);
+
+            // Paramètres de la grille horizontale
+            double gap = 5;  // espace entre les locomotives
+            double cellWidth = locoWidth + gap; // largeur d'une cellule (locomotive + gap)
+            double offsetX = (cellWidth - locoWidth) / 2;
+
+            // Calculer la cellule horizontale pour X en fonction de dropPosition.X
+            double cellX = Math.Floor(dropPosition.X / cellWidth) * cellWidth;
+
+            // Définir la position verticale fixe (ignorer dropPosition.Y)
+            // Ici, on fixe la ligne à une valeur de base (par exemple 64) ajustée par gridOffsetY
+            double fixedY = 64 - gridOffsetY;
+
+            // Calculer la position finale en combinant la position X calculée et la valeur fixe Y
+            Point newPosition = new Point(cellX + offsetX, fixedY);
+
+            // Vérifier si la cellule (sur la ligne fixe) est déjà occupée
+            while (IsCellOccupied(new Point(cellX + offsetX, fixedY)))
+            {
+                cellX += cellWidth;
+                if (cellX + cellWidth > MonCanvas.Width)
+                {
+                    cellX = 0;
+                }
+                newPosition = new Point(cellX + offsetX, fixedY);
+            }
+
+            // Placer l'élément (la locomotive) à la position calculée
             if (e.Data.GetDataPresent(typeof(LocoDragData)))
             {
                 LocoDragData dragData = e.Data.GetData(typeof(LocoDragData)) as LocoDragData;
@@ -184,27 +338,27 @@ namespace Ploco
                             Border canvasItem = dragData.SourceElement;
                             if (!MonCanvas.Children.Contains(canvasItem))
                                 MonCanvas.Children.Add(canvasItem);
-                            Canvas.SetLeft(canvasItem, dropPosition.X - canvasItem.Width / 2);
-                            Canvas.SetTop(canvasItem, dropPosition.Y - canvasItem.Height / 2);
+                            Canvas.SetLeft(canvasItem, newPosition.X);
+                            Canvas.SetTop(canvasItem, newPosition.Y);
                         }
                         else
                         {
                             Border existing = FindCanvasItemForLoco(loco);
                             if (existing != null)
                             {
-                                Canvas.SetLeft(existing, dropPosition.X - existing.Width / 2);
-                                Canvas.SetTop(existing, dropPosition.Y - existing.Height / 2);
+                                Canvas.SetLeft(existing, newPosition.X);
+                                Canvas.SetTop(existing, newPosition.Y);
                             }
                             else
                             {
                                 Border canvasItem = new Border
                                 {
-                                    Width = 40,
-                                    Height = 30,
+                                    Width = locoWidth,
+                                    Height = locoHeight,
                                     Tag = loco,
                                     ContextMenu = (ContextMenu)this.Resources["LocomotivesContextMenu"]
                                 };
-                                // Lier le Background au statut via le convertisseur.
+
                                 var converter = this.Resources["StatutToBrushConverter"] as IValueConverter;
                                 Binding binding = new Binding("Statut")
                                 {
@@ -224,8 +378,8 @@ namespace Ploco
                                 canvasItem.Child = tb;
                                 canvasItem.MouseLeftButtonDown += CanvasItem_MouseLeftButtonDown;
                                 canvasItem.MouseMove += CanvasItem_MouseMove;
-                                Canvas.SetLeft(canvasItem, dropPosition.X - canvasItem.Width / 2);
-                                Canvas.SetTop(canvasItem, dropPosition.Y - canvasItem.Height / 2);
+                                Canvas.SetLeft(canvasItem, newPosition.X);
+                                Canvas.SetTop(canvasItem, newPosition.Y);
                                 MonCanvas.Children.Add(canvasItem);
                                 loco.IsOnCanvas = true;
                             }
@@ -234,6 +388,7 @@ namespace Ploco
                 }
             }
         }
+
 
         // --- Gestion du drag depuis le tapis (Canvas) ---
         private void CanvasItem_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -362,7 +517,9 @@ namespace Ploco
                             bool? result = dialog.ShowDialog();
                             if (result == true)
                             {
-                                loco.Statut = dialog.NewStatut;
+                                // À ce stade, le statut de la locomotive a été modifié.
+                                // Mettez à jour la zone d'info.
+                                UpdateInfoZone();
                             }
                         }
                     }
@@ -402,15 +559,35 @@ namespace Ploco
 
         private void MenuItem_Reset_Click(object sender, RoutedEventArgs e)
         {
-            // Réinitialiser : vider les deux pools et recréer toutes les locomotives dans lineasPool uniquement.
+            // Réinitialiser les pools
             lineasPool.Clear();
             sibelitPool.Clear();
-            for (int i = 1301; i <= 1320; i++)
+
+            // Supprimer uniquement les éléments du Canvas qui représentent des locomotives
+            var locomotivesToRemove = MonCanvas.Children
+                .OfType<UIElement>()
+                .Where(element =>
+                {
+                    // Si l'élément est un Border et que son Tag est une locomotive, c'est un élément à supprimer
+                    if (element is Border border && border.Tag is Locomotive)
+                        return true;
+                    return false;
+                }).ToList();
+
+            foreach (var element in locomotivesToRemove)
+            {
+                MonCanvas.Children.Remove(element);
+            }
+
+            // (Optionnel) Réinitialiser les locomotives dans le pool lineas
+            for (int i = 1301; i <= 1349; i++)
             {
                 lineasPool.Add(new Locomotive { NumeroSerie = i, IsOnCanvas = false, Statut = StatutLocomotive.Ok });
             }
-            MessageBox.Show("Réinitialisation effectuée. Toutes les locomotives sont dans la pool Lineas.", "Reset", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Réinitialisation effectuée. Toutes les locomotives sont dans la pool Lineas.",
+                            "Reset", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
 
         // --- Boutons supplémentaires (appelés via le menu "Fichier", "Gestion" et "Option") ---
         private void ParcLoco_Click(object sender, RoutedEventArgs e)
@@ -428,6 +605,26 @@ namespace Ploco
         {
             PoolTransferWindow transferWindow = new PoolTransferWindow(lineasPool, sibelitPool);
             transferWindow.ShowDialog();
+        }
+        private int gridOffsetY = 20;   // Valeur par défaut
+        private int locoWidth = 42;     // Valeur par défaut
+        private int locoHeight = 32;    // Valeur par défaut
+
+        private void MenuItem_Settings_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsWindow settingsWindow = new SettingsWindow
+            {
+                Owner = this
+            };
+
+            bool? result = settingsWindow.ShowDialog();
+            if (result == true)
+            {
+                gridOffsetY = settingsWindow.GridOffset;
+                locoWidth = settingsWindow.LocoWidth;
+                locoHeight = settingsWindow.LocoHeight;
+                // Optionnel : Vous pouvez déclencher un recalcul du placement des locomotives ou mettre à jour l'interface
+            }
         }
     }
 }

@@ -14,6 +14,8 @@ namespace Ploco
         public ParcLocoWindow(ObservableCollection<Locomotive> sibelitPool, ObservableCollection<Locomotive> lineasPool)
         {
             InitializeComponent();
+            Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
+            WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
             SibelitPool = sibelitPool;
             LineasPool = lineasPool;
             ItemsControlSibelit.ItemsSource = SibelitPool;

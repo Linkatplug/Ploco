@@ -7,11 +7,18 @@ namespace Ploco
 {
     public partial class ModifierStatutDialog : Window
     {
+        // Ajoute ce champ pour stocker l'instance de locomotive
+        private Locomotive loco;
+
         public StatutLocomotive NewStatut { get; private set; }
 
         public ModifierStatutDialog(Locomotive loco)
         {
             InitializeComponent();
+            Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
+            WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
+            // Assure-toi d'assigner l'instance au champ
+            this.loco = loco;
             tbLocoInfo.Text = loco.ToString();
             // Pré-remplissage des champs date/heure avec la date/heure actuelles.
             tbEMDateTime.Text = DateTime.Now.ToString("G");
@@ -50,6 +57,8 @@ namespace Ploco
                 if (Enum.TryParse(statutString, out StatutLocomotive statut))
                 {
                     NewStatut = statut;
+                    // Mettre à jour le statut de la locomotive afin que le binding se rafraîchisse
+                    loco.Statut = NewStatut;
                 }
             }
 

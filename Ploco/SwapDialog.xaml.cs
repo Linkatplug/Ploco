@@ -17,6 +17,8 @@ namespace Ploco
         public SwapDialog(Locomotive locoFromSibelit, ObservableCollection<Locomotive> lineasPool)
         {
             InitializeComponent();
+            Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
+            WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
             LocoFromSibelit = locoFromSibelit;
             LineasPool = lineasPool;
             tbLocoSibelit.Text = LocoFromSibelit.ToString();

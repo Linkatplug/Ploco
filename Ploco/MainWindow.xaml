@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ploco.Converters"
-        Title="Gestion des Locomotives" Height="600" Width="800"
+        Title="Gestion des Locomotives" Height="700" Width="1100"
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
         <!-- Convertisseur pour transformer le statut en couleur -->
@@ -49,40 +49,48 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Width="40" Height="30" Margin="5"
-                                        Background="{Binding Statut, Converter={StaticResource StatutToBrushConverter}}"
-                                        ContextMenu="{StaticResource LocomotivesContextMenu}">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsOnCanvas}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="{Binding NumeroSerie}" Foreground="White"
-                                               VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Border>
-            <!-- Tapis (Canvas) avec l'image de la voie ferrée -->
-            <Grid Grid.Column="1" Margin="10">
-                <Canvas x:Name="MonCanvas" Background="LightGray" AllowDrop="True"
-                        DragOver="MonCanvas_DragOver" Drop="MonCanvas_Drop">
-
-                    <!-- Image de la voie ferrée -->
-                    <Image Source="pack://application:,,,/img/spoor.png"
-                           Width="1093" Height="25"
-                           Canvas.Left="20" Canvas.Top="273" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-
-                    <!-- Autres éléments du Canvas seront superposés ici -->
-                </Canvas>
-            </Grid>
-        </Grid>
-    </DockPanel>
+            <Border Width="42" Height="32" Margin="5"
+                        Background="{Binding Statut, Converter={StaticResource StatutToBrushConverter}}"
+                        ContextMenu="{StaticResource LocomotivesContextMenu}">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Visibility" Value="Visible"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsOnCanvas}" Value="True">
+                          <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="{Binding NumeroSerie}" 
+                             Foreground="LightGray"
+                             VerticalAlignment="Center" HorizontalAlignment="Center"
+                             FontWeight="Bold"/>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+      
+      <!-- Zone de dépôt (Canvas) et zone d'info -->
+      <Grid Grid.Column="1" Margin="10">
+        <Viewbox Stretch="Uniform">
+          <Canvas x:Name="MonCanvas" Width="704" Height="65" AllowDrop="True"
+                  DragOver="MonCanvas_DragOver" Drop="MonCanvas_Drop">
+            <!-- Image de fond (le tapis) -->
+            <Image Source="pack://application:,,,/img/spoor.png" 
+                   Canvas.Top="64" 
+                   Width="704" Height="84" Stretch="Fill"
+                   HorizontalAlignment="Center" VerticalAlignment="Top"/>
+          </Canvas>
+        </Viewbox>
+        <!-- Zone d'info affichant le nombre total et le nombre HS (HS en rouge) -->
+        <TextBlock x:Name="InfoZone" HorizontalAlignment="Right" VerticalAlignment="Bottom" 
+                   Margin="10" FontSize="14" TextWrapping="Wrap">
+          Sibelit Pool: 0    HS: 0
+        </TextBlock>
+      </Grid>
+    </Grid>
+  </DockPanel>
 </Window>

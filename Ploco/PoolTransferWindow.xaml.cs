@@ -15,10 +15,14 @@ namespace Ploco
         public PoolTransferWindow(ObservableCollection<Locomotive> lineasPool, ObservableCollection<Locomotive> sibelitPool)
         {
             InitializeComponent();
+            Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
+            WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
             LineasPool = lineasPool;
             SibelitPool = sibelitPool;
             ListBoxLineas.ItemsSource = LineasPool;
             ListBoxSibelit.ItemsSource = SibelitPool;
+            ListBoxLineas.Items.Refresh();
+            ListBoxSibelit.Items.Refresh();
 
             CollectionView viewLineas = (CollectionView)CollectionViewSource.GetDefaultView(LineasPool);
             viewLineas.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
