@@ -6,11 +6,19 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>img\train_logo.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="img\spoor.png" />
+    <None Remove="img\train_logo.ico" />
     <None Remove="spoor.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="img\train_logo.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +29,7 @@
     <Resource Include="img\spoor.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="img\train_logo.ico" />
   </ItemGroup>
 
   <ItemGroup>

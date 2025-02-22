@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ploco.Converters"
         Title="Gestion des Locomotives" Height="700" Width="1100"
+        Icon="pack://application:,,,/img/train_logo.ico"
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
         <!-- Convertisseur pour transformer le statut en couleur -->
