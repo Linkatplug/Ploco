@@ -17,45 +17,41 @@ namespace Ploco.Helpers
         /// <param name="sibelitPool">La collection des locomotives du pool Sibelit.</param>
         /// <param name="findCanvasItemForLoco">
         /// Une fonction permettant de retrouver l'élément Border associé à une locomotive sur le Canvas.
-        /// Si tu n'utilises pas de Canvas dans la fenêtre, tu peux passer null.
+        /// Si aucun Canvas n'est utilisé, on peut passer null.
         /// </param>
         /// <param name="updateInfoZone">
         /// Une action à appeler pour mettre à jour l'interface après l'échange.
         /// </param>
         public static void HandleSwap(object sender,
-                                      ObservableCollection<Locomotive> lineasPool,
-                                      ObservableCollection<Locomotive> sibelitPool,
-                                      Func<Locomotive, Border> findCanvasItemForLoco,
-                                      Action updateInfoZone)
+                              ObservableCollection<Locomotive> lineasPool,
+                              ObservableCollection<Locomotive> sibelitPool,
+                              Func<Locomotive, Border> findCanvasItemForLoco,
+                              Action updateInfoZone)
         {
             MenuItem menuItem = sender as MenuItem;
-            if (menuItem == null)
-                return;
+            if (menuItem == null) return;
 
             ContextMenu contextMenu = menuItem.Parent as ContextMenu;
-            if (contextMenu == null)
-                return;
+            if (contextMenu == null) return;
 
-            // Le PlacementTarget est l'élément sur lequel on a cliqué
+            // Le PlacementTarget est l'élément sur lequel on a cliqué.
             Border border = contextMenu.PlacementTarget as Border;
-            if (border == null)
-                return;
+            if (border == null) return;
 
-            // Récupérer la locomotive depuis le DataContext ou le Tag
+            // Récupérer la locomotive depuis le DataContext ou le Tag.
             Locomotive locoFromSibelit = border.DataContext as Locomotive ?? border.Tag as Locomotive;
-            if (locoFromSibelit == null)
-                return;
+            if (locoFromSibelit == null) return;
 
-            // Ouvrir la fenêtre de swap en passant la locomotive de Sibelit et le pool Lineas
+            // Ouvrir la fenêtre de swap en passant la locomotive de Sibelit et le pool Lineas.
             SwapDialog dialog = new SwapDialog(locoFromSibelit, lineasPool);
             bool? result = dialog.ShowDialog();
             if (result == true)
             {
-                // Récupérer la locomotive sélectionnée dans le SwapDialog
+                // Récupérer la locomotive sélectionnée dans le SwapDialog.
                 Locomotive locoFromLineas = dialog.SelectedLoco;
                 if (locoFromLineas != null)
                 {
-                    // Si la locomotive de Sibelit est sur le Canvas, la supprimer
+                    // Si la locomotive de Sibelit est sur le Canvas, la retirer.
                     if (findCanvasItemForLoco != null)
                     {
                         Border canvasItem = findCanvasItemForLoco(locoFromSibelit);
@@ -66,7 +62,7 @@ namespace Ploco.Helpers
                         }
                     }
 
-                    // Échanger les locomotives entre les pools :
+                    // Effectuer l'échange dans les collections.
                     if (sibelitPool.Contains(locoFromSibelit))
                         sibelitPool.Remove(locoFromSibelit);
                     if (!lineasPool.Contains(locoFromSibelit))
@@ -76,6 +72,10 @@ namespace Ploco.Helpers
                         lineasPool.Remove(locoFromLineas);
                     if (!sibelitPool.Contains(locoFromLineas))
                         sibelitPool.Add(locoFromLineas);
+
+                    // Mettre à jour les propriétés CurrentPool pour refléter l'échange.
+                    locoFromSibelit.CurrentPool = "Lineas";
+                    locoFromLineas.CurrentPool = "Sibelit";
 
                     updateInfoZone?.Invoke();
                 }
@@ -114,6 +114,10 @@ namespace Ploco.Helpers
                 updateInfoZone?.Invoke();
             }
         }
+
+        /// <summary>
+        /// Gère le clic droit pour afficher l'historique de modification d'une locomotive.
+        /// </summary>
         public static void HandleVoirHistorique(object sender, Window owner)
         {
             MenuItem menuItem = sender as MenuItem;

@@ -15,6 +15,7 @@ namespace Ploco.Models
     {
         private bool _isOnCanvas;
         private StatutLocomotive _statut;
+        private string _currentPool;             // Propriété ajoutée pour le pool actuel
         private string _defautMoteurDetails;
         private string _emDetails;
         private string _atevapDetails;
@@ -45,6 +46,20 @@ namespace Ploco.Models
                 {
                     _statut = value;
                     OnPropertyChanged(nameof(Statut));
+                }
+            }
+        }
+
+        // Propriété pour stocker le pool actuel de la locomotive
+        public string CurrentPool
+        {
+            get => string.IsNullOrEmpty(_currentPool) ? "Lineas" : _currentPool;
+            set
+            {
+                if (_currentPool != value)
+                {
+                    _currentPool = value;
+                    OnPropertyChanged(nameof(CurrentPool));
                 }
             }
         }
@@ -120,7 +135,7 @@ namespace Ploco.Models
             return $"T13-{NumeroSerie}";
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

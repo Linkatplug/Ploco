@@ -8,7 +8,6 @@ namespace Ploco
         public HistoriqueDialog(Locomotive loco)
         {
             InitializeComponent();
-            // Définir l'objet locomotive comme contexte de données
             DataContext = loco;
         }
 

@@ -59,7 +59,7 @@ namespace Ploco
             {
                 for (int i = 1301; i <= 1349; i++)
                 {
-                    lineasPool.Add(new Locomotive { NumeroSerie = i, IsOnCanvas = false, Statut = StatutLocomotive.Ok });
+                    lineasPool.Add(new Locomotive { NumeroSerie = i, IsOnCanvas = false, Statut = StatutLocomotive.Ok, CurrentPool = "Lineas" });
                 }
                 // Par défaut, on remet toutes les locomotives dans la pool Lineas (aucun dans Sibelit)
                 // Vous pouvez ajuster ceci selon vos besoins
@@ -491,6 +491,10 @@ namespace Ploco
                                         lineasPool.Remove(locoFromLineas);
                                     if (!sibelitPool.Contains(locoFromLineas))
                                         sibelitPool.Add(locoFromLineas);
+
+                                    // Mise à jour des propriétés CurrentPool.
+                                    locoFromSibelit.CurrentPool = "Lineas";
+                                    locoFromLineas.CurrentPool = "Sibelit";
                                 }
                             }
                         }
@@ -498,6 +502,7 @@ namespace Ploco
                 }
             }
         }
+
 
         private void MenuItem_ModifierStatut_Click(object sender, RoutedEventArgs e)
         {
@@ -629,9 +634,9 @@ namespace Ploco
                 locoHeight = settingsWindow.LocoHeight;
                 // Optionnel : Vous pouvez déclencher un recalcul du placement des locomotives ou mettre à jour l'interface
             }
-        }
-        private void MenuItem_VoirHistorique_Click(object sender, RoutedEventArgs e)
+        }        private void MenuItem_VoirHistorique_Click(object sender, RoutedEventArgs e)
         {
+            // Assurez-vous d'avoir : using Ploco.Helpers;
             ContextMenuHelper.HandleVoirHistorique(sender, this);
         }
     }

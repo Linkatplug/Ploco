@@ -47,7 +47,9 @@ namespace Ploco
         }
         private void MenuItem_VoirHistorique_Click(object sender, RoutedEventArgs e)
         {
-            ContextMenuHelper.HandleVoirHistorique(sender, this);
+            // Utilise le helper pour ouvrir l'historique pour la locomotive sélectionnée.
+            Helpers.ContextMenuHelper.HandleVoirHistorique(sender, this);
         }
+
     }
 }

@@ -17,8 +17,10 @@ namespace Ploco
             InitializeComponent();
             Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
             WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
+
             LineasPool = lineasPool;
             SibelitPool = sibelitPool;
+
             ListBoxLineas.ItemsSource = LineasPool;
             ListBoxSibelit.ItemsSource = SibelitPool;
             ListBoxLineas.Items.Refresh();
@@ -38,13 +40,18 @@ namespace Ploco
             {
                 if (loco.IsOnCanvas)
                 {
-                    MessageBox.Show($"La loco {loco} est sur le tapis et ne peut être transférée.", "Transfert impossible", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show($"La loco {loco} est sur le tapis et ne peut être transférée.",
+                                    "Transfert impossible",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning);
                 }
                 else
                 {
                     SibelitPool.Remove(loco);
                     if (!LineasPool.Contains(loco))
                         LineasPool.Add(loco);
+                    // Mise à jour du pool courant
+                    loco.CurrentPool = "Lineas";
                 }
             }
         }
@@ -58,6 +65,8 @@ namespace Ploco
                 LineasPool.Remove(loco);
                 if (!SibelitPool.Contains(loco))
                     SibelitPool.Add(loco);
+                // Mise à jour du pool courant
+                loco.CurrentPool = "Sibelit";
             }
         }
 

@@ -19,16 +19,22 @@ namespace Ploco
             InitializeComponent();
             Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
             WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
+
             LocoFromSibelit = locoFromSibelit;
             LineasPool = lineasPool;
+
+            // Afficher la loco de Sibelit dans un TextBlock pour information
             tbLocoSibelit.Text = LocoFromSibelit.ToString();
+
+            // Remplir le ComboBox avec la pool Lineas et trier par NumeroSerie
             cbLineas.ItemsSource = LineasPool;
-            // Tri automatique de la liste des locomotives de la pool Lineas.
             CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(LineasPool);
             view.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
+
             if (cbLineas.Items.Count > 0)
                 cbLineas.SelectedIndex = 0;
-            // Remplissage du champ Date/Heure avec la date et l'heure actuelles.
+
+            // Pré-remplir le champ date/heure avec la date et l'heure actuelles
             tbDateTime.Text = DateTime.Now.ToString("G");
         }
 
@@ -39,8 +45,11 @@ namespace Ploco
                 MessageBox.Show("Veuillez sélectionner une loco dans la pool Lineas.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+
+            // La loco sélectionnée dans la pool Lineas est celle avec laquelle on souhaite effectuer le swap
             SelectedLoco = cbLineas.SelectedItem as Locomotive;
-            // Archive les informations de swap dans un fichier log.
+
+            // Archive les informations du swap dans un fichier log
             string logEntry = $"Action: Swap, Loc Sibelit: {LocoFromSibelit}, Loc Lineas: {SelectedLoco}, Date: {tbDateTime.Text}, Message: {tbMessage.Text}";
             try
             {
@@ -50,6 +59,8 @@ namespace Ploco
             {
                 MessageBox.Show("Erreur lors de l'enregistrement du swap : " + ex.Message);
             }
+
+            // Le swap effectif (mise à jour des pools et de CurrentPool) se fera dans le code appelant
             this.DialogResult = true;
             this.Close();
         }
