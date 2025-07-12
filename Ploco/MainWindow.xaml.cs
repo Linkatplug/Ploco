@@ -437,6 +437,10 @@ namespace Ploco
                     {
                         if (!sibelitPool.Contains(loco))
                             sibelitPool.Add(loco);
+
+                        // Assure que la locomotive reflète correctement son nouveau pool
+                        loco.CurrentPool = "Sibelit";
+
                         Border canvasItem = FindCanvasItemForLoco(loco);
                         if (canvasItem != null)
                         {
