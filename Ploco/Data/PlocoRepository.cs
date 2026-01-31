@@ -269,7 +269,7 @@ namespace Ploco.Data
                 command.Parameters.AddWithValue("$number", loco.Number);
                 command.Parameters.AddWithValue("$status", loco.Status.ToString());
                 command.ExecuteNonQuery();
-                loco.Id = GetLastInsertRowId(connection);
+                loco.Id = (int)connection.LastInsertRowId;
             }
 
             foreach (var tile in state.Tiles)
@@ -287,7 +287,7 @@ namespace Ploco.Data
                 });
                 command.Parameters.AddWithValue("$config", configJson);
                 command.ExecuteNonQuery();
-                tile.Id = GetLastInsertRowId(connection);
+                tile.Id = (int)connection.LastInsertRowId;
 
                 var trackPosition = 0;
                 foreach (var track in tile.Tracks)
@@ -298,7 +298,7 @@ namespace Ploco.Data
                     trackCommand.Parameters.AddWithValue("$name", track.Name);
                     trackCommand.Parameters.AddWithValue("$position", trackPosition++);
                     trackCommand.ExecuteNonQuery();
-                    track.Id = GetLastInsertRowId(connection);
+                    track.Id = (int)connection.LastInsertRowId;
 
                     var locoPosition = 0;
                     foreach (var loco in track.Locomotives)
@@ -336,7 +336,7 @@ namespace Ploco.Data
             command.Parameters.AddWithValue("$start", startNumber);
             command.Parameters.AddWithValue("$end", endNumber);
             command.ExecuteNonQuery();
-            return GetLastInsertRowId(connection);
+            return (int)connection.LastInsertRowId;
         }
 
         private static void ExecuteNonQuery(SqliteConnection connection, string sql)
@@ -344,13 +344,6 @@ namespace Ploco.Data
             using var command = connection.CreateCommand();
             command.CommandText = sql;
             command.ExecuteNonQuery();
-        }
-
-        private static int GetLastInsertRowId(SqliteConnection connection)
-        {
-            using var command = connection.CreateCommand();
-            command.CommandText = "SELECT last_insert_rowid();";
-            return Convert.ToInt32(command.ExecuteScalar());
         }
 
         private class TileConfig
