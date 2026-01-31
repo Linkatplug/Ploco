@@ -1,643 +1,447 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-using Newtonsoft.Json;
+using Ploco.Data;
+using Ploco.Dialogs;
 using Ploco.Models;
-using Ploco.Helpers;
 
 namespace Ploco
 {
-    // Classe pour transporter les données de drag-drop.
-    public class LocoDragData
-    {
-        public Locomotive Loco { get; set; }
-        public Border SourceElement { get; set; }
-    }
-
-    // Classe pour sauvegarder/charger l'état de l'application.
-    public class LocomotiveOnCanvas
-    {
-        public int NumeroSerie { get; set; }
-        public double PositionX { get; set; }
-        public double PositionY { get; set; }
-    }
-
-    public class AppState
-    {
-        public ObservableCollection<Locomotive> LineasPool { get; set; } = new ObservableCollection<Locomotive>();
-        public ObservableCollection<Locomotive> SibelitPool { get; set; } = new ObservableCollection<Locomotive>();
-        public List<LocomotiveOnCanvas> LocosOnCanvas { get; set; } = new List<LocomotiveOnCanvas>(); // ✅ Toujours initialisé
-    }
-
     public partial class MainWindow : Window
     {
+        private readonly PlocoRepository _repository;
+        private readonly ObservableCollection<LocomotiveModel> _locomotives = new();
+        private readonly ObservableCollection<TileModel> _tiles = new();
         private Point _dragStartPoint;
-        private ObservableCollection<Locomotive> lineasPool = new ObservableCollection<Locomotive>();
-        private ObservableCollection<Locomotive> sibelitPool = new ObservableCollection<Locomotive>();
+        private TileModel? _draggedTile;
+        private Point _tileDragStart;
 
         public MainWindow()
         {
             InitializeComponent();
-
-            sibelitPool.CollectionChanged += SibelitPool_CollectionChanged;
-            UpdateInfoZone(); // Met à jour au démarrage
-
-            // Charger l'état sauvegardé
-            ChargerEtat();
-
-            // Si les collections sont vides, initialiser par défaut.
-            if (lineasPool.Count == 0 || sibelitPool.Count == 0)
-            {
-                for (int i = 1301; i <= 1349; i++)
-                {
-                    lineasPool.Add(new Locomotive { NumeroSerie = i, IsOnCanvas = false, Statut = StatutLocomotive.Ok, CurrentPool = "Lineas" });
-                }
-                // Par défaut, on remet toutes les locomotives dans la pool Lineas (aucun dans Sibelit)
-                // Vous pouvez ajuster ceci selon vos besoins
-                sibelitPool.Clear();
-            }
-
-            // Lier l'ItemsControl à la pool Sibelit.
-            PoolItemsControl.ItemsSource = sibelitPool;
-            sibelitPool.CollectionChanged += PoolSibelit_CollectionChanged;
-            CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(sibelitPool);
-            view.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
+            _repository = new PlocoRepository("ploco.db");
         }
-        private bool IsCellOccupied(Point position)
-        {
-            // On vérifie si un Border (contenant une loco) existe déjà à cette position
-            foreach (UIElement element in MonCanvas.Children)
-            {
-                if (element is Border border && border.Tag is Locomotive)
-                {
-                    double left = Canvas.GetLeft(border);
-                    double top = Canvas.GetTop(border);
-                    // On considère que la cellule est occupée si le coin supérieur gauche est à la même position (tolérance de 1 pixel)
-                    if (Math.Abs(left - position.X) < 1 && Math.Abs(top - position.Y) < 1)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-
-        private void SibelitPool_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            UpdateInfoZone();
-        }
-
-        private void UpdateInfoZone()
-        {
-            int total = sibelitPool.Count;
-            int hsCount = sibelitPool.Count(loco => loco.Statut == StatutLocomotive.HS);
-            InfoZone.Inlines.Clear();
-            InfoZone.Inlines.Add(new Run($"Sibelit Pool: {total}    ") { Foreground = System.Windows.Media.Brushes.Black });
-            InfoZone.Inlines.Add(new Run($"HS: {hsCount}") { Foreground = System.Windows.Media.Brushes.Red });
-        }
-
-
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            _repository.Initialize();
+            _repository.SeedDefaultDataIfNeeded();
 
+            LoadState();
+            LocomotiveList.ItemsSource = _locomotives;
+            TileCanvas.ItemsSource = _tiles;
         }
 
-        private void Window_Closing(object sender, CancelEventArgs e)
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            SauvegarderEtat();
+            PersistState();
         }
 
-        private void SauvegarderEtat()
+        private void LoadState()
+        {
+            _locomotives.Clear();
+            _tiles.Clear();
+
+            var state = _repository.LoadState();
+            foreach (var loco in state.Locomotives.OrderBy(l => l.SeriesName).ThenBy(l => l.Number))
+            {
+                _locomotives.Add(loco);
+            }
+
+            foreach (var tile in state.Tiles)
+            {
+                if (!tile.Tracks.Any())
+                {
+                    tile.Tracks.Add(CreateDefaultTrack(tile));
+                }
+                _tiles.Add(tile);
+            }
+        }
+
+        private void PersistState()
         {
             var state = new AppState
             {
-                LineasPool = lineasPool,
-                SibelitPool = sibelitPool,
-                LocosOnCanvas = MonCanvas.Children
-                    .OfType<Border>() // Prendre tous les Borders sur le Canvas
-                    .Where(b => b.Tag is Locomotive)
-                    .Select(b => new LocomotiveOnCanvas
-                    {
-                        NumeroSerie = ((Locomotive)b.Tag).NumeroSerie,
-                        PositionX = Canvas.GetLeft(b),
-                        PositionY = Canvas.GetTop(b)
-                    })
-                    .ToList()
+                Series = BuildSeriesState(),
+                Locomotives = _locomotives.ToList(),
+                Tiles = _tiles.ToList()
             };
-
-            string json = JsonConvert.SerializeObject(state, Newtonsoft.Json.Formatting.Indented);
-            System.IO.File.WriteAllText("etat.json", json);
+            _repository.SaveState(state);
         }
 
-        private void ChargerEtat()
+        private List<RollingStockSeries> BuildSeriesState()
         {
-            if (System.IO.File.Exists("etat.json"))
+            var series = new Dictionary<int, RollingStockSeries>();
+            foreach (var loco in _locomotives)
             {
-                string json = System.IO.File.ReadAllText("etat.json");
-                AppState state = JsonConvert.DeserializeObject<AppState>(json);
-                if (state != null)
+                if (!series.ContainsKey(loco.SeriesId))
                 {
-                    // Vider tous les éléments du Canvas
-                    MonCanvas.Children.Clear();
-
-                    // Réinsérer l'image de fond avec les paramètres corrects
-                    Image bgImage = new Image
+                    series[loco.SeriesId] = new RollingStockSeries
                     {
-                        Source = new BitmapImage(new Uri("pack://application:,,,/img/spoor.png")),
-                        Width = 704,
-                        Height = 84,
-                        Stretch = Stretch.Fill
+                        Id = loco.SeriesId,
+                        Name = loco.SeriesName,
+                        StartNumber = loco.Number,
+                        EndNumber = loco.Number
                     };
-                    // Positionner l'image (comme dans votre XAML : Canvas.Top="64", et ici Canvas.Left à 0)
-                    Canvas.SetLeft(bgImage, 0);
-                    Canvas.SetTop(bgImage, 64);
-                    // Ajouter l'image en première position dans le Canvas
-                    MonCanvas.Children.Insert(0, bgImage);
+                }
+                var item = series[loco.SeriesId];
+                item.StartNumber = Math.Min(item.StartNumber, loco.Number);
+                item.EndNumber = Math.Max(item.EndNumber, loco.Number);
+            }
 
-                    // Réinitialiser les pools
-                    lineasPool.Clear();
-                    sibelitPool.Clear();
+            return series.Values.ToList();
+        }
 
-                    // Rechargez ensuite vos locomotives à partir de l'état sauvegardé
-                    foreach (var loco in state.LineasPool)
-                        lineasPool.Add(loco);
-                    foreach (var loco in state.SibelitPool)
-                        sibelitPool.Add(loco);
+        private TrackModel CreateDefaultTrack(TileModel tile)
+        {
+            return tile.Type switch
+            {
+                TileType.Depot => new TrackModel { Name = "Sortie 1" },
+                TileType.VoieGarage => new TrackModel { Name = "Voie 1" },
+                _ => new TrackModel { Name = "Locomotives" }
+            };
+        }
 
-                    if (state.LocosOnCanvas != null)
+        private void AddDepot_Click(object sender, RoutedEventArgs e)
+        {
+            AddTile(TileType.Depot, "Dépôt");
+        }
+
+        private void AddLineStop_Click(object sender, RoutedEventArgs e)
+        {
+            AddTile(TileType.ArretLigne, "Arrêt en ligne");
+        }
+
+        private void AddGarage_Click(object sender, RoutedEventArgs e)
+        {
+            AddTile(TileType.VoieGarage, "Voie de garage");
+        }
+
+        private void AddTile(TileType type, string defaultName)
+        {
+            var tile = new TileModel
+            {
+                Name = defaultName,
+                Type = type,
+                X = 20 + _tiles.Count * 30,
+                Y = 20 + _tiles.Count * 30,
+                LocationPreset = type == TileType.VoieGarage ? "Garage A" : null,
+                GarageTrackNumber = type == TileType.VoieGarage ? 1 : null
+            };
+            tile.Tracks.Add(CreateDefaultTrack(tile));
+            _tiles.Add(tile);
+            _repository.AddHistory("TileCreated", $"Création de la tuile {tile.Name} ({tile.Type}).");
+            PersistState();
+        }
+
+        private void DeleteTile_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is TileModel tile)
+            {
+                foreach (var track in tile.Tracks)
+                {
+                    foreach (var loco in track.Locomotives.ToList())
                     {
-                        foreach (var locoCanvas in state.LocosOnCanvas)
-                        {
-                            var loco = lineasPool.Concat(sibelitPool)
-                                .FirstOrDefault(l => l.NumeroSerie == locoCanvas.NumeroSerie);
-
-                            if (loco != null)
-                            {
-                                Border canvasItem = new Border
-                                {
-                                    Width = 40,
-                                    Height = 30,
-                                    Tag = loco,
-                                    ContextMenu = (ContextMenu)this.Resources["LocomotivesContextMenu"]
-                                };
-
-                                var converter = this.Resources["StatutToBrushConverter"] as IValueConverter;
-                                Binding binding = new Binding("Statut")
-                                {
-                                    Source = loco,
-                                    Converter = converter
-                                };
-                                canvasItem.SetBinding(Border.BackgroundProperty, binding);
-
-                                TextBlock tb = new TextBlock
-                                {
-                                    Text = loco.NumeroSerie.ToString(),
-                                    Foreground = Brushes.White,
-                                    VerticalAlignment = VerticalAlignment.Center,
-                                    HorizontalAlignment = HorizontalAlignment.Center,
-                                    FontWeight = FontWeights.Bold
-                                };
-                                canvasItem.Child = tb;
-                                canvasItem.MouseLeftButtonDown += CanvasItem_MouseLeftButtonDown;
-                                canvasItem.MouseMove += CanvasItem_MouseMove;
-
-                                MonCanvas.Children.Add(canvasItem);
-                                Canvas.SetLeft(canvasItem, locoCanvas.PositionX);
-                                Canvas.SetTop(canvasItem, locoCanvas.PositionY);
-                            }
-                        }
+                        loco.AssignedTrackId = null;
                     }
                 }
+                _tiles.Remove(tile);
+                _repository.AddHistory("TileDeleted", $"Suppression de la tuile {tile.Name}.");
+                PersistState();
             }
         }
 
-        private void PoolSibelit_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void RenameTile_Click(object sender, RoutedEventArgs e)
         {
-            if (e.Action == NotifyCollectionChangedAction.Add ||
-                e.Action == NotifyCollectionChangedAction.Remove)
+            if (sender is Button button && button.Tag is TileModel tile)
             {
-                foreach (var item in (e.NewItems ?? e.OldItems))
+                var dialog = new SimpleTextDialog("Renommer la tuile", "Nom :", tile.Name) { Owner = this };
+                if (dialog.ShowDialog() == true)
                 {
-                    if (item is Locomotive loco)
-                    {
-                        Border canvasItem = FindCanvasItemForLoco(loco);
-                        if (canvasItem != null)
-                        {
-                            MonCanvas.Children.Remove(canvasItem);
-                            loco.IsOnCanvas = false;
-                        }
-                    }
+                    tile.Name = dialog.ResponseText;
+                    _repository.AddHistory("TileRenamed", $"Tuile renommée en {tile.Name}.");
+                    PersistState();
                 }
             }
         }
 
-        private Border FindCanvasItemForLoco(Locomotive loco)
+        private void ConfigureTile_Click(object sender, RoutedEventArgs e)
         {
-            foreach (UIElement element in MonCanvas.Children)
+            if (sender is Button button && button.Tag is TileModel tile)
             {
-                if (element is Border b && b.Tag is Locomotive tagLoco && tagLoco.NumeroSerie == loco.NumeroSerie)
+                var dialog = new TileConfigDialog(tile) { Owner = this };
+                if (dialog.ShowDialog() == true)
                 {
-                    return b;
+                    _repository.AddHistory("TileConfigured", $"Configuration mise à jour pour {tile.Name}.");
+                    PersistState();
                 }
             }
-            return null;
         }
 
-        // --- Gestion du drag depuis la pool ---
-        private void PoolItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void AddTrack_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is TileModel tile)
+            {
+                var trackName = tile.Type switch
+                {
+                    TileType.Depot => $"Sortie {tile.Tracks.Count + 1}",
+                    TileType.VoieGarage => $"Voie {tile.Tracks.Count + 1}",
+                    _ => $"Zone {tile.Tracks.Count + 1}"
+                };
+                tile.Tracks.Add(new TrackModel { Name = trackName });
+                _repository.AddHistory("TrackAdded", $"Ajout de {trackName} dans {tile.Name}.");
+                PersistState();
+            }
+        }
+
+        private void RemoveTrack_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is TrackModel track)
+            {
+                var tile = _tiles.FirstOrDefault(t => t.Tracks.Contains(track));
+                if (tile == null || tile.Tracks.Count <= 1)
+                {
+                    MessageBox.Show("Une tuile doit conserver au moins une voie.", "Action impossible", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                foreach (var loco in track.Locomotives.ToList())
+                {
+                    loco.AssignedTrackId = null;
+                }
+
+                tile.Tracks.Remove(track);
+                _repository.AddHistory("TrackRemoved", $"Suppression de {track.Name} dans {tile.Name}.");
+                PersistState();
+            }
+        }
+
+        private void LocomotiveList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             _dragStartPoint = e.GetPosition(null);
         }
 
-        private void PoolItemsControl_PreviewMouseMove(object sender, MouseEventArgs e)
+        private void LocomotiveList_PreviewMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.LeftButton != MouseButtonState.Pressed)
             {
-                Point currentPos = e.GetPosition(null);
-                Vector diff = _dragStartPoint - currentPos;
-                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    DependencyObject obj = e.OriginalSource as DependencyObject;
-                    while (obj != null && !(obj is Border))
-                    {
-                        obj = VisualTreeHelper.GetParent(obj);
-                    }
-                    if (obj is Border border && border.DataContext is Locomotive loco)
-                    {
-                        LocoDragData dragData = new LocoDragData { Loco = loco, SourceElement = null };
-                        DragDrop.DoDragDrop(border, dragData, DragDropEffects.Move);
-                    }
-                }
+                return;
+            }
+
+            Point currentPos = e.GetPosition(null);
+            Vector diff = _dragStartPoint - currentPos;
+            if (Math.Abs(diff.X) <= SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(diff.Y) <= SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+
+            if (LocomotiveList.SelectedItem is LocomotiveModel loco)
+            {
+                DragDrop.DoDragDrop(LocomotiveList, loco, DragDropEffects.Move);
             }
         }
 
-        // --- Gestion du drag-over et du drop sur le tapis (Canvas) ---
-        private void MonCanvas_DragOver(object sender, DragEventArgs e)
-        {
-            if (e.Data.GetDataPresent(typeof(LocoDragData)))
-                e.Effects = DragDropEffects.Move;
-            else
-                e.Effects = DragDropEffects.None;
-            e.Handled = true;
-        }
-
-        private void MonCanvas_Drop(object sender, DragEventArgs e)
-        {
-            // Obtenir la position du drop dans le Canvas
-            Point dropPosition = e.GetPosition(MonCanvas);
-
-            // Paramètres de la grille horizontale
-            double gap = 5;  // espace entre les locomotives
-            double cellWidth = locoWidth + gap; // largeur d'une cellule (locomotive + gap)
-            double offsetX = (cellWidth - locoWidth) / 2;
-
-            // Calculer la cellule horizontale pour X en fonction de dropPosition.X
-            double cellX = Math.Floor(dropPosition.X / cellWidth) * cellWidth;
-
-            // Définir la position verticale fixe (ignorer dropPosition.Y)
-            // Ici, on fixe la ligne à une valeur de base (par exemple 64) ajustée par gridOffsetY
-            double fixedY = 64 - gridOffsetY;
-
-            // Calculer la position finale en combinant la position X calculée et la valeur fixe Y
-            Point newPosition = new Point(cellX + offsetX, fixedY);
-
-            // Vérifier si la cellule (sur la ligne fixe) est déjà occupée
-            while (IsCellOccupied(new Point(cellX + offsetX, fixedY)))
-            {
-                cellX += cellWidth;
-                if (cellX + cellWidth > MonCanvas.Width)
-                {
-                    cellX = 0;
-                }
-                newPosition = new Point(cellX + offsetX, fixedY);
-            }
-
-            // Placer l'élément (la locomotive) à la position calculée
-            if (e.Data.GetDataPresent(typeof(LocoDragData)))
-            {
-                LocoDragData dragData = e.Data.GetData(typeof(LocoDragData)) as LocoDragData;
-                if (dragData != null)
-                {
-                    Locomotive loco = dragData.Loco;
-                    if (loco != null)
-                    {
-                        if (dragData.SourceElement != null)
-                        {
-                            Border canvasItem = dragData.SourceElement;
-                            if (!MonCanvas.Children.Contains(canvasItem))
-                                MonCanvas.Children.Add(canvasItem);
-                            Canvas.SetLeft(canvasItem, newPosition.X);
-                            Canvas.SetTop(canvasItem, newPosition.Y);
-                        }
-                        else
-                        {
-                            Border existing = FindCanvasItemForLoco(loco);
-                            if (existing != null)
-                            {
-                                Canvas.SetLeft(existing, newPosition.X);
-                                Canvas.SetTop(existing, newPosition.Y);
-                            }
-                            else
-                            {
-                                Border canvasItem = new Border
-                                {
-                                    Width = locoWidth,
-                                    Height = locoHeight,
-                                    Tag = loco,
-                                    ContextMenu = (ContextMenu)this.Resources["LocomotivesContextMenu"]
-                                };
-
-                                var converter = this.Resources["StatutToBrushConverter"] as IValueConverter;
-                                Binding binding = new Binding("Statut")
-                                {
-                                    Source = loco,
-                                    Converter = converter
-                                };
-                                canvasItem.SetBinding(Border.BackgroundProperty, binding);
-
-                                TextBlock tb = new TextBlock
-                                {
-                                    Text = loco.NumeroSerie.ToString(),
-                                    Foreground = Brushes.White,
-                                    VerticalAlignment = VerticalAlignment.Center,
-                                    HorizontalAlignment = HorizontalAlignment.Center,
-                                    FontWeight = FontWeights.Bold
-                                };
-                                canvasItem.Child = tb;
-                                canvasItem.MouseLeftButtonDown += CanvasItem_MouseLeftButtonDown;
-                                canvasItem.MouseMove += CanvasItem_MouseMove;
-                                Canvas.SetLeft(canvasItem, newPosition.X);
-                                Canvas.SetTop(canvasItem, newPosition.Y);
-                                MonCanvas.Children.Add(canvasItem);
-                                loco.IsOnCanvas = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-
-        // --- Gestion du drag depuis le tapis (Canvas) ---
-        private void CanvasItem_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void TrackLocomotives_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             _dragStartPoint = e.GetPosition(null);
         }
 
-        private void CanvasItem_MouseMove(object sender, MouseEventArgs e)
+        private void TrackLocomotives_PreviewMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.LeftButton != MouseButtonState.Pressed)
             {
-                Point currentPos = e.GetPosition(null);
-                Vector diff = _dragStartPoint - currentPos;
-                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                return;
+            }
+
+            Point currentPos = e.GetPosition(null);
+            Vector diff = _dragStartPoint - currentPos;
+            if (Math.Abs(diff.X) <= SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(diff.Y) <= SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+
+            if (sender is ListBox listBox && listBox.SelectedItem is LocomotiveModel loco)
+            {
+                DragDrop.DoDragDrop(listBox, loco, DragDropEffects.Move);
+            }
+        }
+
+        private void TrackLocomotives_Drop(object sender, DragEventArgs e)
+        {
+            if (sender is not ListBox listBox || listBox.DataContext is not TrackModel track)
+            {
+                return;
+            }
+
+            if (e.Data.GetDataPresent(typeof(LocomotiveModel)))
+            {
+                var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+                var insertIndex = GetInsertIndex(listBox, e.GetPosition(listBox));
+                MoveLocomotiveToTrack(loco, track, insertIndex);
+                PersistState();
+                e.Handled = true;
+            }
+        }
+
+        private void Tile_Drop(object sender, DragEventArgs e)
+        {
+            if (sender is not Border border || border.DataContext is not TileModel tile)
+            {
+                return;
+            }
+
+            if (e.Data.GetDataPresent(typeof(LocomotiveModel)))
+            {
+                var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+                var targetTrack = tile.Tracks.FirstOrDefault();
+                if (targetTrack != null)
                 {
-                    Border border = sender as Border;
-                    if (border != null && border.Tag is Locomotive loco)
-                    {
-                        LocoDragData dragData = new LocoDragData { Loco = loco, SourceElement = border };
-                        DragDrop.DoDragDrop(border, dragData, DragDropEffects.Move);
-                    }
+                    MoveLocomotiveToTrack(loco, targetTrack, targetTrack.Locomotives.Count);
+                    PersistState();
                 }
             }
         }
 
-        // --- Gestion du drag-over et du drop sur la zone du pool (pool Sibelit) ---
-        private void Pool_DragOver(object sender, DragEventArgs e)
+        private void MoveLocomotiveToTrack(LocomotiveModel loco, TrackModel targetTrack, int insertIndex)
         {
-            if (e.Data.GetDataPresent(typeof(LocoDragData)))
-                e.Effects = DragDropEffects.Move;
-            else
-                e.Effects = DragDropEffects.None;
-            e.Handled = true;
-        }
-
-        private void Pool_Drop(object sender, DragEventArgs e)
-        {
-            if (e.Data.GetDataPresent(typeof(LocoDragData)))
+            var currentTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+            if (currentTrack != null)
             {
-                LocoDragData dragData = e.Data.GetData(typeof(LocoDragData)) as LocoDragData;
-                if (dragData != null)
+                var currentIndex = currentTrack.Locomotives.IndexOf(loco);
+                currentTrack.Locomotives.Remove(loco);
+                if (currentTrack == targetTrack && insertIndex > currentIndex)
                 {
-                    Locomotive loco = dragData.Loco;
-                    if (loco != null)
-                    {
-                        if (!sibelitPool.Contains(loco))
-                            sibelitPool.Add(loco);
-                        Border canvasItem = FindCanvasItemForLoco(loco);
-                        if (canvasItem != null)
-                        {
-                            MonCanvas.Children.Remove(canvasItem);
-                            loco.IsOnCanvas = false;
-                        }
-                    }
+                    insertIndex--;
                 }
             }
-        }
 
-        // --- Gestion du clic droit pour Swap et Modifier statut ---
-        private void MenuItem_Swap_Click(object sender, RoutedEventArgs e)
-        {
-            MenuItem menuItem = sender as MenuItem;
-            if (menuItem != null)
+            if (!targetTrack.Locomotives.Contains(loco))
             {
-                ContextMenu contextMenu = menuItem.Parent as ContextMenu;
-                if (contextMenu != null)
+                if (insertIndex < 0 || insertIndex > targetTrack.Locomotives.Count)
                 {
-                    // Le PlacementTarget du ContextMenu est l'élément visuel sur lequel on a cliqué.
-                    Border border = contextMenu.PlacementTarget as Border;
-                    if (border != null)
-                    {
-                        // Si l'élément provient du pool, il doit avoir son DataContext, sinon s'il provient du Canvas, utilisez Tag.
-                        Locomotive locoFromSibelit = border.DataContext as Locomotive ?? border.Tag as Locomotive;
-                        if (locoFromSibelit != null)
-                        {
-                            // Ouvrir la fenêtre de swap en passant la loco et le pool Lineas.
-                            SwapDialog dialog = new SwapDialog(locoFromSibelit, lineasPool);
-                            bool? result = dialog.ShowDialog();
-                            if (result == true)
-                            {
-                                // Récupérer la loco sélectionnée dans le ComboBox du dialog.
-                                Locomotive locoFromLineas = dialog.SelectedLoco;
-                                if (locoFromLineas != null)
-                                {
-                                    // Si la loco de Sibelit est sur le tapis, on la retire (mettre IsOnCanvas à false).
-                                    Border canvasItem = FindCanvasItemForLoco(locoFromSibelit);
-                                    if (canvasItem != null)
-                                    {
-                                        MonCanvas.Children.Remove(canvasItem);
-                                        locoFromSibelit.IsOnCanvas = false;
-                                    }
-                                    // Échanger les locomotives entre les pools.
-                                    if (sibelitPool.Contains(locoFromSibelit))
-                                        sibelitPool.Remove(locoFromSibelit);
-                                    if (!lineasPool.Contains(locoFromSibelit))
-                                        lineasPool.Add(locoFromSibelit);
-
-                                    if (lineasPool.Contains(locoFromLineas))
-                                        lineasPool.Remove(locoFromLineas);
-                                    if (!sibelitPool.Contains(locoFromLineas))
-                                        sibelitPool.Add(locoFromLineas);
-
-                                    // Mise à jour des propriétés CurrentPool.
-                                    locoFromSibelit.CurrentPool = "Lineas";
-                                    locoFromLineas.CurrentPool = "Sibelit";
-                                }
-                            }
-                        }
-                    }
+                    targetTrack.Locomotives.Add(loco);
+                }
+                else
+                {
+                    targetTrack.Locomotives.Insert(insertIndex, loco);
                 }
             }
+
+            loco.AssignedTrackId = targetTrack.Id;
+            _repository.AddHistory("LocomotiveMoved", $"Loco {loco.DisplayName} déplacée vers {targetTrack.Name}.");
         }
 
+        private static int GetInsertIndex(ListBox listBox, Point dropPosition)
+        {
+            var element = listBox.InputHitTest(dropPosition) as DependencyObject;
+            while (element != null && element is not ListBoxItem)
+            {
+                element = VisualTreeHelper.GetParent(element);
+            }
+
+            if (element is ListBoxItem item)
+            {
+                return listBox.ItemContainerGenerator.IndexFromContainer(item);
+            }
+
+            return listBox.Items.Count;
+        }
 
         private void MenuItem_ModifierStatut_Click(object sender, RoutedEventArgs e)
         {
-            MenuItem menuItem = sender as MenuItem;
-            if (menuItem != null)
+            if (sender is MenuItem menuItem && menuItem.Parent is ContextMenu contextMenu)
             {
-                ContextMenu contextMenu = menuItem.Parent as ContextMenu;
-                if (contextMenu != null)
+                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
                 {
-                    Border border = contextMenu.PlacementTarget as Border;
-                    if (border != null)
+                    var dialog = new StatusDialog(loco) { Owner = this };
+                    if (dialog.ShowDialog() == true)
                     {
-                        Locomotive loco = border.DataContext as Locomotive ?? border.Tag as Locomotive;
-                        if (loco != null)
-                        {
-                            ModifierStatutDialog dialog = new ModifierStatutDialog(loco);
-                            bool? result = dialog.ShowDialog();
-                            if (result == true)
-                            {
-                                // À ce stade, le statut de la locomotive a été modifié.
-                                // Mettez à jour la zone d'info.
-                                UpdateInfoZone();
-                            }
-                        }
+                        _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.DisplayName}.");
+                        PersistState();
                     }
                 }
             }
         }
 
-        // --- Gestion des menus du haut ---
-        private void MenuItem_Sauvegarder_Click(object sender, RoutedEventArgs e)
+        private void MenuItem_RemoveFromTile_Click(object sender, RoutedEventArgs e)
         {
-            SauvegarderEtat();
-            MessageBox.Show("Etat sauvegardé", "Sauvegarder", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void MenuItem_Charger_Click(object sender, RoutedEventArgs e)
-        {
-            ChargerEtat();
-            MessageBox.Show("Etat chargé", "Charger", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void MenuItem_GererLocomotives_Click(object sender, RoutedEventArgs e)
-        {
-            PoolTransferWindow transferWindow = new PoolTransferWindow(lineasPool, sibelitPool);
-            transferWindow.ShowDialog();
-        }
-
-        private void MenuItem_ParcLoco_Click(object sender, RoutedEventArgs e)
-        {
-            ParcLocoWindow parcWindow = new ParcLocoWindow(sibelitPool, lineasPool);
-            parcWindow.ShowDialog();
-        }
-
-        private void MenuItem_Historique_Click(object sender, RoutedEventArgs e)
-        {
-            HistoriqueWindow historiqueWindow = new HistoriqueWindow
+            if (sender is MenuItem menuItem && menuItem.Parent is ContextMenu contextMenu)
             {
-                Owner = this
-            };
-            historiqueWindow.ShowDialog();
-        }
-
-        private void MenuItem_Reset_Click(object sender, RoutedEventArgs e)
-        {
-            // Réinitialiser les pools
-            lineasPool.Clear();
-            sibelitPool.Clear();
-
-            // Supprimer uniquement les éléments du Canvas qui représentent des locomotives
-            var locomotivesToRemove = MonCanvas.Children
-                .OfType<UIElement>()
-                .Where(element =>
+                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
                 {
-                    // Si l'élément est un Border et que son Tag est une locomotive, c'est un élément à supprimer
-                    if (element is Border border && border.Tag is Locomotive)
-                        return true;
-                    return false;
-                }).ToList();
+                    var track = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+                    if (track != null)
+                    {
+                        track.Locomotives.Remove(loco);
+                        loco.AssignedTrackId = null;
+                        _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.DisplayName} retirée de {track.Name}.");
+                        PersistState();
+                    }
+                }
+            }
+        }
 
-            foreach (var element in locomotivesToRemove)
+        private void Tile_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is DependencyObject source && FindAncestor<Button>(source) != null)
             {
-                MonCanvas.Children.Remove(element);
+                return;
             }
 
-            // (Optionnel) Réinitialiser les locomotives dans le pool lineas
-            for (int i = 1301; i <= 1349; i++)
+            if (sender is Border border && border.DataContext is TileModel tile)
             {
-                lineasPool.Add(new Locomotive { NumeroSerie = i, IsOnCanvas = false, Statut = StatutLocomotive.Ok });
+                _draggedTile = tile;
+                _tileDragStart = e.GetPosition(TileCanvas);
+                border.CaptureMouse();
             }
-            MessageBox.Show("Réinitialisation effectuée. Toutes les locomotives sont dans la pool Lineas.",
-                            "Reset", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-
-        // --- Boutons supplémentaires (appelés via le menu "Fichier", "Gestion" et "Option") ---
-        private void ParcLoco_Click(object sender, RoutedEventArgs e)
+        private void Tile_MouseMove(object sender, MouseEventArgs e)
         {
-            ParcLocoWindow parcWindow = new ParcLocoWindow(sibelitPool, lineasPool);
-            parcWindow.ShowDialog();
-        }
-
-        private void Historique_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Fonction Historique en cours de développement.", "Historique", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void OuvrirFenetreTransfert_Click(object sender, RoutedEventArgs e)
-        {
-            PoolTransferWindow transferWindow = new PoolTransferWindow(lineasPool, sibelitPool);
-            transferWindow.ShowDialog();
-        }
-        private int gridOffsetY = 20;   // Valeur par défaut
-        private int locoWidth = 42;     // Valeur par défaut
-        private int locoHeight = 32;    // Valeur par défaut
-
-        private void MenuItem_Settings_Click(object sender, RoutedEventArgs e)
-        {
-            SettingsWindow settingsWindow = new SettingsWindow
+            if (_draggedTile == null || e.LeftButton != MouseButtonState.Pressed)
             {
-                Owner = this
-            };
-
-            bool? result = settingsWindow.ShowDialog();
-            if (result == true)
-            {
-                gridOffsetY = settingsWindow.GridOffset;
-                locoWidth = settingsWindow.LocoWidth;
-                locoHeight = settingsWindow.LocoHeight;
-                // Optionnel : Vous pouvez déclencher un recalcul du placement des locomotives ou mettre à jour l'interface
+                return;
             }
-        }        private void MenuItem_VoirHistorique_Click(object sender, RoutedEventArgs e)
+
+            var currentPosition = e.GetPosition(TileCanvas);
+            var offset = currentPosition - _tileDragStart;
+            _draggedTile.X = Math.Max(0, _draggedTile.X + offset.X);
+            _draggedTile.Y = Math.Max(0, _draggedTile.Y + offset.Y);
+            _tileDragStart = currentPosition;
+        }
+
+        private void Tile_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            // Assurez-vous d'avoir : using Ploco.Helpers;
-            ContextMenuHelper.HandleVoirHistorique(sender, this);
+            if (_draggedTile != null)
+            {
+                _repository.AddHistory("TileMoved", $"Tuile {_draggedTile.Name} déplacée.");
+                PersistState();
+            }
+            if (sender is Border border)
+            {
+                border.ReleaseMouseCapture();
+            }
+            _draggedTile = null;
+        }
+
+        private static T? FindAncestor<T>(DependencyObject child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T match)
+                {
+                    return match;
+                }
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
     }
 }
