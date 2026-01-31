@@ -2,97 +2,125 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ploco.Converters"
-        Title="Gestion des Locomotives" Height="700" Width="1100"
+        Title="Ploco - Nouvelle version" Height="800" Width="1200"
         Icon="pack://application:,,,/img/train_logo.ico"
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
-        <!-- Convertisseur pour transformer le statut en couleur -->
         <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
-        <!-- Menu contextuel pour les locomotives -->
-        <ContextMenu x:Key="LocomotivesContextMenu">
-            <MenuItem Header="Swap" Click="MenuItem_Swap_Click"/>
+        <Style x:Key="TileHeaderButton" TargetType="Button">
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <ContextMenu x:Key="LocomotiveContextMenu">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
-            <MenuItem Header="Voir historique" Click="MenuItem_VoirHistorique_Click"/>
+            <MenuItem Header="Retirer de la tuile" Click="MenuItem_RemoveFromTile_Click"/>
         </ContextMenu>
     </Window.Resources>
     <DockPanel>
-        <!-- Menu principal -->
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="Fichier">
-                <MenuItem Header="Sauvegarder" Click="MenuItem_Sauvegarder_Click"/>
-                <MenuItem Header="Charger" Click="MenuItem_Charger_Click"/>
-            </MenuItem>
-            <MenuItem Header="Gestion">
-                <MenuItem Header="Gérer les Locomotives" Click="MenuItem_GererLocomotives_Click"/>
-                <MenuItem Header="Parc Loco" Click="MenuItem_ParcLoco_Click"/>
-                <MenuItem Header="Historique" Click="MenuItem_Historique_Click"/>
-            </MenuItem>
-            <MenuItem Header="Option">
-                <MenuItem Header="Reset" Click="MenuItem_Reset_Click"/>
-            </MenuItem>
-        </Menu>
-        <!-- Contenu principal -->
+        <ToolBar DockPanel.Dock="Top">
+            <Button Content="Ajouter dépôt" Click="AddDepot_Click"/>
+            <Button Content="Ajouter arrêt en ligne" Click="AddLineStop_Click"/>
+            <Button Content="Ajouter voie de garage" Click="AddGarage_Click"/>
+        </ToolBar>
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="260"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <!-- Pool Sibelit affichée -->
-            <Border Grid.Column="0" Margin="10" Background="LightBlue" AllowDrop="True"
-                    Drop="Pool_Drop" DragOver="Pool_DragOver">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl x:Name="PoolItemsControl"
-                                  PreviewMouseLeftButtonDown="PoolItemsControl_PreviewMouseLeftButtonDown"
-                                  PreviewMouseMove="PoolItemsControl_PreviewMouseMove">
+            <Border Grid.Column="0" Margin="10" Background="#FFEFF4FF" CornerRadius="6">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Locomotives" FontWeight="Bold" Margin="8"/>
+                    <ListBox x:Name="LocomotiveList"
+                             DisplayMemberPath="DisplayName"
+                             PreviewMouseLeftButtonDown="LocomotiveList_PreviewMouseLeftButtonDown"
+                             PreviewMouseMove="LocomotiveList_PreviewMouseMove"/>
+                </DockPanel>
+            </Border>
+            <Border Grid.Column="1" Margin="10" Background="#FFF7F7F7" CornerRadius="6">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="TileCanvas">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
+                                <Canvas />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-            <Border Width="42" Height="32" Margin="5"
-                        Background="{Binding Statut, Converter={StaticResource StatutToBrushConverter}}"
-                        ContextMenu="{StaticResource LocomotivesContextMenu}">
-                  <Border.Style>
-                    <Style TargetType="Border">
-                      <Setter Property="Visibility" Value="Visible"/>
-                      <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsOnCanvas}" Value="True">
-                          <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                      </Style.Triggers>
-                    </Style>
-                  </Border.Style>
-                  <TextBlock Text="{Binding NumeroSerie}" 
-                             Foreground="LightGray"
-                             VerticalAlignment="Center" HorizontalAlignment="Center"
-                             FontWeight="Bold"/>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
-      </Border>
-      
-      <!-- Zone de dépôt (Canvas) et zone d'info -->
-      <Grid Grid.Column="1" Margin="10">
-        <Viewbox Stretch="Uniform">
-          <Canvas x:Name="MonCanvas" Width="704" Height="65" AllowDrop="True"
-                  DragOver="MonCanvas_DragOver" Drop="MonCanvas_Drop">
-            <!-- Image de fond (le tapis) -->
-            <Image Source="pack://application:,,,/img/spoor.png" 
-                   Canvas.Top="64" 
-                   Width="704" Height="84" Stretch="Fill"
-                   HorizontalAlignment="Center" VerticalAlignment="Top"/>
-          </Canvas>
-        </Viewbox>
-        <!-- Zone d'info affichant le nombre total et le nombre HS (HS en rouge) -->
-        <TextBlock x:Name="InfoZone" HorizontalAlignment="Right" VerticalAlignment="Bottom" 
-                   Margin="10" FontSize="14" TextWrapping="Wrap">
-          Sibelit Pool: 0    HS: 0
-        </TextBlock>
-      </Grid>
-    </Grid>
-  </DockPanel>
+                                <Border Background="White" BorderBrush="#FFB0B0B0" BorderThickness="1"
+                                        CornerRadius="6" Padding="8" Width="340"
+                                        AllowDrop="True"
+                                        Drop="Tile_Drop"
+                                        MouseLeftButtonDown="Tile_MouseLeftButtonDown"
+                                        MouseMove="Tile_MouseMove"
+                                        MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
+                                                        Click="RenameTile_Click" Tag="{Binding}"/>
+                                                <Button Style="{StaticResource TileHeaderButton}" Content="Configurer"
+                                                        Click="ConfigureTile_Click" Tag="{Binding}"/>
+                                                <Button Style="{StaticResource TileHeaderButton}" Content="Supprimer"
+                                                        Click="DeleteTile_Click" Tag="{Binding}"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding Type}" Foreground="Gray" FontSize="12" Margin="0,2,0,2"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <TextBlock Text="{Binding LocationPreset}" Foreground="SlateGray" FontSize="11"/>
+                                            <TextBlock Text="{Binding GarageTrackNumber, StringFormat= Voie {0}, TargetNullValue='', FallbackValue=''}"
+                                                       Foreground="SlateGray" FontSize="11" Margin="6,0,0,0"/>
+                                        </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Tracks}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
+                                                        <StackPanel>
+                                                            <DockPanel>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                                <Button DockPanel.Dock="Right" Style="{StaticResource TileHeaderButton}"
+                                                                        Content="Retirer voie" Click="RemoveTrack_Click"
+                                                                        Tag="{Binding}"/>
+                                                            </DockPanel>
+                                                            <ListBox ItemsSource="{Binding Locomotives}"
+                                                                     DisplayMemberPath="DisplayName"
+                                                                     AllowDrop="True"
+                                                                     PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                                     PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                                     Drop="TrackLocomotives_Drop">
+                                                                <ListBox.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                                Padding="4" Margin="2" CornerRadius="4"
+                                                                                ContextMenu="{StaticResource LocomotiveContextMenu}">
+                                                                            <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="Bold"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ListBox.ItemTemplate>
+                                                            </ListBox>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Content="Ajouter voie" Margin="0,4,0,0" Click="AddTrack_Click" Tag="{Binding}"/>
+                                        <Border Background="#FFF1F5FF" Padding="4" Margin="0,6,0,0" CornerRadius="4">
+                                            <TextBlock Text="Faites glisser les locomotives depuis la liste vers une voie." FontSize="11"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
 </Window>
