@@ -31,6 +31,28 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="LeftBlockedToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource SaturationToggleStyle}">
+            <Setter Property="ToolTip" Value="BLOCK plein"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding LeftLabel}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="RightBlockedToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource SaturationToggleStyle}">
+            <Setter Property="ToolTip" Value="BIF plein"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding RightLabel}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="TileHeaderButton" TargetType="Button">
             <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Padding" Value="4,0"/>
@@ -272,39 +294,11 @@
                                                             </Style>
                                                         </TextBlock.Style>
                                                     </TextBlock>
-                                                    <ToggleButton Style="{StaticResource SaturationToggleStyle}"
+                                                    <ToggleButton Style="{StaticResource RightBlockedToggleStyle}"
                                                                   DockPanel.Dock="Right"
-                                                                  IsChecked="{Binding IsRightBlocked}"
-                                                                  ToolTip="BIF plein">
-                                                        <ToggleButton.Style>
-                                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource SaturationToggleStyle}">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding RightLabel}" Value="">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </ToggleButton.Style>
-                                                    </ToggleButton>
-                                                    <ToggleButton Style="{StaticResource SaturationToggleStyle}"
-                                                                  IsChecked="{Binding IsLeftBlocked}"
-                                                                  ToolTip="BLOCK plein">
-                                                        <ToggleButton.Style>
-                                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource SaturationToggleStyle}">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding LeftLabel}" Value="">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </ToggleButton.Style>
-                                                    </ToggleButton>
+                                                                  IsChecked="{Binding IsRightBlocked}"/>
+                                                    <ToggleButton Style="{StaticResource LeftBlockedToggleStyle}"
+                                                                  IsChecked="{Binding IsLeftBlocked}"/>
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                                         <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
                                                                 Click="RenameZone_Click" Tag="{Binding}"/>
