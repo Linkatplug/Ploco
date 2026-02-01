@@ -8,6 +8,9 @@
             <TextBlock Text="Nom du lieu" FontWeight="SemiBold"/>
             <TextBox x:Name="PlaceNameText" Margin="0,6,0,12"/>
 
+            <TextBlock Text="Nom de la voie" FontWeight="SemiBold"/>
+            <TextBox x:Name="TrackNameText" Margin="0,6,0,12"/>
+
             <TextBlock Text="Locomotives à ajouter (séparées par espace ou virgule)" FontWeight="SemiBold"/>
             <TextBox x:Name="LocomotiveNumbersText" Margin="0,6,0,12"/>
 

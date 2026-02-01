@@ -21,6 +21,7 @@ namespace Ploco.Dialogs
             "Bale",
             "Bettembourg",
             "Chatelet",
+            "Gent",
             "La Louviere",
             "Luxembourg",
             "Monceau",

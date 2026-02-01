@@ -14,6 +14,7 @@ namespace Ploco.Dialogs
         }
 
         public string PlaceName => PlaceNameText.Text.Trim();
+        public string TrackName => TrackNameText.Text.Trim();
         public string LocomotiveNumbers => LocomotiveNumbersText.Text.Trim();
         public string IssueReason => IssueReasonText.Text.Trim();
         public bool IsOnTrain => OnTrainCheck.IsChecked == true;
@@ -37,6 +38,12 @@ namespace Ploco.Dialogs
             if (string.IsNullOrWhiteSpace(PlaceName))
             {
                 MessageBox.Show("Veuillez saisir un nom de lieu.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(TrackName))
+            {
+                MessageBox.Show("Veuillez saisir un nom de voie.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

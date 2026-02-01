@@ -448,6 +448,7 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"/>
                                                 <Menu Grid.Column="1" HorizontalAlignment="Right">
                                                     <MenuItem Header="...">
+                                                        <MenuItem Header="Renommer voie" Click="RenameLineTrack_Click" Tag="{Binding}"/>
                                                         <MenuItem Header="Supprimer voie" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
                                                     </MenuItem>
                                                 </Menu>
@@ -513,6 +514,10 @@
             <MenuItem Header="Gestion">
                 <MenuItem Header="Gestion des parcs" Click="MenuItem_PoolManagement_Click"/>
                 <MenuItem Header="Historique" Click="MenuItem_History_Click"/>
+            </MenuItem>
+            <MenuItem Header="View">
+                <MenuItem Header="Charger un preset" x:Name="ViewPresetsMenu"/>
+                <MenuItem Header="Enregistrer le preset..." Click="SaveLayoutPreset_Click"/>
             </MenuItem>
             <MenuItem Header="Option">
                 <MenuItem Header="Reset">

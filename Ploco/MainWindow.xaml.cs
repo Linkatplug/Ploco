@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -20,6 +23,8 @@ namespace Ploco
         private readonly PlocoRepository _repository;
         private readonly ObservableCollection<LocomotiveModel> _locomotives = new();
         private readonly ObservableCollection<TileModel> _tiles = new();
+        private readonly List<LayoutPreset> _layoutPresets = new();
+        private const string LayoutPresetFileName = "layout_presets.json";
         private Point _dragStartPoint;
         private TileModel? _draggedTile;
         private Point _tileDragStart;
@@ -35,6 +40,8 @@ namespace Ploco
             _repository.SeedDefaultDataIfNeeded();
 
             LoadState();
+            LoadLayoutPresets();
+            RefreshPresetMenu();
             LocomotiveList.ItemsSource = _locomotives;
             TileCanvas.ItemsSource = _tiles;
             InitializeLocomotiveView();
@@ -42,6 +49,13 @@ namespace Ploco
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            var result = MessageBox.Show("Are you sure you want to quit?", "Quitter", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
+                return;
+            }
+
             PersistState();
         }
 
@@ -163,7 +177,7 @@ namespace Ploco
 
             var track = new TrackModel
             {
-                Name = "Voie 1",
+                Name = dialog.TrackName,
                 Kind = TrackKind.Line,
                 IsOnTrain = dialog.IsOnTrain,
                 TrainNumber = dialog.IsOnTrain ? dialog.TrainNumber : null,
@@ -420,6 +434,23 @@ namespace Ploco
                 tile.RefreshTrackCollections();
                 _repository.AddHistory("LineTrackRemoved", $"Suppression de la voie {track.Name} dans {tile.DisplayTitle}.");
                 UpdatePoolVisibility();
+                PersistState();
+            }
+        }
+
+        private void RenameLineTrack_Click(object sender, RoutedEventArgs e)
+        {
+            var track = GetTrackFromSender(sender);
+            if (track == null)
+            {
+                return;
+            }
+
+            var dialog = new SimpleTextDialog("Renommer la voie", "Nom de voie :", track.Name) { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                track.Name = dialog.ResponseText;
+                _repository.AddHistory("LineTrackRenamed", $"Voie renommée en {track.Name}.");
                 PersistState();
             }
         }
@@ -799,6 +830,46 @@ namespace Ploco
             PersistState();
         }
 
+        private void SaveLayoutPreset_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SimpleTextDialog("Enregistrer un preset", "Nom du preset :", "Nouveau preset") { Owner = this };
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var name = dialog.ResponseText.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                MessageBox.Show("Veuillez saisir un nom valide.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var preset = BuildLayoutPreset(name);
+            var existing = _layoutPresets.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+                _layoutPresets.Remove(existing);
+            }
+            _layoutPresets.Add(preset);
+            SaveLayoutPresets();
+            RefreshPresetMenu();
+            _repository.AddHistory("LayoutPresetSaved", $"Preset enregistré : {name}.");
+        }
+
+        private void LoadLayoutPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem || menuItem.Tag is not LayoutPreset preset)
+            {
+                return;
+            }
+
+            ApplyLayoutPreset(preset);
+            _repository.AddHistory("LayoutPresetLoaded", $"Preset chargé : {preset.Name}.");
+            UpdatePoolVisibility();
+            PersistState();
+        }
+
         private TrackModel? GetDefaultDropTrack(TileModel tile)
         {
             if (tile.Type == TileType.ArretLigne)
@@ -962,6 +1033,221 @@ namespace Ploco
             }
 
             return numbers;
+        }
+
+        private void LoadLayoutPresets()
+        {
+            _layoutPresets.Clear();
+            if (File.Exists(LayoutPresetFileName))
+            {
+                try
+                {
+                    var json = File.ReadAllText(LayoutPresetFileName);
+                    var presets = JsonSerializer.Deserialize<List<LayoutPreset>>(json, GetPresetSerializerOptions());
+                    if (presets != null)
+                    {
+                        _layoutPresets.AddRange(presets);
+                    }
+                }
+                catch (Exception)
+                {
+                    _layoutPresets.Clear();
+                }
+            }
+
+            if (_layoutPresets.All(p => !string.Equals(p.Name, "Défaut", StringComparison.OrdinalIgnoreCase)))
+            {
+                _layoutPresets.Add(BuildDefaultPreset());
+            }
+
+            SaveLayoutPresets();
+        }
+
+        private void SaveLayoutPresets()
+        {
+            var json = JsonSerializer.Serialize(_layoutPresets, GetPresetSerializerOptions());
+            File.WriteAllText(LayoutPresetFileName, json);
+        }
+
+        private void RefreshPresetMenu()
+        {
+            if (ViewPresetsMenu == null)
+            {
+                return;
+            }
+
+            ViewPresetsMenu.Items.Clear();
+            foreach (var preset in _layoutPresets.OrderBy(p => p.Name))
+            {
+                var item = new MenuItem
+                {
+                    Header = preset.Name,
+                    Tag = preset
+                };
+                item.Click += LoadLayoutPreset_Click;
+                ViewPresetsMenu.Items.Add(item);
+            }
+        }
+
+        private LayoutPreset BuildLayoutPreset(string name)
+        {
+            var tiles = _tiles
+                .Where(tile => tile.Type != TileType.ArretLigne)
+                .Select(tile => new LayoutTile
+                {
+                    Name = tile.Name,
+                    Type = tile.Type,
+                    X = tile.X,
+                    Y = tile.Y,
+                    Tracks = tile.Tracks.Select(track => new LayoutTrack
+                    {
+                        Name = track.Name,
+                        Kind = track.Kind,
+                        LeftLabel = track.LeftLabel,
+                        RightLabel = track.RightLabel,
+                        IsLeftBlocked = track.IsLeftBlocked,
+                        IsRightBlocked = track.IsRightBlocked
+                    }).ToList()
+                }).ToList();
+
+            return new LayoutPreset
+            {
+                Name = name,
+                Tiles = tiles
+            };
+        }
+
+        private LayoutPreset BuildDefaultPreset()
+        {
+            var preset = new LayoutPreset
+            {
+                Name = "Défaut",
+                Tiles = new List<LayoutTile>()
+            };
+
+            var defaultTiles = new List<(TileType type, string name)>
+            {
+                (TileType.Depot, "Thionville"),
+                (TileType.Depot, "Mulhouse Nord"),
+                (TileType.VoieGarage, "Zeebrugge"),
+                (TileType.VoieGarage, "Anvers Nord"),
+                (TileType.VoieGarage, "Bale")
+            };
+
+            const double startX = 20;
+            const double startY = 20;
+            const double stepX = 380;
+            const double stepY = 260;
+
+            for (var index = 0; index < defaultTiles.Count; index++)
+            {
+                var (type, name) = defaultTiles[index];
+                var tile = new TileModel
+                {
+                    Name = name,
+                    Type = type,
+                    X = startX + (index % 2) * stepX,
+                    Y = startY + (index / 2) * stepY
+                };
+                EnsureDefaultTracks(tile);
+                ApplyGaragePresets(tile);
+
+                preset.Tiles.Add(new LayoutTile
+                {
+                    Name = tile.Name,
+                    Type = tile.Type,
+                    X = tile.X,
+                    Y = tile.Y,
+                    Tracks = tile.Tracks.Select(track => new LayoutTrack
+                    {
+                        Name = track.Name,
+                        Kind = track.Kind,
+                        LeftLabel = track.LeftLabel,
+                        RightLabel = track.RightLabel,
+                        IsLeftBlocked = track.IsLeftBlocked,
+                        IsRightBlocked = track.IsRightBlocked
+                    }).ToList()
+                });
+            }
+
+            return preset;
+        }
+
+        private void ApplyLayoutPreset(LayoutPreset preset)
+        {
+            var removableTiles = _tiles.Where(tile => tile.Type != TileType.ArretLigne).ToList();
+            foreach (var tile in removableTiles)
+            {
+                foreach (var track in tile.Tracks)
+                {
+                    foreach (var loco in track.Locomotives.ToList())
+                    {
+                        track.Locomotives.Remove(loco);
+                        loco.AssignedTrackId = null;
+                    }
+                }
+                _tiles.Remove(tile);
+            }
+
+            foreach (var layoutTile in preset.Tiles.Where(t => t.Type != TileType.ArretLigne))
+            {
+                var tile = new TileModel
+                {
+                    Name = layoutTile.Name,
+                    Type = layoutTile.Type,
+                    X = layoutTile.X,
+                    Y = layoutTile.Y
+                };
+                foreach (var layoutTrack in layoutTile.Tracks)
+                {
+                    tile.Tracks.Add(new TrackModel
+                    {
+                        Name = layoutTrack.Name,
+                        Kind = layoutTrack.Kind,
+                        LeftLabel = layoutTrack.LeftLabel,
+                        RightLabel = layoutTrack.RightLabel,
+                        IsLeftBlocked = layoutTrack.IsLeftBlocked,
+                        IsRightBlocked = layoutTrack.IsRightBlocked
+                    });
+                }
+                tile.RefreshTrackCollections();
+                _tiles.Add(tile);
+            }
+        }
+
+        private static JsonSerializerOptions GetPresetSerializerOptions()
+        {
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            options.Converters.Add(new JsonStringEnumConverter());
+            return options;
+        }
+
+        private sealed class LayoutPreset
+        {
+            public string Name { get; set; } = string.Empty;
+            public List<LayoutTile> Tiles { get; set; } = new();
+        }
+
+        private sealed class LayoutTile
+        {
+            public string Name { get; set; } = string.Empty;
+            public TileType Type { get; set; }
+            public double X { get; set; }
+            public double Y { get; set; }
+            public List<LayoutTrack> Tracks { get; set; } = new();
+        }
+
+        private sealed class LayoutTrack
+        {
+            public string Name { get; set; } = string.Empty;
+            public TrackKind Kind { get; set; }
+            public string? LeftLabel { get; set; }
+            public string? RightLabel { get; set; }
+            public bool IsLeftBlocked { get; set; }
+            public bool IsRightBlocked { get; set; }
         }
     }
 }
