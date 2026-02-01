@@ -15,8 +15,7 @@ namespace Ploco.Converters
                 return statut switch
                 {
                     LocomotiveStatus.Ok => Brushes.Green,
-                    LocomotiveStatus.DefautMineur => Brushes.Gold,
-                    LocomotiveStatus.AControler => Brushes.Orange,
+                    LocomotiveStatus.ManqueTraction => Brushes.Orange,
                     LocomotiveStatus.HS => Brushes.Red,
                     _ => Brushes.Gray,
                 };

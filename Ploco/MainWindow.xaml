@@ -29,7 +29,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#FF1B5E20"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Content" Value="Free"/>
+            <Setter Property="Content" Value="Libre"/>
         </Style>
         <Style x:Key="LeftBlockedSwitchStyle" TargetType="Button" BasedOn="{StaticResource BlockedSwitchButtonBase}">
             <Setter Property="ToolTip" Value="BLOCK"/>
@@ -37,7 +37,7 @@
                 <DataTrigger Binding="{Binding IsLeftBlocked}" Value="True">
                     <Setter Property="Background" Value="#FFD32F2F"/>
                     <Setter Property="BorderBrush" Value="#FFB71C1C"/>
-                    <Setter Property="Content" Value="Full"/>
+                    <Setter Property="Content" Value="Plein"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -53,7 +53,7 @@
                 <DataTrigger Binding="{Binding IsRightBlocked}" Value="True">
                     <Setter Property="Background" Value="#FFD32F2F"/>
                     <Setter Property="BorderBrush" Value="#FFB71C1C"/>
-                    <Setter Property="Content" Value="Full"/>
+                    <Setter Property="Content" Value="Plein"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -118,7 +118,23 @@
                                             <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                     Padding="4" Margin="2" CornerRadius="4"
                                                     ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -164,7 +180,23 @@
                                                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                                         Padding="4" Margin="2" CornerRadius="4"
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                                    <Grid>
+                                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                   HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </Grid>
                                                                 </Border>
                                                             </DataTemplate>
                                                         </ListBox.ItemTemplate>
@@ -250,7 +282,23 @@
                                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                         Padding="4" Margin="2" CornerRadius="4"
                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                   HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Grid>
                                                 </Border>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
@@ -387,7 +435,23 @@
                                                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                                         Padding="4" Margin="2" CornerRadius="4"
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                                    <Grid>
+                                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                   HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </Grid>
                                                                 </Border>
                                                             </DataTemplate>
                                                         </ListBox.ItemTemplate>
@@ -478,7 +542,23 @@
                                                             <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                                     Padding="4" Margin="2" CornerRadius="4"
                                                                     ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                                <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                                <Grid>
+                                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </Grid>
                                                             </Border>
                                                         </DataTemplate>
                                                     </ListBox.ItemTemplate>
@@ -571,8 +651,23 @@
                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                         Padding="6" Margin="4" CornerRadius="4"
                                         ContextMenu="{StaticResource LocomotiveListContextMenu}">
-                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
-                                               HorizontalAlignment="Center"/>
+                                    <Grid>
+                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

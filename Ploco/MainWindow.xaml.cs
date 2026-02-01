@@ -812,6 +812,8 @@ namespace Ploco
             {
                 loco.AssignedTrackId = null;
                 loco.Status = LocomotiveStatus.Ok;
+                loco.TractionPercent = null;
+                loco.HsReason = null;
                 loco.Pool = "Lineas";
             }
 

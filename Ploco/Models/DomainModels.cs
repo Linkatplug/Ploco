@@ -9,8 +9,7 @@ namespace Ploco.Models
     public enum LocomotiveStatus
     {
         Ok,
-        DefautMineur,
-        AControler,
+        ManqueTraction,
         HS
     }
 
@@ -41,6 +40,8 @@ namespace Ploco.Models
     {
         private string _pool = "Lineas";
         private LocomotiveStatus _status;
+        private int? _tractionPercent;
+        private string? _hsReason;
         private int? _assignedTrackId;
         private bool _isVisibleInActivePool = true;
 
@@ -57,6 +58,34 @@ namespace Ploco.Models
                 if (_status != value)
                 {
                     _status = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(TractionDisplay));
+                }
+            }
+        }
+
+        public int? TractionPercent
+        {
+            get => _tractionPercent;
+            set
+            {
+                if (_tractionPercent != value)
+                {
+                    _tractionPercent = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(TractionDisplay));
+                }
+            }
+        }
+
+        public string? HsReason
+        {
+            get => _hsReason;
+            set
+            {
+                if (_hsReason != value)
+                {
+                    _hsReason = value;
                     OnPropertyChanged();
                 }
             }
@@ -102,6 +131,9 @@ namespace Ploco.Models
         }
 
         public string DisplayName => Number.ToString();
+        public string TractionDisplay => Status == LocomotiveStatus.ManqueTraction && TractionPercent.HasValue
+            ? $"{TractionPercent.Value}%"
+            : string.Empty;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

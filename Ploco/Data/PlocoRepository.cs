@@ -40,6 +40,8 @@ namespace Ploco.Data
                     number INTEGER NOT NULL,
                     status TEXT NOT NULL,
                     pool TEXT NOT NULL DEFAULT 'Lineas',
+                    traction_percent INTEGER,
+                    hs_reason TEXT,
                     FOREIGN KEY(series_id) REFERENCES series(id)
                 );",
                 @"CREATE TABLE IF NOT EXISTS tiles (
@@ -89,6 +91,8 @@ namespace Ploco.Data
             }
 
             EnsureColumn(connection, "locomotives", "pool", "TEXT NOT NULL DEFAULT 'Lineas'");
+            EnsureColumn(connection, "locomotives", "traction_percent", "INTEGER");
+            EnsureColumn(connection, "locomotives", "hs_reason", "TEXT");
             EnsureColumn(connection, "tracks", "type", "TEXT NOT NULL DEFAULT 'Main'");
             EnsureColumn(connection, "tracks", "config_json", "TEXT");
         }
@@ -120,20 +124,24 @@ namespace Ploco.Data
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, series_id, number, status, pool FROM locomotives;";
+                command.CommandText = "SELECT id, series_id, number, status, pool, traction_percent, hs_reason FROM locomotives;";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
                     var seriesId = reader.GetInt32(1);
                     var seriesName = series.TryGetValue(seriesId, out var serie) ? serie.Name : "Serie";
+                    var statusValue = reader.GetString(3);
+                    var status = ParseLocomotiveStatus(statusValue);
                     state.Locomotives.Add(new LocomotiveModel
                     {
                         Id = reader.GetInt32(0),
                         SeriesId = seriesId,
                         SeriesName = seriesName,
                         Number = reader.GetInt32(2),
-                        Status = Enum.Parse<LocomotiveStatus>(reader.GetString(3)),
-                        Pool = reader.IsDBNull(4) ? "Lineas" : reader.GetString(4)
+                        Status = status,
+                        Pool = reader.IsDBNull(4) ? "Lineas" : reader.GetString(4),
+                        TractionPercent = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                        HsReason = reader.IsDBNull(6) ? null : reader.GetString(6)
                     });
                 }
             }
@@ -309,11 +317,13 @@ namespace Ploco.Data
                     loco.SeriesId = newSeriesId;
                 }
                 using var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool) VALUES ($seriesId, $number, $status, $pool);";
+                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool, traction_percent, hs_reason) VALUES ($seriesId, $number, $status, $pool, $traction, $reason);";
                 command.Parameters.AddWithValue("$seriesId", loco.SeriesId);
                 command.Parameters.AddWithValue("$number", loco.Number);
                 command.Parameters.AddWithValue("$status", loco.Status.ToString());
                 command.Parameters.AddWithValue("$pool", loco.Pool);
+                command.Parameters.AddWithValue("$traction", (object?)loco.TractionPercent ?? DBNull.Value);
+                command.Parameters.AddWithValue("$reason", string.IsNullOrWhiteSpace(loco.HsReason) ? DBNull.Value : loco.HsReason);
                 command.ExecuteNonQuery();
                 loco.Id = GetLastInsertRowId(connection);
             }
@@ -406,6 +416,27 @@ namespace Ploco.Data
             command.Parameters.AddWithValue("$end", endNumber);
             command.ExecuteNonQuery();
             return GetLastInsertRowId(connection);
+        }
+
+        private static LocomotiveStatus ParseLocomotiveStatus(string value)
+        {
+            if (Enum.TryParse(value, out LocomotiveStatus status))
+            {
+                return status;
+            }
+
+            if (Enum.TryParse(value, out StatutLocomotive legacy))
+            {
+                return legacy switch
+                {
+                    StatutLocomotive.HS => LocomotiveStatus.HS,
+                    StatutLocomotive.DefautMineur => LocomotiveStatus.ManqueTraction,
+                    StatutLocomotive.AControler => LocomotiveStatus.ManqueTraction,
+                    _ => LocomotiveStatus.Ok
+                };
+            }
+
+            return LocomotiveStatus.Ok;
         }
 
         private static void ExecuteNonQuery(SqliteConnection connection, string sql)

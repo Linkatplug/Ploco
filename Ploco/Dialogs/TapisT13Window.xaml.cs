@@ -35,16 +35,20 @@ namespace Ploco.Dialogs
                         : $"{location} {track.TrainNumber}"
                     : location;
 
-                var locHs = loco.Status == LocomotiveStatus.HS ? trainInfo : string.Empty;
-                var report = loco.Status == LocomotiveStatus.HS ? trainInfo : string.Empty;
+                var isHs = loco.Status == LocomotiveStatus.HS;
+                var locHs = isHs ? trainInfo : string.Empty;
+                var report = isHs ? trainInfo : string.Empty;
 
                 _rows.Add(new T13Row
                 {
                     Locomotive = loco.Number.ToString(),
                     LocHs = locHs,
-                    Report = report
+                    Report = report,
+                    IsHs = isHs
                 });
             }
+
+            UpdateSummary();
         }
 
         private static bool IsT13(LocomotiveModel loco)
@@ -103,11 +107,41 @@ namespace Ploco.Dialogs
             Close();
         }
 
+        private void CopyLocomotive_Click(object sender, RoutedEventArgs e)
+        {
+            CopyColumn(row => row.Locomotive);
+        }
+
+        private void CopyLocHs_Click(object sender, RoutedEventArgs e)
+        {
+            CopyColumn(row => row.LocHs);
+        }
+
+        private void CopyReport_Click(object sender, RoutedEventArgs e)
+        {
+            CopyColumn(row => row.Report);
+        }
+
+        private void CopyColumn(Func<T13Row, string> selector)
+        {
+            var text = string.Join(Environment.NewLine, _rows.Select(selector));
+            Clipboard.SetText(text);
+        }
+
+        private void UpdateSummary()
+        {
+            var total = _rows.Count;
+            var hsCount = _rows.Count(r => r.IsHs);
+            var okCount = total - hsCount;
+            SummaryText.Text = $"Total : {total} · HS : {hsCount} · OK : {okCount}";
+        }
+
         private sealed class T13Row
         {
             public string Locomotive { get; set; } = string.Empty;
             public string LocHs { get; set; } = string.Empty;
             public string Report { get; set; } = string.Empty;
+            public bool IsHs { get; set; }
         }
     }
 }

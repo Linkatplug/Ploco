@@ -10,7 +10,21 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Synthèse des locomotives T13 (pool Sibelit)" FontWeight="Bold" Margin="0,0,0,8"/>
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Synthèse des locomotives T13 (pool Sibelit)" FontWeight="Bold"/>
+                <TextBlock x:Name="SummaryText" Foreground="SlateGray"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Copier colonne Locomotive" Margin="4,0" Click="CopyLocomotive_Click"/>
+                <Button Content="Copier colonne Loc HS" Margin="4,0" Click="CopyLocHs_Click"/>
+                <Button Content="Copier colonne Infos/Rapport" Margin="4,0" Click="CopyReport_Click"/>
+            </StackPanel>
+        </Grid>
 
         <DataGrid Grid.Row="1"
                   x:Name="T13Grid"
@@ -25,7 +39,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Locomotive" Binding="{Binding Locomotive}" Width="*"/>
                 <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*"/>
-                <DataGridTextColumn Header="Infos / Report" Binding="{Binding Report}" Width="*"/>
+                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 
