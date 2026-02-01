@@ -48,7 +48,7 @@ namespace Ploco
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            var result = MessageBox.Show("Are you sure you want to quit?", "Quitter", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var result = MessageBox.Show("Êtes-vous sûr de vouloir quitter ?", "Quitter", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes)
             {
                 e.Cancel = true;
@@ -789,9 +789,15 @@ namespace Ploco
             dialog.ShowDialog();
         }
 
+        private void MenuItem_TapisT13_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new TapisT13Window(_locomotives, _tiles) { Owner = this };
+            dialog.ShowDialog();
+        }
+
         private void MenuItem_ResetLocomotives_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show("Réinitialiser toutes les locomotives ?", "Reset locomotives", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var result = MessageBox.Show("Réinitialiser toutes les locomotives ?", "Réinitialisation des locomotives", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes)
             {
                 return;
@@ -816,7 +822,7 @@ namespace Ploco
 
         private void MenuItem_ResetTiles_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show("Supprimer toutes les tuiles ?", "Reset tuiles", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var result = MessageBox.Show("Supprimer toutes les tuiles ?", "Réinitialisation des tuiles", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes)
             {
                 return;

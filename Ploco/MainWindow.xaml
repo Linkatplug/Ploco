@@ -521,15 +521,19 @@
                 <MenuItem Header="Gestion des parcs" Click="MenuItem_PoolManagement_Click"/>
                 <MenuItem Header="Historique" Click="MenuItem_History_Click"/>
             </MenuItem>
-            <MenuItem Header="View">
+            <MenuItem Header="Tapis">
+                <MenuItem Header="T13" Click="MenuItem_TapisT13_Click"/>
+                <MenuItem Header="37000" IsEnabled="False"/>
+            </MenuItem>
+            <MenuItem Header="Vue">
                 <MenuItem Header="Charger un preset" x:Name="ViewPresetsMenu"/>
                 <MenuItem Header="Enregistrer le preset..." Click="SaveLayoutPreset_Click"/>
                 <MenuItem Header="Supprimer un preset" x:Name="ViewPresetsDeleteMenu"/>
             </MenuItem>
             <MenuItem Header="Option">
-                <MenuItem Header="Reset">
-                    <MenuItem Header="Reset locomotives" Click="MenuItem_ResetLocomotives_Click"/>
-                    <MenuItem Header="Reset tuiles" Click="MenuItem_ResetTiles_Click"/>
+                <MenuItem Header="Réinitialiser">
+                    <MenuItem Header="Réinitialiser locomotives" Click="MenuItem_ResetLocomotives_Click"/>
+                    <MenuItem Header="Réinitialiser tuiles" Click="MenuItem_ResetTiles_Click"/>
                 </MenuItem>
             </MenuItem>
         </Menu>
