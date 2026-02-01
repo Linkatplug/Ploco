@@ -9,6 +9,15 @@
     <Window.Resources>
         <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style x:Key="DropListBoxStyle" TargetType="ListBox">
+            <Setter Property="MinHeight" Value="48"/>
+            <Setter Property="Background" Value="#FFF5F5F5"/>
+            <Setter Property="BorderBrush" Value="#FFDDDDDD"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
         <Style x:Key="TileHeaderButton" TargetType="Button">
             <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Padding" Value="4,0"/>
@@ -25,7 +34,7 @@
         </ContextMenu>
         <DataTemplate x:Key="DepotTileTemplate">
             <Border Background="White" BorderBrush="#FFB0B0B0" BorderThickness="1"
-                    CornerRadius="6" Padding="8" Width="360"
+                    CornerRadius="6" Padding="8" Width="360" MinHeight="220"
                     AllowDrop="True"
                     Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
@@ -34,71 +43,115 @@
                 <StackPanel>
                     <DockPanel>
                         <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
-                                    Click="RenameTile_Click" Tag="{Binding}"/>
-                            <Button Style="{StaticResource TileHeaderButton}" Content="Supprimer"
-                                    Click="DeleteTile_Click" Tag="{Binding}"/>
-                        </StackPanel>
+                        <Menu DockPanel.Dock="Right">
+                            <MenuItem Header="...">
+                                <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                <Separator/>
+                                <MenuItem Header="Ajouter voie de sortie" Click="AddDepotOutput_Click" Tag="{Binding}"/>
+                            </MenuItem>
+                        </Menu>
                     </DockPanel>
-                    <TextBlock Text="Locomotives" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
-                    <ListBox DataContext="{Binding MainTrack}"
-                             ItemsSource="{Binding Locomotives}"
-                             AllowDrop="True"
-                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                             Drop="TrackLocomotives_Drop">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                        Padding="4" Margin="2" CornerRadius="4"
-                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <Button Content="Ajouter voie de sortie" Margin="0,6,0,4" Click="AddDepotOutput_Click" Tag="{Binding}"/>
-                    <ItemsControl ItemsSource="{Binding OutputTracks}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
-                                    <StackPanel>
-                                        <DockPanel>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" DockPanel.Dock="Left"/>
-                                            <TextBlock Text="Sortie" Foreground="SlateGray" DockPanel.Dock="Right" Margin="8,0,0,0"/>
-                                        </DockPanel>
-                                        <ListBox ItemsSource="{Binding Locomotives}"
-                                                 AllowDrop="True"
-                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                 Drop="TrackLocomotives_Drop">
-                                            <ListBox.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <WrapPanel Orientation="Horizontal"/>
-                                                </ItemsPanelTemplate>
-                                            </ListBox.ItemsPanel>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                            Padding="4" Margin="2" CornerRadius="4"
-                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="Locomotives" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
+                            <Grid>
+                                <ListBox x:Name="DepotMainList"
+                                         DataContext="{Binding MainTrack}"
+                                         ItemsSource="{Binding Locomotives}"
+                                         Style="{StaticResource DropListBoxStyle}"
+                                         AllowDrop="True"
+                                         PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                         PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                         Drop="TrackLocomotives_Drop">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                    Padding="4" Margin="2" CornerRadius="4"
+                                                    ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=DepotMainList, Path=HasItems}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding OutputTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+                                                    <TextBlock Text="Sortie" Foreground="SlateGray" DockPanel.Dock="Right" Margin="8,0,0,0"/>
+                                                </DockPanel>
+                                                <Grid>
+                                                    <ListBox x:Name="DepotOutputList"
+                                                             ItemsSource="{Binding Locomotives}"
+                                                             Style="{StaticResource DropListBoxStyle}"
+                                                             AllowDrop="True"
+                                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                             Drop="TrackLocomotives_Drop">
+                                                        <ListBox.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ListBox.ItemsPanel>
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                    <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ElementName=DepotOutputList, Path=HasItems}" Value="False">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
                 </StackPanel>
             </Border>
         </DataTemplate>
         <DataTemplate x:Key="GarageTileTemplate">
             <Border Background="White" BorderBrush="#FFB0B0B0" BorderThickness="1"
-                    CornerRadius="6" Padding="8" Width="360"
+                    CornerRadius="6" Padding="8" Width="360" MinHeight="220"
                     AllowDrop="True"
                     Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
@@ -107,71 +160,150 @@
                 <StackPanel>
                     <DockPanel>
                         <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
-                                    Click="RenameTile_Click" Tag="{Binding}"/>
-                            <Button Style="{StaticResource TileHeaderButton}" Content="Supprimer"
-                                    Click="DeleteTile_Click" Tag="{Binding}"/>
-                        </StackPanel>
+                        <Menu DockPanel.Dock="Right">
+                            <MenuItem Header="...">
+                                <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                <Separator/>
+                                <MenuItem Header="Ajouter zone" Click="AddGarageZone_Click" Tag="{Binding}"/>
+                            </MenuItem>
+                        </Menu>
                     </DockPanel>
-                    <TextBlock Text="Zone principale" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
-                    <ListBox DataContext="{Binding MainTrack}"
-                             ItemsSource="{Binding Locomotives}"
-                             AllowDrop="True"
-                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                             Drop="TrackLocomotives_Drop">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                        Padding="4" Margin="2" CornerRadius="4"
-                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <Button Content="Ajouter zone" Margin="0,6,0,4" Click="AddGarageZone_Click" Tag="{Binding}"/>
-                    <ItemsControl ItemsSource="{Binding ZoneTracks}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
-                                    <StackPanel>
-                                        <DockPanel>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                                <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
-                                                        Click="RenameZone_Click" Tag="{Binding}"/>
-                                                <Button Style="{StaticResource TileHeaderButton}" Content="Supprimer"
-                                                        Click="RemoveZone_Click" Tag="{Binding}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="Zone principale" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
+                            <Grid>
+                                <ListBox x:Name="GarageMainList"
+                                         DataContext="{Binding MainTrack}"
+                                         ItemsSource="{Binding Locomotives}"
+                                         Style="{StaticResource DropListBoxStyle}"
+                                         AllowDrop="True"
+                                         PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                         PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                         Drop="TrackLocomotives_Drop">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                    Padding="4" Margin="2" CornerRadius="4"
+                                                    ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=GarageMainList, Path=HasItems}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding ZoneTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding LeftLabel}" FontWeight="SemiBold" Foreground="SlateGray">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding LeftLabel}" Value="">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="6,0,0,0"/>
+                                                    <TextBlock Text="{Binding RightLabel}" FontWeight="SemiBold" DockPanel.Dock="Right" Foreground="SlateGray">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding RightLabel}" Value="">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
+                                                                Click="RenameZone_Click" Tag="{Binding}"/>
+                                                        <Button Style="{StaticResource TileHeaderButton}" Content="Supprimer"
+                                                                Click="RemoveZone_Click" Tag="{Binding}"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                                <Grid>
+                                                    <ListBox x:Name="GarageZoneList"
+                                                             ItemsSource="{Binding Locomotives}"
+                                                             Style="{StaticResource DropListBoxStyle}"
+                                                             AllowDrop="True"
+                                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                             Drop="TrackLocomotives_Drop">
+                                                        <ListBox.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ListBox.ItemsPanel>
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                    <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ElementName=GarageZoneList, Path=HasItems}" Value="False">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
                                             </StackPanel>
-                                        </DockPanel>
-                                        <ListBox ItemsSource="{Binding Locomotives}"
-                                                 AllowDrop="True"
-                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                 Drop="TrackLocomotives_Drop">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                            Padding="4" Margin="2" CornerRadius="4"
-                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
                 </StackPanel>
             </Border>
         </DataTemplate>
         <DataTemplate x:Key="LineTileTemplate">
             <Border Background="White" BorderBrush="#FFB0B0B0" BorderThickness="1"
-                    CornerRadius="6" Padding="8" Width="360"
+                    CornerRadius="6" Padding="8" Width="360" MinHeight="220"
                     AllowDrop="True"
                     Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
@@ -180,45 +312,70 @@
                 <StackPanel>
                     <DockPanel>
                         <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
-                                    Click="RenameTile_Click" Tag="{Binding}"/>
-                            <Button Style="{StaticResource TileHeaderButton}" Content="Supprimer"
-                                    Click="DeleteTile_Click" Tag="{Binding}"/>
-                        </StackPanel>
+                        <Menu DockPanel.Dock="Right">
+                            <MenuItem Header="...">
+                                <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                <Separator/>
+                                <MenuItem Header="Ajouter voie" Click="AddLineTrack_Click" Tag="{Binding}"/>
+                            </MenuItem>
+                        </Menu>
                     </DockPanel>
-                    <Button Content="Ajouter voie" Margin="0,6,0,4" Click="AddLineTrack_Click" Tag="{Binding}"/>
-                    <ItemsControl ItemsSource="{Binding LineTracks}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
-                                    <StackPanel>
-                                        <DockPanel>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <Button DockPanel.Dock="Right" Style="{StaticResource TileHeaderButton}"
-                                                    Content="Supprimer" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
-                                        </DockPanel>
-                                        <TextBlock Text="{Binding LineInfo}" FontSize="11" Foreground="SlateGray" Margin="0,2,0,4"/>
-                                        <ListBox ItemsSource="{Binding Locomotives}"
-                                                 AllowDrop="True"
-                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                 Drop="TrackLocomotives_Drop">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                            Padding="4" Margin="2" CornerRadius="4"
-                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding LineTracks}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource TileHeaderButton}"
+                                                        Content="Supprimer" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding LineInfo}" FontSize="11" Foreground="SlateGray" Margin="0,2,0,4"/>
+                                            <Grid>
+                                                <ListBox x:Name="LineTrackList"
+                                                         ItemsSource="{Binding Locomotives}"
+                                                         Style="{StaticResource DropListBoxStyle}"
+                                                         AllowDrop="True"
+                                                         PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                         PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                         Drop="TrackLocomotives_Drop">
+                                                    <ListBox.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ListBox.ItemsPanel>
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                    Padding="4" Margin="2" CornerRadius="4"
+                                                                    ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                                <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding ElementName=LineTrackList, Path=HasItems}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -238,7 +395,10 @@
                 <MenuItem Header="Historique" Click="MenuItem_History_Click"/>
             </MenuItem>
             <MenuItem Header="Option">
-                <MenuItem Header="Reset (debug)" Click="MenuItem_Reset_Click"/>
+                <MenuItem Header="Reset">
+                    <MenuItem Header="Reset locomotives" Click="MenuItem_ResetLocomotives_Click"/>
+                    <MenuItem Header="Reset tuiles" Click="MenuItem_ResetTiles_Click"/>
+                </MenuItem>
             </MenuItem>
         </Menu>
         <ToolBar DockPanel.Dock="Top">
@@ -252,9 +412,13 @@
             <Border Grid.Column="0" Margin="10" Background="#FFEFF4FF" CornerRadius="6">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Locomotives" FontWeight="Bold" Margin="8"/>
-                    <ListBox x:Name="LocomotiveList"
-                             PreviewMouseLeftButtonDown="LocomotiveList_PreviewMouseLeftButtonDown"
-                             PreviewMouseMove="LocomotiveList_PreviewMouseMove">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ListBox x:Name="LocomotiveList"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                 ScrollViewer.CanContentScroll="False"
+                                 PreviewMouseLeftButtonDown="LocomotiveList_PreviewMouseLeftButtonDown"
+                                 PreviewMouseMove="LocomotiveList_PreviewMouseMove">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel />
@@ -276,7 +440,8 @@
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
-                    </ListBox>
+                        </ListBox>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
             <Border Grid.Column="1" Margin="10" Background="#FFF7F7F7" CornerRadius="6">

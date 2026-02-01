@@ -134,6 +134,7 @@ namespace Ploco
                 Y = 20 + _tiles.Count * 30
             };
             EnsureDefaultTracks(tile);
+            ApplyGaragePresets(tile);
             _tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             PersistState();
@@ -604,9 +605,9 @@ namespace Ploco
             dialog.ShowDialog();
         }
 
-        private void MenuItem_Reset_Click(object sender, RoutedEventArgs e)
+        private void MenuItem_ResetLocomotives_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show("Réinitialiser toutes les locomotives ?", "Reset (debug)", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var result = MessageBox.Show("Réinitialiser toutes les locomotives ?", "Reset locomotives", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes)
             {
                 return;
@@ -624,7 +625,33 @@ namespace Ploco
                 loco.Pool = "Lineas";
             }
 
-            _repository.AddHistory("Reset", "Réinitialisation debug des locomotives.");
+            _repository.AddHistory("ResetLocomotives", "Réinitialisation des locomotives.");
+            UpdatePoolVisibility();
+            PersistState();
+        }
+
+        private void MenuItem_ResetTiles_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Supprimer toutes les tuiles ?", "Reset tuiles", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            foreach (var tile in _tiles.ToList())
+            {
+                foreach (var track in tile.Tracks)
+                {
+                    foreach (var loco in track.Locomotives.ToList())
+                    {
+                        track.Locomotives.Remove(loco);
+                        loco.AssignedTrackId = null;
+                    }
+                }
+            }
+
+            _tiles.Clear();
+            _repository.AddHistory("ResetTiles", "Suppression de toutes les tuiles.");
             UpdatePoolVisibility();
             PersistState();
         }
@@ -645,6 +672,44 @@ namespace Ploco
             {
                 tile.Tracks.Add(CreateDefaultTrack(tile));
             }
+            tile.RefreshTrackCollections();
+        }
+
+        private void ApplyGaragePresets(TileModel tile)
+        {
+            if (tile.Type != TileType.VoieGarage)
+            {
+                return;
+            }
+
+            if (string.Equals(tile.Name, "Zeebrugge", StringComparison.OrdinalIgnoreCase))
+            {
+                AddGarageZone(tile, "BRAM");
+                AddGarageZone(tile, "ZWAN");
+            }
+
+            if (string.Equals(tile.Name, "Anvers Nord", StringComparison.OrdinalIgnoreCase))
+            {
+                var blockTrack = new TrackModel
+                {
+                    Name = "917",
+                    Kind = TrackKind.Zone,
+                    LeftLabel = "Block",
+                    RightLabel = "BIF"
+                };
+                tile.Tracks.Add(blockTrack);
+                tile.RefreshTrackCollections();
+            }
+        }
+
+        private void AddGarageZone(TileModel tile, string name)
+        {
+            var track = new TrackModel
+            {
+                Name = name,
+                Kind = TrackKind.Zone
+            };
+            tile.Tracks.Add(track);
             tile.RefreshTrackCollections();
         }
     }

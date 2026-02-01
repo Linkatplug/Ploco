@@ -126,6 +126,8 @@ namespace Ploco.Models
         private string? _stopTime;
         private string? _issueReason;
         private bool _isLocomotiveHs;
+        private string? _leftLabel;
+        private string? _rightLabel;
 
         public int Id { get; set; }
         public int TileId { get; set; }
@@ -209,6 +211,32 @@ namespace Ploco.Models
                     _isLocomotiveHs = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(LineInfo));
+                }
+            }
+        }
+
+        public string? LeftLabel
+        {
+            get => _leftLabel;
+            set
+            {
+                if (_leftLabel != value)
+                {
+                    _leftLabel = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? RightLabel
+        {
+            get => _rightLabel;
+            set
+            {
+                if (_rightLabel != value)
+                {
+                    _rightLabel = value;
+                    OnPropertyChanged();
                 }
             }
         }

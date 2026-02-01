@@ -194,6 +194,8 @@ namespace Ploco.Data
                             track.StopTime = config.StopTime;
                             track.IssueReason = config.IssueReason;
                             track.IsLocomotiveHs = config.IsLocomotiveHs;
+                            track.LeftLabel = config.LeftLabel;
+                            track.RightLabel = config.RightLabel;
                         }
                     }
                     if (tiles.TryGetValue(track.TileId, out var tile))
@@ -344,9 +346,14 @@ namespace Ploco.Data
                         IsOnTrain = track.IsOnTrain,
                         StopTime = track.StopTime,
                         IssueReason = track.IssueReason,
-                        IsLocomotiveHs = track.IsLocomotiveHs
+                        IsLocomotiveHs = track.IsLocomotiveHs,
+                        LeftLabel = track.LeftLabel,
+                        RightLabel = track.RightLabel
                     });
-                    trackCommand.Parameters.AddWithValue("$config", track.Kind == TrackKind.Line ? trackConfigJson : DBNull.Value);
+                    var configValue = track.Kind == TrackKind.Line || !string.IsNullOrWhiteSpace(track.LeftLabel) || !string.IsNullOrWhiteSpace(track.RightLabel)
+                        ? trackConfigJson
+                        : DBNull.Value;
+                    trackCommand.Parameters.AddWithValue("$config", configValue);
                     trackCommand.ExecuteNonQuery();
                     track.Id = GetLastInsertRowId(connection);
 
@@ -533,6 +540,8 @@ namespace Ploco.Data
             public string? StopTime { get; set; }
             public string? IssueReason { get; set; }
             public bool IsLocomotiveHs { get; set; }
+            public string? LeftLabel { get; set; }
+            public string? RightLabel { get; set; }
         }
     }
 }
