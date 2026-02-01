@@ -130,6 +130,7 @@ namespace Ploco.Models
         private string? _rightLabel;
         private bool _isLeftBlocked;
         private bool _isRightBlocked;
+        private string? _trainNumber;
 
         public int Id { get; set; }
         public int TileId { get; set; }
@@ -269,6 +270,20 @@ namespace Ploco.Models
             }
         }
 
+        public string? TrainNumber
+        {
+            get => _trainNumber;
+            set
+            {
+                if (_trainNumber != value)
+                {
+                    _trainNumber = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LineInfo));
+                }
+            }
+        }
+
         public string LineInfo
         {
             get
@@ -281,7 +296,8 @@ namespace Ploco.Models
                 var status = IsLocomotiveHs ? "HS" : "OK";
                 var reason = string.IsNullOrWhiteSpace(IssueReason) ? "Raison non précisée" : IssueReason;
                 var time = string.IsNullOrWhiteSpace(StopTime) ? "Heure inconnue" : StopTime;
-                return $"Train arrêté à {time} · {reason} · Loco {status}";
+                var train = string.IsNullOrWhiteSpace(TrainNumber) ? "Train non précisé" : $"Train {TrainNumber}";
+                return $"{train} · Arrêt {time} · {reason} · Loco {status}";
             }
         }
 
