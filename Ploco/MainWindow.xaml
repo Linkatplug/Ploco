@@ -63,30 +63,32 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
-                                    <DockPanel>
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" DockPanel.Dock="Left"/>
-                                        <TextBlock Text="Sortie" Foreground="SlateGray" DockPanel.Dock="Right" Margin="8,0,0,0"/>
-                                    </DockPanel>
-                                    <ListBox ItemsSource="{Binding Locomotives}"
-                                             AllowDrop="True"
-                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                             Drop="TrackLocomotives_Drop">
-                                        <ListBox.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel Orientation="Horizontal"/>
-                                            </ItemsPanelTemplate>
-                                        </ListBox.ItemsPanel>
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                        Padding="4" Margin="2" CornerRadius="4"
-                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+                                            <TextBlock Text="Sortie" Foreground="SlateGray" DockPanel.Dock="Right" Margin="8,0,0,0"/>
+                                        </DockPanel>
+                                        <ListBox ItemsSource="{Binding Locomotives}"
+                                                 AllowDrop="True"
+                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                 Drop="TrackLocomotives_Drop">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
