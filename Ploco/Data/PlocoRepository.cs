@@ -350,7 +350,7 @@ namespace Ploco.Data
                         LeftLabel = track.LeftLabel,
                         RightLabel = track.RightLabel
                     });
-                    var configValue = track.Kind == TrackKind.Line || !string.IsNullOrWhiteSpace(track.LeftLabel) || !string.IsNullOrWhiteSpace(track.RightLabel)
+                    object configValue = track.Kind == TrackKind.Line || !string.IsNullOrWhiteSpace(track.LeftLabel) || !string.IsNullOrWhiteSpace(track.RightLabel)
                         ? trackConfigJson
                         : DBNull.Value;
                     trackCommand.Parameters.AddWithValue("$config", configValue);
