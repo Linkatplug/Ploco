@@ -343,7 +343,7 @@ namespace Ploco.Data
                         IssueReason = track.IssueReason,
                         IsLocomotiveHs = track.IsLocomotiveHs
                     });
-                    trackCommand.Parameters.AddWithValue("$config", track.Kind == TrackKind.Line ? trackConfigJson : null);
+                    trackCommand.Parameters.AddWithValue("$config", track.Kind == TrackKind.Line ? trackConfigJson : DBNull.Value);
                     trackCommand.ExecuteNonQuery();
                     track.Id = GetLastInsertRowId(connection);
 
