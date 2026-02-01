@@ -13,18 +13,13 @@ namespace Ploco
         private readonly CollectionViewSource _lineasSource;
         private readonly CollectionViewSource _sibelitSource;
 
-        public string ActivePool { get; private set; }
-        public bool HideNonActivePool { get; private set; }
-
-        public PoolTransferWindow(ObservableCollection<LocomotiveModel> locomotives, string activePool, bool hideNonActivePool)
+        public PoolTransferWindow(ObservableCollection<LocomotiveModel> locomotives)
         {
             InitializeComponent();
             Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
             WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
 
             _locomotives = locomotives;
-            ActivePool = activePool;
-            HideNonActivePool = hideNonActivePool;
 
             _lineasSource = new CollectionViewSource { Source = _locomotives };
             _lineasSource.SortDescriptions.Add(new SortDescription(nameof(LocomotiveModel.Number), ListSortDirection.Ascending));
@@ -48,9 +43,6 @@ namespace Ploco
 
             ListBoxLineas.ItemsSource = _lineasSource.View;
             ListBoxSibelit.ItemsSource = _sibelitSource.View;
-
-            ActivePoolCombo.SelectedIndex = string.Equals(ActivePool, "Sibelit") ? 1 : 0;
-            HideNonActiveCheckBox.IsChecked = HideNonActivePool;
         }
 
         private void BtnTransferToLineas_Click(object sender, RoutedEventArgs e)
@@ -86,17 +78,5 @@ namespace Ploco
             _sibelitSource.View.Refresh();
         }
 
-        private void ActivePoolCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            if (ActivePoolCombo.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Content is string poolName)
-            {
-                ActivePool = poolName;
-            }
-        }
-
-        private void HideNonActiveCheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            HideNonActivePool = HideNonActiveCheckBox.IsChecked == true;
-        }
     }
 }

@@ -9,8 +9,6 @@ namespace Ploco.Data
 {
     public class PlocoRepository
     {
-        private const string ActivePoolSettingKey = "ActivePool";
-        private const string HideNonActivePoolSettingKey = "HideNonActivePool";
         private readonly string _databasePath;
         private readonly string _connectionString;
 
@@ -54,6 +52,8 @@ namespace Ploco.Data
                     tile_id INTEGER NOT NULL,
                     name TEXT NOT NULL,
                     position INTEGER NOT NULL,
+                    type TEXT NOT NULL DEFAULT 'Main',
+                    config_json TEXT,
                     FOREIGN KEY(tile_id) REFERENCES tiles(id)
                 );",
                 @"CREATE TABLE IF NOT EXISTS track_locomotives (
@@ -70,9 +70,11 @@ namespace Ploco.Data
                     action TEXT NOT NULL,
                     details TEXT NOT NULL
                 );",
-                @"CREATE TABLE IF NOT EXISTS app_settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
+                @"CREATE TABLE IF NOT EXISTS places (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    UNIQUE(type, name)
                 );"
             };
 
@@ -84,6 +86,8 @@ namespace Ploco.Data
             }
 
             EnsureColumn(connection, "locomotives", "pool", "TEXT NOT NULL DEFAULT 'Lineas'");
+            EnsureColumn(connection, "tracks", "type", "TEXT NOT NULL DEFAULT 'Main'");
+            EnsureColumn(connection, "tracks", "config_json", "TEXT");
         }
 
         public AppState LoadState()
@@ -165,7 +169,7 @@ namespace Ploco.Data
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, tile_id, name, position FROM tracks ORDER BY position;";
+                command.CommandText = "SELECT id, tile_id, name, position, type, config_json FROM tracks ORDER BY position;";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
@@ -174,8 +178,21 @@ namespace Ploco.Data
                         Id = reader.GetInt32(0),
                         TileId = reader.GetInt32(1),
                         Name = reader.GetString(2),
-                        Position = reader.GetInt32(3)
+                        Position = reader.GetInt32(3),
+                        Kind = Enum.TryParse(reader.GetString(4), out TrackKind kind) ? kind : TrackKind.Main
                     };
+                    var configJson = reader.IsDBNull(5) ? null : reader.GetString(5);
+                    if (!string.IsNullOrWhiteSpace(configJson))
+                    {
+                        var config = JsonSerializer.Deserialize<TrackConfig>(configJson);
+                        if (config != null)
+                        {
+                            track.IsOnTrain = config.IsOnTrain;
+                            track.StopTime = config.StopTime;
+                            track.IssueReason = config.IssueReason;
+                            track.IsLocomotiveHs = config.IsLocomotiveHs;
+                        }
+                    }
                     if (tiles.TryGetValue(track.TileId, out var tile))
                     {
                         tile.Tracks.Add(track);
@@ -202,8 +219,10 @@ namespace Ploco.Data
                 }
             }
 
-            state.ActivePoolName = GetSetting(connection, ActivePoolSettingKey) ?? "Lineas";
-            state.HideNonActivePool = string.Equals(GetSetting(connection, HideNonActivePoolSettingKey), "true", StringComparison.OrdinalIgnoreCase);
+            foreach (var tile in state.Tiles)
+            {
+                tile.RefreshTrackCollections();
+            }
             return state;
         }
 
@@ -312,10 +331,19 @@ namespace Ploco.Data
                 foreach (var track in tile.Tracks)
                 {
                     using var trackCommand = connection.CreateCommand();
-                    trackCommand.CommandText = "INSERT INTO tracks (tile_id, name, position) VALUES ($tileId, $name, $position);";
+                    trackCommand.CommandText = "INSERT INTO tracks (tile_id, name, position, type, config_json) VALUES ($tileId, $name, $position, $type, $config);";
                     trackCommand.Parameters.AddWithValue("$tileId", tile.Id);
                     trackCommand.Parameters.AddWithValue("$name", track.Name);
                     trackCommand.Parameters.AddWithValue("$position", trackPosition++);
+                    trackCommand.Parameters.AddWithValue("$type", track.Kind.ToString());
+                    var trackConfigJson = JsonSerializer.Serialize(new TrackConfig
+                    {
+                        IsOnTrain = track.IsOnTrain,
+                        StopTime = track.StopTime,
+                        IssueReason = track.IssueReason,
+                        IsLocomotiveHs = track.IsLocomotiveHs
+                    });
+                    trackCommand.Parameters.AddWithValue("$config", track.Kind == TrackKind.Line ? trackConfigJson : null);
                     trackCommand.ExecuteNonQuery();
                     track.Id = GetLastInsertRowId(connection);
 
@@ -332,8 +360,7 @@ namespace Ploco.Data
                 }
             }
 
-            UpsertSetting(connection, ActivePoolSettingKey, state.ActivePoolName);
-            UpsertSetting(connection, HideNonActivePoolSettingKey, state.HideNonActivePool ? "true" : "false");
+            SavePlaces(connection, state.Tiles);
             transaction.Commit();
         }
 
@@ -433,28 +460,37 @@ namespace Ploco.Data
             alterCommand.ExecuteNonQuery();
         }
 
-        private static string? GetSetting(SqliteConnection connection, string key)
+        private static void SavePlaces(SqliteConnection connection, IEnumerable<TileModel> tiles)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT value FROM app_settings WHERE key = $key;";
-            command.Parameters.AddWithValue("$key", key);
-            return command.ExecuteScalar() as string;
-        }
+            command.CommandText = "INSERT OR IGNORE INTO places (type, name) VALUES ($type, $name);";
+            var typeParameter = command.CreateParameter();
+            typeParameter.ParameterName = "$type";
+            command.Parameters.Add(typeParameter);
+            var nameParameter = command.CreateParameter();
+            nameParameter.ParameterName = "$name";
+            command.Parameters.Add(nameParameter);
 
-        private static void UpsertSetting(SqliteConnection connection, string key, string value)
-        {
-            using var command = connection.CreateCommand();
-            command.CommandText = "INSERT INTO app_settings (key, value) VALUES ($key, $value) " +
-                                  "ON CONFLICT(key) DO UPDATE SET value = excluded.value;";
-            command.Parameters.AddWithValue("$key", key);
-            command.Parameters.AddWithValue("$value", value);
-            command.ExecuteNonQuery();
+            foreach (var tile in tiles)
+            {
+                typeParameter.Value = tile.Type.ToString();
+                nameParameter.Value = tile.Name;
+                command.ExecuteNonQuery();
+            }
         }
 
         private class TileConfig
         {
             public string? LocationPreset { get; set; }
             public int? GarageTrackNumber { get; set; }
+        }
+
+        private class TrackConfig
+        {
+            public bool IsOnTrain { get; set; }
+            public string? StopTime { get; set; }
+            public string? IssueReason { get; set; }
+            public bool IsLocomotiveHs { get; set; }
         }
     }
 }

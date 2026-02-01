@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Ploco.Models
@@ -18,6 +19,14 @@ namespace Ploco.Models
         Depot,
         ArretLigne,
         VoieGarage
+    }
+
+    public enum TrackKind
+    {
+        Main,
+        Output,
+        Zone,
+        Line
     }
 
     public class RollingStockSeries
@@ -111,11 +120,29 @@ namespace Ploco.Models
 
     public class TrackModel : INotifyPropertyChanged
     {
+        private TrackKind _kind;
         private string _name = string.Empty;
+        private bool _isOnTrain;
+        private string? _stopTime;
+        private string? _issueReason;
+        private bool _isLocomotiveHs;
 
         public int Id { get; set; }
         public int TileId { get; set; }
         public int Position { get; set; }
+
+        public TrackKind Kind
+        {
+            get => _kind;
+            set
+            {
+                if (_kind != value)
+                {
+                    _kind = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public string Name
         {
@@ -127,6 +154,78 @@ namespace Ploco.Models
                     _name = value;
                     OnPropertyChanged();
                 }
+            }
+        }
+
+        public bool IsOnTrain
+        {
+            get => _isOnTrain;
+            set
+            {
+                if (_isOnTrain != value)
+                {
+                    _isOnTrain = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LineInfo));
+                }
+            }
+        }
+
+        public string? StopTime
+        {
+            get => _stopTime;
+            set
+            {
+                if (_stopTime != value)
+                {
+                    _stopTime = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LineInfo));
+                }
+            }
+        }
+
+        public string? IssueReason
+        {
+            get => _issueReason;
+            set
+            {
+                if (_issueReason != value)
+                {
+                    _issueReason = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LineInfo));
+                }
+            }
+        }
+
+        public bool IsLocomotiveHs
+        {
+            get => _isLocomotiveHs;
+            set
+            {
+                if (_isLocomotiveHs != value)
+                {
+                    _isLocomotiveHs = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LineInfo));
+                }
+            }
+        }
+
+        public string LineInfo
+        {
+            get
+            {
+                if (!IsOnTrain)
+                {
+                    return "Locomotive isolée";
+                }
+
+                var status = IsLocomotiveHs ? "HS" : "OK";
+                var reason = string.IsNullOrWhiteSpace(IssueReason) ? "Raison non précisée" : IssueReason;
+                var time = string.IsNullOrWhiteSpace(StopTime) ? "Heure inconnue" : StopTime;
+                return $"Train arrêté à {time} · {reason} · Loco {status}";
             }
         }
 
@@ -145,9 +244,26 @@ namespace Ploco.Models
         private string _name = string.Empty;
         private double _x;
         private double _y;
+        private readonly ObservableCollection<TrackModel> _outputTracks = new();
+        private readonly ObservableCollection<TrackModel> _zoneTracks = new();
+        private readonly ObservableCollection<TrackModel> _lineTracks = new();
 
         public int Id { get; set; }
-        public TileType Type { get; set; }
+        private TileType _type;
+
+        public TileType Type
+        {
+            get => _type;
+            set
+            {
+                if (_type != value)
+                {
+                    _type = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayTitle));
+                }
+            }
+        }
 
         public string Name
         {
@@ -158,6 +274,7 @@ namespace Ploco.Models
                 {
                     _name = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayTitle));
                 }
             }
         }
@@ -192,6 +309,48 @@ namespace Ploco.Models
         }
 
         public ObservableCollection<TrackModel> Tracks { get; } = new ObservableCollection<TrackModel>();
+        public ObservableCollection<TrackModel> OutputTracks => _outputTracks;
+        public ObservableCollection<TrackModel> ZoneTracks => _zoneTracks;
+        public ObservableCollection<TrackModel> LineTracks => _lineTracks;
+
+        public string DisplayTitle
+        {
+            get
+            {
+                return Type switch
+                {
+                    TileType.Depot => $"Dépôt {Name}",
+                    _ => Name
+                };
+            }
+        }
+
+        public TrackModel? MainTrack => Tracks.FirstOrDefault(track => track.Kind == TrackKind.Main);
+
+        public void RefreshTrackCollections()
+        {
+            _outputTracks.Clear();
+            _zoneTracks.Clear();
+            _lineTracks.Clear();
+
+            foreach (var track in Tracks)
+            {
+                switch (track.Kind)
+                {
+                    case TrackKind.Output:
+                        _outputTracks.Add(track);
+                        break;
+                    case TrackKind.Zone:
+                        _zoneTracks.Add(track);
+                        break;
+                    case TrackKind.Line:
+                        _lineTracks.Add(track);
+                        break;
+                }
+            }
+
+            OnPropertyChanged(nameof(MainTrack));
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

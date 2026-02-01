@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Data;
 using Microsoft.Win32;
 using Ploco.Data;
 using Ploco.Dialogs;
@@ -22,9 +21,6 @@ namespace Ploco
         private Point _dragStartPoint;
         private TileModel? _draggedTile;
         private Point _tileDragStart;
-        private string _activePoolName = "Lineas";
-        private bool _hideNonActivePool;
-
         public MainWindow()
         {
             InitializeComponent();
@@ -53,8 +49,6 @@ namespace Ploco
             _tiles.Clear();
 
             var state = _repository.LoadState();
-            _activePoolName = state.ActivePoolName;
-            _hideNonActivePool = state.HideNonActivePool;
             foreach (var loco in state.Locomotives.OrderBy(l => l.SeriesName).ThenBy(l => l.Number))
             {
                 _locomotives.Add(loco);
@@ -62,10 +56,7 @@ namespace Ploco
 
             foreach (var tile in state.Tiles)
             {
-                if (!tile.Tracks.Any())
-                {
-                    tile.Tracks.Add(CreateDefaultTrack(tile));
-                }
+                EnsureDefaultTracks(tile);
                 _tiles.Add(tile);
             }
 
@@ -78,9 +69,7 @@ namespace Ploco
             {
                 Series = BuildSeriesState(),
                 Locomotives = _locomotives.ToList(),
-                Tiles = _tiles.ToList(),
-                ActivePoolName = _activePoolName,
-                HideNonActivePool = _hideNonActivePool
+                Tiles = _tiles.ToList()
             };
             _repository.SaveState(state);
         }
@@ -119,41 +108,33 @@ namespace Ploco
         {
             return tile.Type switch
             {
-                TileType.Depot => new TrackModel { Name = "Sortie 1" },
-                TileType.VoieGarage => new TrackModel { Name = "Voie 1" },
-                _ => new TrackModel { Name = "Locomotives" }
+                TileType.Depot => new TrackModel { Name = "Locomotives", Kind = TrackKind.Main },
+                TileType.VoieGarage => new TrackModel { Name = "Vrac", Kind = TrackKind.Main },
+                _ => new TrackModel { Name = "Locomotives", Kind = TrackKind.Main }
             };
         }
 
-        private void AddDepot_Click(object sender, RoutedEventArgs e)
+        private void AddPlace_Click(object sender, RoutedEventArgs e)
         {
-            AddTile(TileType.Depot, "Dépôt");
+            var dialog = new PlaceDialog { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                AddTile(dialog.SelectedType, dialog.SelectedName);
+            }
         }
 
-        private void AddLineStop_Click(object sender, RoutedEventArgs e)
-        {
-            AddTile(TileType.ArretLigne, "Arrêt en ligne");
-        }
-
-        private void AddGarage_Click(object sender, RoutedEventArgs e)
-        {
-            AddTile(TileType.VoieGarage, "Voie de garage");
-        }
-
-        private void AddTile(TileType type, string defaultName)
+        private void AddTile(TileType type, string name)
         {
             var tile = new TileModel
             {
-                Name = defaultName,
+                Name = name,
                 Type = type,
                 X = 20 + _tiles.Count * 30,
-                Y = 20 + _tiles.Count * 30,
-                LocationPreset = type == TileType.VoieGarage ? "Garage A" : null,
-                GarageTrackNumber = type == TileType.VoieGarage ? 1 : null
+                Y = 20 + _tiles.Count * 30
             };
-            tile.Tracks.Add(CreateDefaultTrack(tile));
+            EnsureDefaultTracks(tile);
             _tiles.Add(tile);
-            _repository.AddHistory("TileCreated", $"Création de la tuile {tile.Name} ({tile.Type}).");
+            _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             PersistState();
         }
 
@@ -161,15 +142,17 @@ namespace Ploco
         {
             if (sender is Button button && button.Tag is TileModel tile)
             {
-                foreach (var track in tile.Tracks)
+                foreach (var track in tile.Tracks.ToList())
                 {
                     foreach (var loco in track.Locomotives.ToList())
                     {
+                        track.Locomotives.Remove(loco);
                         loco.AssignedTrackId = null;
                     }
                 }
                 _tiles.Remove(tile);
-                _repository.AddHistory("TileDeleted", $"Suppression de la tuile {tile.Name}.");
+                _repository.AddHistory("TileDeleted", $"Suppression du lieu {tile.DisplayTitle}.");
+                UpdatePoolVisibility();
                 PersistState();
             }
         }
@@ -188,53 +171,123 @@ namespace Ploco
             }
         }
 
-        private void ConfigureTile_Click(object sender, RoutedEventArgs e)
+        private void AddDepotOutput_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button button && button.Tag is TileModel tile)
             {
-                var dialog = new TileConfigDialog(tile) { Owner = this };
+                if (tile.OutputTracks.Any())
+                {
+                    MessageBox.Show("Une seule voie de sortie est autorisée.", "Action impossible", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var track = new TrackModel
+                {
+                    Name = "Voie de sortie",
+                    Kind = TrackKind.Output
+                };
+                tile.Tracks.Add(track);
+                tile.RefreshTrackCollections();
+                _repository.AddHistory("TrackAdded", $"Ajout de la voie de sortie dans {tile.DisplayTitle}.");
+                PersistState();
+            }
+        }
+
+        private void AddGarageZone_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is TileModel tile)
+            {
+                var dialog = new SimpleTextDialog("Ajouter une zone", "Nom de zone :", "Zone 1") { Owner = this };
                 if (dialog.ShowDialog() == true)
                 {
-                    _repository.AddHistory("TileConfigured", $"Configuration mise à jour pour {tile.Name}.");
+                    var track = new TrackModel
+                    {
+                        Name = dialog.ResponseText,
+                        Kind = TrackKind.Zone
+                    };
+                    tile.Tracks.Add(track);
+                    tile.RefreshTrackCollections();
+                    _repository.AddHistory("ZoneAdded", $"Ajout de la zone {track.Name} dans {tile.DisplayTitle}.");
                     PersistState();
                 }
             }
         }
 
-        private void AddTrack_Click(object sender, RoutedEventArgs e)
+        private void RenameZone_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TileModel tile)
+            if (sender is Button button && button.Tag is TrackModel track)
             {
-                var trackName = tile.Type switch
+                var dialog = new SimpleTextDialog("Renommer la zone", "Nom de zone :", track.Name) { Owner = this };
+                if (dialog.ShowDialog() == true)
                 {
-                    TileType.Depot => $"Sortie {tile.Tracks.Count + 1}",
-                    TileType.VoieGarage => $"Voie {tile.Tracks.Count + 1}",
-                    _ => $"Zone {tile.Tracks.Count + 1}"
-                };
-                tile.Tracks.Add(new TrackModel { Name = trackName });
-                _repository.AddHistory("TrackAdded", $"Ajout de {trackName} dans {tile.Name}.");
-                PersistState();
+                    track.Name = dialog.ResponseText;
+                    _repository.AddHistory("ZoneRenamed", $"Zone renommée en {track.Name}.");
+                    PersistState();
+                }
             }
         }
 
-        private void RemoveTrack_Click(object sender, RoutedEventArgs e)
+        private void RemoveZone_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button button && button.Tag is TrackModel track)
             {
                 var tile = _tiles.FirstOrDefault(t => t.Tracks.Contains(track));
-                if (tile == null || tile.Tracks.Count <= 1)
+                if (tile == null)
                 {
-                    MessageBox.Show("Une tuile doit conserver au moins une voie.", "Action impossible", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 foreach (var loco in track.Locomotives.ToList())
                 {
+                    track.Locomotives.Remove(loco);
                     loco.AssignedTrackId = null;
                 }
 
                 tile.Tracks.Remove(track);
-                _repository.AddHistory("TrackRemoved", $"Suppression de {track.Name} dans {tile.Name}.");
+                tile.RefreshTrackCollections();
+                _repository.AddHistory("ZoneRemoved", $"Suppression de la zone {track.Name} dans {tile.DisplayTitle}.");
+                UpdatePoolVisibility();
+                PersistState();
+            }
+        }
+
+        private void AddLineTrack_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is TileModel tile)
+            {
+                var dialog = new LineTrackDialog { Owner = this };
+                if (dialog.ShowDialog() == true)
+                {
+                    var track = dialog.BuildTrack();
+                    track.Kind = TrackKind.Line;
+                    tile.Tracks.Add(track);
+                    tile.RefreshTrackCollections();
+                    _repository.AddHistory("LineTrackAdded", $"Ajout de la voie {track.Name} dans {tile.DisplayTitle}.");
+                    PersistState();
+                }
+            }
+        }
+
+        private void RemoveLineTrack_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is TrackModel track)
+            {
+                var tile = _tiles.FirstOrDefault(t => t.Tracks.Contains(track));
+                if (tile == null)
+                {
+                    return;
+                }
+
+                foreach (var loco in track.Locomotives.ToList())
+                {
+                    track.Locomotives.Remove(loco);
+                    loco.AssignedTrackId = null;
+                }
+
+                tile.Tracks.Remove(track);
+                tile.RefreshTrackCollections();
+                _repository.AddHistory("LineTrackRemoved", $"Suppression de la voie {track.Name} dans {tile.DisplayTitle}.");
+                UpdatePoolVisibility();
                 PersistState();
             }
         }
@@ -318,11 +371,15 @@ namespace Ploco
             if (e.Data.GetDataPresent(typeof(LocomotiveModel)))
             {
                 var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
-                var targetTrack = tile.Tracks.FirstOrDefault();
+                var targetTrack = GetDefaultDropTrack(tile);
                 if (targetTrack != null)
                 {
                     MoveLocomotiveToTrack(loco, targetTrack, targetTrack.Locomotives.Count);
                     PersistState();
+                }
+                else
+                {
+                    MessageBox.Show("Aucune voie disponible pour déposer une locomotive.", "Action impossible", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
@@ -354,6 +411,7 @@ namespace Ploco
 
             loco.AssignedTrackId = targetTrack.Id;
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
+            UpdatePoolVisibility();
         }
 
         private static int GetInsertIndex(ListBox listBox, Point dropPosition)
@@ -411,6 +469,7 @@ namespace Ploco
                         track.Locomotives.Remove(loco);
                         loco.AssignedTrackId = null;
                         _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
+                        UpdatePoolVisibility();
                         PersistState();
                     }
                 }
@@ -477,11 +536,11 @@ namespace Ploco
         {
             foreach (var loco in _locomotives)
             {
-                loco.IsVisibleInActivePool = !_hideNonActivePool ||
-                                             string.Equals(loco.Pool, _activePoolName, StringComparison.OrdinalIgnoreCase);
+                loco.IsVisibleInActivePool = string.Equals(loco.Pool, "Sibelit", StringComparison.OrdinalIgnoreCase)
+                                             && loco.AssignedTrackId == null;
             }
 
-            CollectionViewSource.GetDefaultView(_locomotives).Refresh();
+            LocomotiveList.Items.Refresh();
         }
 
         private void SwapLocomotivePool(LocomotiveModel loco)
@@ -523,13 +582,11 @@ namespace Ploco
 
         private void MenuItem_PoolManagement_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new PoolTransferWindow(_locomotives, _activePoolName, _hideNonActivePool)
+            var dialog = new PoolTransferWindow(_locomotives)
             {
                 Owner = this
             };
             dialog.ShowDialog();
-            _activePoolName = dialog.ActivePool;
-            _hideNonActivePool = dialog.HideNonActivePool;
             UpdatePoolVisibility();
             PersistState();
         }
@@ -564,6 +621,25 @@ namespace Ploco
             _repository.AddHistory("Reset", "Réinitialisation debug des locomotives.");
             UpdatePoolVisibility();
             PersistState();
+        }
+
+        private TrackModel? GetDefaultDropTrack(TileModel tile)
+        {
+            if (tile.Type == TileType.ArretLigne)
+            {
+                return tile.LineTracks.FirstOrDefault();
+            }
+
+            return tile.MainTrack;
+        }
+
+        private void EnsureDefaultTracks(TileModel tile)
+        {
+            if (!tile.Tracks.Any() && tile.Type != TileType.ArretLigne)
+            {
+                tile.Tracks.Add(CreateDefaultTrack(tile));
+            }
+            tile.RefreshTrackCollections();
         }
     }
 }
