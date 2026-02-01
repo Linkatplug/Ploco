@@ -128,6 +128,8 @@ namespace Ploco.Models
         private bool _isLocomotiveHs;
         private string? _leftLabel;
         private string? _rightLabel;
+        private bool _isLeftBlocked;
+        private bool _isRightBlocked;
 
         public int Id { get; set; }
         public int TileId { get; set; }
@@ -236,6 +238,32 @@ namespace Ploco.Models
                 if (_rightLabel != value)
                 {
                     _rightLabel = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsLeftBlocked
+        {
+            get => _isLeftBlocked;
+            set
+            {
+                if (_isLeftBlocked != value)
+                {
+                    _isLeftBlocked = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsRightBlocked
+        {
+            get => _isRightBlocked;
+            set
+            {
+                if (_isRightBlocked != value)
+                {
+                    _isRightBlocked = value;
                     OnPropertyChanged();
                 }
             }

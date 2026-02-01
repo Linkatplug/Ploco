@@ -142,76 +142,88 @@ namespace Ploco
 
         private void DeleteTile_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TileModel tile)
+            var tile = GetTileFromSender(sender);
+            if (tile == null)
             {
-                foreach (var track in tile.Tracks.ToList())
-                {
-                    foreach (var loco in track.Locomotives.ToList())
-                    {
-                        track.Locomotives.Remove(loco);
-                        loco.AssignedTrackId = null;
-                    }
-                }
-                _tiles.Remove(tile);
-                _repository.AddHistory("TileDeleted", $"Suppression du lieu {tile.DisplayTitle}.");
-                UpdatePoolVisibility();
-                PersistState();
+                return;
             }
+
+            foreach (var track in tile.Tracks.ToList())
+            {
+                foreach (var loco in track.Locomotives.ToList())
+                {
+                    track.Locomotives.Remove(loco);
+                    loco.AssignedTrackId = null;
+                }
+            }
+            _tiles.Remove(tile);
+            _repository.AddHistory("TileDeleted", $"Suppression du lieu {tile.DisplayTitle}.");
+            UpdatePoolVisibility();
+            PersistState();
         }
 
         private void RenameTile_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TileModel tile)
+            var tile = GetTileFromSender(sender);
+            if (tile == null)
             {
-                var dialog = new SimpleTextDialog("Renommer la tuile", "Nom :", tile.Name) { Owner = this };
-                if (dialog.ShowDialog() == true)
-                {
-                    tile.Name = dialog.ResponseText;
-                    _repository.AddHistory("TileRenamed", $"Tuile renommée en {tile.Name}.");
-                    PersistState();
-                }
+                return;
+            }
+
+            var dialog = new SimpleTextDialog("Renommer la tuile", "Nom :", tile.Name) { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                tile.Name = dialog.ResponseText;
+                _repository.AddHistory("TileRenamed", $"Tuile renommée en {tile.Name}.");
+                PersistState();
             }
         }
 
         private void AddDepotOutput_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TileModel tile)
+            var tile = GetTileFromSender(sender);
+            if (tile == null)
             {
-                if (tile.OutputTracks.Any())
-                {
-                    MessageBox.Show("Une seule voie de sortie est autorisée.", "Action impossible", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                var track = new TrackModel
-                {
-                    Name = "Voie de sortie",
-                    Kind = TrackKind.Output
-                };
-                tile.Tracks.Add(track);
-                tile.RefreshTrackCollections();
-                _repository.AddHistory("TrackAdded", $"Ajout de la voie de sortie dans {tile.DisplayTitle}.");
-                PersistState();
+                return;
             }
+
+            if (tile.OutputTracks.Any())
+            {
+                MessageBox.Show("Une seule voie de sortie est autorisée.", "Action impossible", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var track = new TrackModel
+            {
+                Name = "Voie de sortie",
+                Kind = TrackKind.Output
+            };
+            tile.Tracks.Add(track);
+            tile.RefreshTrackCollections();
+            _repository.AddHistory("TrackAdded", $"Ajout de la voie de sortie dans {tile.DisplayTitle}.");
+            PersistState();
         }
 
         private void AddGarageZone_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TileModel tile)
+            var tile = GetTileFromSender(sender);
+            if (tile == null)
             {
-                var dialog = new SimpleTextDialog("Ajouter une zone", "Nom de zone :", "Zone 1") { Owner = this };
-                if (dialog.ShowDialog() == true)
+                return;
+            }
+
+            var dialog = new SimpleTextDialog("Ajouter une zone", "Nom de zone :", "Zone 1") { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                var track = new TrackModel
                 {
-                    var track = new TrackModel
-                    {
-                        Name = dialog.ResponseText,
-                        Kind = TrackKind.Zone
-                    };
-                    tile.Tracks.Add(track);
-                    tile.RefreshTrackCollections();
-                    _repository.AddHistory("ZoneAdded", $"Ajout de la zone {track.Name} dans {tile.DisplayTitle}.");
-                    PersistState();
-                }
+                    Name = dialog.ResponseText,
+                    Kind = TrackKind.Zone
+                };
+                tile.Tracks.Add(track);
+                tile.RefreshTrackCollections();
+                _repository.AddHistory("ZoneAdded", $"Ajout de la zone {track.Name} dans {tile.DisplayTitle}.");
+                PersistState();
             }
         }
 
@@ -255,18 +267,21 @@ namespace Ploco
 
         private void AddLineTrack_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TileModel tile)
+            var tile = GetTileFromSender(sender);
+            if (tile == null)
             {
-                var dialog = new LineTrackDialog { Owner = this };
-                if (dialog.ShowDialog() == true)
-                {
-                    var track = dialog.BuildTrack();
-                    track.Kind = TrackKind.Line;
-                    tile.Tracks.Add(track);
-                    tile.RefreshTrackCollections();
-                    _repository.AddHistory("LineTrackAdded", $"Ajout de la voie {track.Name} dans {tile.DisplayTitle}.");
-                    PersistState();
-                }
+                return;
+            }
+
+            var dialog = new LineTrackDialog { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                var track = dialog.BuildTrack();
+                track.Kind = TrackKind.Line;
+                tile.Tracks.Add(track);
+                tile.RefreshTrackCollections();
+                _repository.AddHistory("LineTrackAdded", $"Ajout de la voie {track.Name} dans {tile.DisplayTitle}.");
+                PersistState();
             }
         }
 
@@ -511,6 +526,7 @@ namespace Ploco
         {
             if (_draggedTile != null)
             {
+                ResolveTileOverlap(_draggedTile);
                 _repository.AddHistory("TileMoved", $"Tuile {_draggedTile.Name} déplacée.");
                 PersistState();
             }
@@ -684,17 +700,19 @@ namespace Ploco
 
             if (string.Equals(tile.Name, "Zeebrugge", StringComparison.OrdinalIgnoreCase))
             {
+                RemoveMainTrack(tile);
                 AddGarageZone(tile, "BRAM");
                 AddGarageZone(tile, "ZWAN");
             }
 
             if (string.Equals(tile.Name, "Anvers Nord", StringComparison.OrdinalIgnoreCase))
             {
+                RemoveMainTrack(tile);
                 var blockTrack = new TrackModel
                 {
                     Name = "917",
                     Kind = TrackKind.Zone,
-                    LeftLabel = "Block",
+                    LeftLabel = "BLOCK",
                     RightLabel = "BIF"
                 };
                 tile.Tracks.Add(blockTrack);
@@ -711,6 +729,70 @@ namespace Ploco
             };
             tile.Tracks.Add(track);
             tile.RefreshTrackCollections();
+        }
+
+        private static void RemoveMainTrack(TileModel tile)
+        {
+            var main = tile.MainTrack;
+            if (main != null)
+            {
+                tile.Tracks.Remove(main);
+                tile.RefreshTrackCollections();
+            }
+        }
+
+        private TileModel? GetTileFromSender(object sender)
+        {
+            if (sender is FrameworkElement element)
+            {
+                if (element.Tag is TileModel tileFromTag)
+                {
+                    return tileFromTag;
+                }
+
+                if (element.DataContext is TileModel tileFromContext)
+                {
+                    return tileFromContext;
+                }
+            }
+
+            return null;
+        }
+
+        private void ResolveTileOverlap(TileModel tile)
+        {
+            const double tileWidth = 360;
+            const double tileHeight = 220;
+            const double step = 20;
+
+            var hasOverlap = true;
+            while (hasOverlap)
+            {
+                hasOverlap = false;
+                foreach (var other in _tiles)
+                {
+                    if (ReferenceEquals(other, tile))
+                    {
+                        continue;
+                    }
+
+                    if (IsOverlapping(tile, other, tileWidth, tileHeight))
+                    {
+                        tile.X += step;
+                        tile.Y += step;
+                        hasOverlap = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static bool IsOverlapping(TileModel first, TileModel second, double width, double height)
+        {
+            return first.X < second.X + width
+                   && first.X + width > second.X
+                   && first.Y < second.Y + height
+                   && first.Y + height > second.Y;
         }
     }
 }

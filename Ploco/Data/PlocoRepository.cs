@@ -196,6 +196,8 @@ namespace Ploco.Data
                             track.IsLocomotiveHs = config.IsLocomotiveHs;
                             track.LeftLabel = config.LeftLabel;
                             track.RightLabel = config.RightLabel;
+                            track.IsLeftBlocked = config.IsLeftBlocked;
+                            track.IsRightBlocked = config.IsRightBlocked;
                         }
                     }
                     if (tiles.TryGetValue(track.TileId, out var tile))
@@ -348,9 +350,15 @@ namespace Ploco.Data
                         IssueReason = track.IssueReason,
                         IsLocomotiveHs = track.IsLocomotiveHs,
                         LeftLabel = track.LeftLabel,
-                        RightLabel = track.RightLabel
+                        RightLabel = track.RightLabel,
+                        IsLeftBlocked = track.IsLeftBlocked,
+                        IsRightBlocked = track.IsRightBlocked
                     });
-                    object configValue = track.Kind == TrackKind.Line || !string.IsNullOrWhiteSpace(track.LeftLabel) || !string.IsNullOrWhiteSpace(track.RightLabel)
+                    object configValue = track.Kind == TrackKind.Line
+                        || !string.IsNullOrWhiteSpace(track.LeftLabel)
+                        || !string.IsNullOrWhiteSpace(track.RightLabel)
+                        || track.IsLeftBlocked
+                        || track.IsRightBlocked
                         ? trackConfigJson
                         : DBNull.Value;
                     trackCommand.Parameters.AddWithValue("$config", configValue);
@@ -542,6 +550,8 @@ namespace Ploco.Data
             public bool IsLocomotiveHs { get; set; }
             public string? LeftLabel { get; set; }
             public string? RightLabel { get; set; }
+            public bool IsLeftBlocked { get; set; }
+            public bool IsRightBlocked { get; set; }
         }
     }
 }
