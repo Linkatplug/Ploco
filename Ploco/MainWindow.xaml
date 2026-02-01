@@ -5,14 +5,23 @@
         xmlns:helpers="clr-namespace:Ploco.Helpers"
         Title="Ploco - Nouvelle version" Height="800" Width="1200"
         Icon="pack://application:,,,/img/train_logo.ico"
+        Background="{DynamicResource AppBackgroundBrush}"
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
         <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFF2F2F2"/>
+        <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#FFEFF4FF"/>
+        <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FFF7F7F7"/>
+        <SolidColorBrush x:Key="TileBackgroundBrush" Color="White"/>
+        <SolidColorBrush x:Key="TileBorderBrush" Color="#FFB0B0B0"/>
+        <SolidColorBrush x:Key="TrackBorderBrush" Color="#FFE0E0E0"/>
+        <SolidColorBrush x:Key="ListBackgroundBrush" Color="#FFF5F5F5"/>
+        <SolidColorBrush x:Key="ListBorderBrush" Color="#FFDDDDDD"/>
         <Style x:Key="DropListBoxStyle" TargetType="ListBox">
             <Setter Property="MinHeight" Value="48"/>
-            <Setter Property="Background" Value="#FFF5F5F5"/>
-            <Setter Property="BorderBrush" Value="#FFDDDDDD"/>
+            <Setter Property="Background" Value="{DynamicResource ListBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ListBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="4"/>
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
@@ -73,7 +82,7 @@
             <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
         </ContextMenu>
         <DataTemplate x:Key="DepotTileTemplate">
-            <Border Background="White" BorderBrush="#FFB0B0B0" BorderThickness="1"
+            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="8" Width="360" MinHeight="220"
                     AllowDrop="True"
                     Drop="Tile_Drop"
@@ -126,7 +135,7 @@
                                                     <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
                                                                HorizontalAlignment="Left"/>
                                                     <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                               HorizontalAlignment="Right">
+                                                               HorizontalAlignment="Right" Margin="0,2,0,0">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="Visibility" Value="Visible"/>
@@ -160,7 +169,7 @@
                             <ItemsControl ItemsSource="{Binding OutputTracks}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
                                             <StackPanel>
                                                 <DockPanel>
                                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" DockPanel.Dock="Left"/>
@@ -192,7 +201,7 @@
                                                                         <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
                                                                                    HorizontalAlignment="Left"/>
                                                                         <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                                   HorizontalAlignment="Right">
+                                                                                   HorizontalAlignment="Right" Margin="0,2,0,0">
                                                                             <TextBlock.Style>
                                                                                 <Style TargetType="TextBlock">
                                                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -234,7 +243,7 @@
             </Border>
         </DataTemplate>
         <DataTemplate x:Key="GarageTileTemplate">
-            <Border Background="White" BorderBrush="#FFB0B0B0" BorderThickness="1"
+            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="8" Width="360" MinHeight="220"
                     AllowDrop="True"
                     Drop="Tile_Drop"
@@ -298,7 +307,7 @@
                                                         <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
                                                                    HorizontalAlignment="Left"/>
                                                         <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                   HorizontalAlignment="Right">
+                                                                   HorizontalAlignment="Right" Margin="0,2,0,0">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
                                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -333,7 +342,7 @@
                             <ItemsControl ItemsSource="{Binding ZoneTracks}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
                                             <StackPanel>
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
@@ -455,7 +464,7 @@
                                                                         <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
                                                                                    HorizontalAlignment="Left"/>
                                                                         <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                                   HorizontalAlignment="Right">
+                                                                                   HorizontalAlignment="Right" Margin="0,2,0,0">
                                                                             <TextBlock.Style>
                                                                                 <Style TargetType="TextBlock">
                                                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -497,7 +506,7 @@
             </Border>
         </DataTemplate>
         <DataTemplate x:Key="LineTileTemplate">
-            <Border Background="White" BorderBrush="#FFB0B0B0" BorderThickness="1"
+            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="8" Width="360" MinHeight="220"
                     AllowDrop="True"
                     Drop="Tile_Drop"
@@ -524,7 +533,7 @@
                         <ItemsControl ItemsSource="{Binding LineTracks}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                    <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
                                         <StackPanel>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -566,7 +575,7 @@
                                                                     <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
                                                                                HorizontalAlignment="Left"/>
                                                                     <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                               HorizontalAlignment="Right">
+                                                                               HorizontalAlignment="Right" Margin="0,2,0,0">
                                                                         <TextBlock.Style>
                                                                             <Style TargetType="TextBlock">
                                                                                 <Setter Property="Visibility" Value="Visible"/>
@@ -631,6 +640,7 @@
                 <MenuItem Header="Supprimer un preset" x:Name="ViewPresetsDeleteMenu"/>
             </MenuItem>
             <MenuItem Header="Option">
+                <MenuItem Header="Mode sombre" IsCheckable="True" Click="ToggleDarkMode_Click"/>
                 <MenuItem Header="Réinitialiser">
                     <MenuItem Header="Réinitialiser locomotives" Click="MenuItem_ResetLocomotives_Click"/>
                     <MenuItem Header="Réinitialiser tuiles" Click="MenuItem_ResetTiles_Click"/>
@@ -645,7 +655,7 @@
                 <ColumnDefinition Width="260"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Margin="10" Background="#FFEFF4FF" CornerRadius="6">
+            <Border Grid.Column="0" Margin="10" Background="{DynamicResource PanelBackgroundBrush}" CornerRadius="6">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Locomotives" FontWeight="Bold" Margin="8"/>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -681,7 +691,7 @@
                                         <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
                                                    HorizontalAlignment="Left"/>
                                         <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                   HorizontalAlignment="Right">
+                                                   HorizontalAlignment="Right" Margin="0,2,0,0">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -701,7 +711,7 @@
                     </ScrollViewer>
                 </DockPanel>
             </Border>
-            <Border Grid.Column="1" Margin="10" Background="#FFF7F7F7" CornerRadius="6">
+            <Border Grid.Column="1" Margin="10" Background="{DynamicResource CanvasBackgroundBrush}" CornerRadius="6">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                     <ItemsControl x:Name="TileCanvas">
                         <ItemsControl.ItemsPanel>

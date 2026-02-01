@@ -24,6 +24,7 @@ namespace Ploco
         private readonly ObservableCollection<TileModel> _tiles = new();
         private readonly List<LayoutPreset> _layoutPresets = new();
         private const string LayoutPresetFileName = "layout_presets.json";
+        private bool _isDarkMode;
         private Point _dragStartPoint;
         private TileModel? _draggedTile;
         private Point _tileDragStart;
@@ -41,6 +42,7 @@ namespace Ploco
             LoadState();
             LoadLayoutPresets();
             RefreshPresetMenu();
+            ApplyTheme(false);
             LocomotiveList.ItemsSource = _locomotives;
             TileCanvas.ItemsSource = _tiles;
             InitializeLocomotiveView();
@@ -869,6 +871,15 @@ namespace Ploco
             PersistState();
         }
 
+        private void ToggleDarkMode_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem)
+            {
+                _isDarkMode = menuItem.IsChecked;
+                ApplyTheme(_isDarkMode);
+            }
+        }
+
         private void SaveLayoutPreset_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new SimpleTextDialog("Enregistrer un preset", "Nom du preset :", "Nouveau preset") { Owner = this };
@@ -1092,6 +1103,32 @@ namespace Ploco
             }
 
             return numbers;
+        }
+
+        private void ApplyTheme(bool darkMode)
+        {
+            if (darkMode)
+            {
+                Resources["AppBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(34, 34, 34));
+                Resources["PanelBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(45, 45, 45));
+                Resources["CanvasBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(40, 40, 40));
+                Resources["TileBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(55, 55, 55));
+                Resources["TileBorderBrush"] = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+                Resources["TrackBorderBrush"] = new SolidColorBrush(Color.FromRgb(80, 80, 80));
+                Resources["ListBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(50, 50, 50));
+                Resources["ListBorderBrush"] = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+            }
+            else
+            {
+                Resources["AppBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(242, 242, 242));
+                Resources["PanelBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(239, 244, 255));
+                Resources["CanvasBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(247, 247, 247));
+                Resources["TileBackgroundBrush"] = new SolidColorBrush(Colors.White);
+                Resources["TileBorderBrush"] = new SolidColorBrush(Color.FromRgb(176, 176, 176));
+                Resources["TrackBorderBrush"] = new SolidColorBrush(Color.FromRgb(224, 224, 224));
+                Resources["ListBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(245, 245, 245));
+                Resources["ListBorderBrush"] = new SolidColorBrush(Color.FromRgb(221, 221, 221));
+            }
         }
 
         private void LoadLayoutPresets()
