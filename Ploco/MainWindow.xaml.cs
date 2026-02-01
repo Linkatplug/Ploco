@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -455,11 +454,22 @@ namespace Ploco
             }
         }
 
-        private void ZoneBlockedToggle_Changed(object sender, RoutedEventArgs e)
+        private void ToggleLeftBlocked_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is ToggleButton toggle && toggle.DataContext is TrackModel track)
+            if (sender is Button button && button.DataContext is TrackModel track)
             {
-                _repository.AddHistory("ZoneBlockedUpdated", $"Mise à jour du remplissage pour {track.Name}.");
+                track.IsLeftBlocked = !track.IsLeftBlocked;
+                _repository.AddHistory("ZoneBlockedUpdated", $"Mise à jour du remplissage BLOCK pour {track.Name}.");
+                PersistState();
+            }
+        }
+
+        private void ToggleRightBlocked_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.DataContext is TrackModel track)
+            {
+                track.IsRightBlocked = !track.IsRightBlocked;
+                _repository.AddHistory("ZoneBlockedUpdated", $"Mise à jour du remplissage BIF pour {track.Name}.");
                 PersistState();
             }
         }
@@ -870,6 +880,26 @@ namespace Ploco
             PersistState();
         }
 
+        private void DeleteLayoutPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem || menuItem.Tag is not LayoutPreset preset)
+            {
+                return;
+            }
+
+            var result = MessageBox.Show($"Supprimer le preset \"{preset.Name}\" ?", "Supprimer preset",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            _layoutPresets.Remove(preset);
+            SaveLayoutPresets();
+            RefreshPresetMenu();
+            _repository.AddHistory("LayoutPresetDeleted", $"Preset supprimé : {preset.Name}.");
+        }
+
         private TrackModel? GetDefaultDropTrack(TileModel tile)
         {
             if (tile.Type == TileType.ArretLigne)
@@ -1071,12 +1101,13 @@ namespace Ploco
 
         private void RefreshPresetMenu()
         {
-            if (ViewPresetsMenu == null)
+            if (ViewPresetsMenu == null || ViewPresetsDeleteMenu == null)
             {
                 return;
             }
 
             ViewPresetsMenu.Items.Clear();
+            ViewPresetsDeleteMenu.Items.Clear();
             foreach (var preset in _layoutPresets.OrderBy(p => p.Name))
             {
                 var item = new MenuItem
@@ -1086,6 +1117,17 @@ namespace Ploco
                 };
                 item.Click += LoadLayoutPreset_Click;
                 ViewPresetsMenu.Items.Add(item);
+
+                if (!string.Equals(preset.Name, "Défaut", StringComparison.OrdinalIgnoreCase))
+                {
+                    var deleteItem = new MenuItem
+                    {
+                        Header = preset.Name,
+                        Tag = preset
+                    };
+                    deleteItem.Click += DeleteLayoutPreset_Click;
+                    ViewPresetsDeleteMenu.Items.Add(deleteItem);
+                }
             }
         }
 

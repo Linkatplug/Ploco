@@ -18,22 +18,27 @@
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
-        <Style x:Key="SaturationToggleStyle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Height" Value="12"/>
+        <Style x:Key="BlockedSwitchButtonBase" TargetType="Button">
+            <Setter Property="MinWidth" Value="44"/>
+            <Setter Property="Height" Value="20"/>
             <Setter Property="Margin" Value="4,0,0,0"/>
-            <Setter Property="Background" Value="#FFDDDDDD"/>
-            <Setter Property="BorderBrush" Value="#FF888888"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="#FF2E7D32"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF1B5E20"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Style.Triggers>
-                <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="Background" Value="#FFD32F2F"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Content" Value="Free"/>
         </Style>
-        <Style x:Key="LeftBlockedToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource SaturationToggleStyle}">
-            <Setter Property="ToolTip" Value="BLOCK plein"/>
+        <Style x:Key="LeftBlockedSwitchStyle" TargetType="Button" BasedOn="{StaticResource BlockedSwitchButtonBase}">
+            <Setter Property="ToolTip" Value="BLOCK"/>
             <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLeftBlocked}" Value="True">
+                    <Setter Property="Background" Value="#FFD32F2F"/>
+                    <Setter Property="BorderBrush" Value="#FFB71C1C"/>
+                    <Setter Property="Content" Value="Full"/>
+                </DataTrigger>
                 <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
                     <Setter Property="Visibility" Value="Collapsed"/>
                 </DataTrigger>
@@ -42,9 +47,14 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="RightBlockedToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource SaturationToggleStyle}">
-            <Setter Property="ToolTip" Value="BIF plein"/>
+        <Style x:Key="RightBlockedSwitchStyle" TargetType="Button" BasedOn="{StaticResource BlockedSwitchButtonBase}">
+            <Setter Property="ToolTip" Value="BIF"/>
             <Style.Triggers>
+                <DataTrigger Binding="{Binding IsRightBlocked}" Value="True">
+                    <Setter Property="Background" Value="#FFD32F2F"/>
+                    <Setter Property="BorderBrush" Value="#FFB71C1C"/>
+                    <Setter Property="Content" Value="Full"/>
+                </DataTrigger>
                 <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
                     <Setter Property="Visibility" Value="Collapsed"/>
                 </DataTrigger>
@@ -287,10 +297,8 @@
                                                                 </Style>
                                                             </TextBlock.Style>
                                                         </TextBlock>
-                                                        <ToggleButton Style="{StaticResource LeftBlockedToggleStyle}"
-                                                                      IsChecked="{Binding IsLeftBlocked}"
-                                                                      Checked="ZoneBlockedToggle_Changed"
-                                                                      Unchecked="ZoneBlockedToggle_Changed"/>
+                                                        <Button Style="{StaticResource LeftBlockedSwitchStyle}"
+                                                                Click="ToggleLeftBlocked_Click"/>
                                                     </StackPanel>
                                                     <Grid Grid.Column="1">
                                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center">
@@ -326,10 +334,8 @@
                                                         </StackPanel>
                                                     </Grid>
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                        <ToggleButton Style="{StaticResource RightBlockedToggleStyle}"
-                                                                      IsChecked="{Binding IsRightBlocked}"
-                                                                      Checked="ZoneBlockedToggle_Changed"
-                                                                      Unchecked="ZoneBlockedToggle_Changed"/>
+                                                        <Button Style="{StaticResource RightBlockedSwitchStyle}"
+                                                                Click="ToggleRightBlocked_Click"/>
                                                         <TextBlock Text="{Binding RightLabel}" FontWeight="SemiBold" Foreground="SlateGray">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
@@ -518,6 +524,7 @@
             <MenuItem Header="View">
                 <MenuItem Header="Charger un preset" x:Name="ViewPresetsMenu"/>
                 <MenuItem Header="Enregistrer le preset..." Click="SaveLayoutPreset_Click"/>
+                <MenuItem Header="Supprimer un preset" x:Name="ViewPresetsDeleteMenu"/>
             </MenuItem>
             <MenuItem Header="Option">
                 <MenuItem Header="Reset">
