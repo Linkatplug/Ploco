@@ -46,8 +46,6 @@ namespace Ploco.Dialogs
         {
             DepotPanel.Visibility = Visibility.Collapsed;
             GaragePanel.Visibility = Visibility.Collapsed;
-            LinePanel.Visibility = Visibility.Collapsed;
-
             if (TypeCombo.SelectedItem is ComboBoxItem item && item.Tag is string tag)
             {
                 SelectedType = Enum.Parse<TileType>(tag);
@@ -64,8 +62,6 @@ namespace Ploco.Dialogs
                     GarageNameCombo.SelectedIndex = 0;
                     break;
                 case TileType.ArretLigne:
-                    LinePanel.Visibility = Visibility.Visible;
-                    LineNameText.Text = string.Empty;
                     break;
             }
         }
@@ -84,11 +80,11 @@ namespace Ploco.Dialogs
             {
                 TileType.Depot => DepotNameCombo.SelectedItem as string ?? string.Empty,
                 TileType.VoieGarage => ResolveGarageName(),
-                TileType.ArretLigne => LineNameText.Text.Trim(),
+                TileType.ArretLigne => string.Empty,
                 _ => string.Empty
             };
 
-            if (string.IsNullOrWhiteSpace(SelectedName))
+            if (SelectedType != TileType.ArretLigne && string.IsNullOrWhiteSpace(SelectedName))
             {
                 MessageBox.Show("Veuillez saisir un nom valide.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;

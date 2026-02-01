@@ -53,11 +53,6 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="TileHeaderButton" TargetType="Button">
-            <Setter Property="Margin" Value="4,0,0,0"/>
-            <Setter Property="Padding" Value="4,0"/>
-            <Setter Property="FontSize" Value="11"/>
-        </Style>
         <ContextMenu x:Key="LocomotiveTileContextMenu">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
             <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
@@ -76,9 +71,13 @@
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
                 <StackPanel>
-                    <DockPanel>
-                        <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <Menu DockPanel.Dock="Right">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                        <Menu Grid.Column="1" HorizontalAlignment="Right">
                             <MenuItem Header="...">
                                 <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
                                 <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
@@ -86,7 +85,7 @@
                                 <MenuItem Header="Ajouter voie de sortie" Click="AddDepotOutput_Click" Tag="{Binding}"/>
                             </MenuItem>
                         </Menu>
-                    </DockPanel>
+                    </Grid>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <TextBlock Text="Locomotives" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
@@ -193,9 +192,13 @@
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
                 <StackPanel>
-                    <DockPanel>
-                        <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <Menu DockPanel.Dock="Right">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                        <Menu Grid.Column="1" HorizontalAlignment="Right">
                             <MenuItem Header="...">
                                 <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
                                 <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
@@ -203,7 +206,7 @@
                                 <MenuItem Header="Ajouter zone" Click="AddGarageZone_Click" Tag="{Binding}"/>
                             </MenuItem>
                         </Menu>
-                    </DockPanel>
+                    </Grid>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <StackPanel>
@@ -262,50 +265,104 @@
                                     <DataTemplate>
                                         <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
                                             <StackPanel>
-                                                <DockPanel>
-                                                    <TextBlock Text="{Binding LeftLabel}" FontWeight="SemiBold" Foreground="SlateGray">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding LeftLabel}" Value="">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="6,0,0,0"/>
-                                                    <TextBlock Text="{Binding RightLabel}" FontWeight="SemiBold" DockPanel.Dock="Right" Foreground="SlateGray">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding RightLabel}" Value="">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <ToggleButton Style="{StaticResource RightBlockedToggleStyle}"
-                                                                  DockPanel.Dock="Right"
-                                                                  IsChecked="{Binding IsRightBlocked}"/>
-                                                    <ToggleButton Style="{StaticResource LeftBlockedToggleStyle}"
-                                                                  IsChecked="{Binding IsLeftBlocked}"/>
-                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                                        <Button Style="{StaticResource TileHeaderButton}" Content="Renommer"
-                                                                Click="RenameZone_Click" Tag="{Binding}"/>
-                                                        <Button Style="{StaticResource TileHeaderButton}" Content="Supprimer"
-                                                                Click="RemoveZone_Click" Tag="{Binding}"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding LeftLabel}" FontWeight="SemiBold" Foreground="SlateGray">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding LeftLabel}" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <ToggleButton Style="{StaticResource LeftBlockedToggleStyle}"
+                                                                      IsChecked="{Binding IsLeftBlocked}"
+                                                                      Checked="ZoneBlockedToggle_Changed"
+                                                                      Unchecked="ZoneBlockedToggle_Changed"/>
                                                     </StackPanel>
-                                                </DockPanel>
+                                                    <Grid Grid.Column="1">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Name}" Value="917">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <StackPanel.Style>
+                                                                <Style TargetType="StackPanel">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Name}" Value="917">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </StackPanel.Style>
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                                            <Menu VerticalAlignment="Center">
+                                                                <MenuItem Header="...">
+                                                                    <MenuItem Header="Renommer zone" Click="RenameZone_Click" Tag="{Binding}"/>
+                                                                    <MenuItem Header="Supprimer zone" Click="RemoveZone_Click" Tag="{Binding}"/>
+                                                                </MenuItem>
+                                                            </Menu>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                        <ToggleButton Style="{StaticResource RightBlockedToggleStyle}"
+                                                                      IsChecked="{Binding IsRightBlocked}"
+                                                                      Checked="ZoneBlockedToggle_Changed"
+                                                                      Unchecked="ZoneBlockedToggle_Changed"/>
+                                                        <TextBlock Text="{Binding RightLabel}" FontWeight="SemiBold" Foreground="SlateGray">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding RightLabel}" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <Menu HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                            <Menu.Style>
+                                                                <Style TargetType="Menu">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Name}" Value="917">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Menu.Style>
+                                                            <MenuItem Header="...">
+                                                                <MenuItem Header="Renommer zone" Click="RenameZone_Click" Tag="{Binding}"/>
+                                                                <MenuItem Header="Supprimer zone" Click="RemoveZone_Click" Tag="{Binding}"/>
+                                                            </MenuItem>
+                                                        </Menu>
+                                                    </StackPanel>
+                                                </Grid>
                                                 <Grid>
                                                     <ListBox x:Name="GarageZoneList"
                                                              ItemsSource="{Binding Locomotives}"
@@ -362,9 +419,13 @@
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
                 <StackPanel>
-                    <DockPanel>
-                        <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <Menu DockPanel.Dock="Right">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                        <Menu Grid.Column="1" HorizontalAlignment="Right">
                             <MenuItem Header="...">
                                 <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
                                 <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
@@ -372,18 +433,25 @@
                                 <MenuItem Header="Ajouter voie" Click="AddLineTrack_Click" Tag="{Binding}"/>
                             </MenuItem>
                         </Menu>
-                    </DockPanel>
+                    </Grid>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding LineTracks}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="#FFE0E0E0" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
                                         <StackPanel>
-                                            <DockPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <Button DockPanel.Dock="Right" Style="{StaticResource TileHeaderButton}"
-                                                        Content="Supprimer" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
-                                            </DockPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <Menu Grid.Column="1" HorizontalAlignment="Right">
+                                                    <MenuItem Header="...">
+                                                        <MenuItem Header="Supprimer voie" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
+                                                    </MenuItem>
+                                                </Menu>
+                                            </Grid>
                                             <TextBlock Text="{Binding LineInfo}" FontSize="11" Foreground="SlateGray" Margin="0,2,0,4"/>
                                             <Grid>
                                                 <ListBox x:Name="LineTrackList"

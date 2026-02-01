@@ -288,13 +288,14 @@ namespace Ploco.Models
         {
             get
             {
-                if (!IsOnTrain)
-                {
-                    return "Locomotive isolée";
-                }
-
                 var status = IsLocomotiveHs ? "HS" : "OK";
                 var reason = string.IsNullOrWhiteSpace(IssueReason) ? "Raison non précisée" : IssueReason;
+
+                if (!IsOnTrain)
+                {
+                    return $"Locomotive isolée · {reason} · Loco {status}";
+                }
+
                 var time = string.IsNullOrWhiteSpace(StopTime) ? "Heure inconnue" : StopTime;
                 var train = string.IsNullOrWhiteSpace(TrainNumber) ? "Train non précisé" : $"Train {TrainNumber}";
                 return $"{train} · Arrêt {time} · {reason} · Loco {status}";

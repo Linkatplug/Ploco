@@ -11,14 +11,17 @@
                   Checked="OnTrainCheck_Checked" Unchecked="OnTrainCheck_Checked"/>
 
         <StackPanel x:Name="TrainDetailsPanel" Visibility="Collapsed">
+            <TextBlock Text="Numéro de train" FontWeight="SemiBold"/>
+            <TextBox x:Name="TrainNumberText" Margin="0,6,0,12"/>
+
             <TextBlock Text="Heure d'arrêt" FontWeight="SemiBold"/>
             <TextBox x:Name="StopTimeText" Margin="0,6,0,12"/>
-
-            <TextBlock Text="Raison du problème" FontWeight="SemiBold"/>
-            <TextBox x:Name="IssueReasonText" Margin="0,6,0,12"/>
-
-            <CheckBox x:Name="IsHsCheck" Content="Locomotive HS ?" Margin="0,0,0,12"/>
         </StackPanel>
+
+        <TextBlock Text="Raison du problème" FontWeight="SemiBold"/>
+        <TextBox x:Name="IssueReasonText" Margin="0,6,0,12"/>
+
+        <CheckBox x:Name="IsHsCheck" Content="Locomotive HS ?" Margin="0,0,0,12"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Valider" Width="80" Margin="0,0,6,0" Click="Validate_Click"/>

@@ -1,7 +1,7 @@
 <Window x:Class="Ploco.Dialogs.PlaceDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Ajouter un lieu" Height="320" Width="420"
+        Title="Ajouter un lieu" Height="260" Width="420"
         WindowStartupLocation="CenterOwner">
     <StackPanel Margin="12">
         <TextBlock Text="Type de lieu" FontWeight="SemiBold"/>
@@ -21,11 +21,6 @@
             <ComboBox x:Name="GarageNameCombo" Margin="0,6,0,6" SelectionChanged="GarageNameCombo_SelectionChanged"/>
             <TextBlock x:Name="CustomGarageLabel" Text="Nom personnalisé" FontWeight="SemiBold" Visibility="Collapsed"/>
             <TextBox x:Name="CustomGarageName" Margin="0,6,0,12" Visibility="Collapsed"/>
-        </StackPanel>
-
-        <StackPanel x:Name="LinePanel" Visibility="Collapsed">
-            <TextBlock Text="Nom du lieu (en ligne)" FontWeight="SemiBold"/>
-            <TextBox x:Name="LineNameText" Margin="0,6,0,12"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

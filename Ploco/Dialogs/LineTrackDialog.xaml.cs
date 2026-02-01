@@ -12,11 +12,13 @@ namespace Ploco.Dialogs
 
         public TrackModel BuildTrack()
         {
+            var isOnTrain = OnTrainCheck.IsChecked == true;
             return new TrackModel
             {
                 Name = TrackNameText.Text.Trim(),
-                IsOnTrain = OnTrainCheck.IsChecked == true,
-                StopTime = StopTimeText.Text.Trim(),
+                IsOnTrain = isOnTrain,
+                TrainNumber = isOnTrain ? TrainNumberText.Text.Trim() : null,
+                StopTime = isOnTrain ? StopTimeText.Text.Trim() : null,
                 IssueReason = IssueReasonText.Text.Trim(),
                 IsLocomotiveHs = IsHsCheck.IsChecked == true
             };
@@ -32,6 +34,18 @@ namespace Ploco.Dialogs
             if (string.IsNullOrWhiteSpace(TrackNameText.Text))
             {
                 MessageBox.Show("Veuillez saisir un nom de voie.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(IssueReasonText.Text))
+            {
+                MessageBox.Show("Veuillez saisir une raison.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (OnTrainCheck.IsChecked == true && string.IsNullOrWhiteSpace(TrainNumberText.Text))
+            {
+                MessageBox.Show("Veuillez saisir un numéro de train.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

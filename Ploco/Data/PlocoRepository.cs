@@ -191,6 +191,7 @@ namespace Ploco.Data
                         if (config != null)
                         {
                             track.IsOnTrain = config.IsOnTrain;
+                            track.TrainNumber = config.TrainNumber;
                             track.StopTime = config.StopTime;
                             track.IssueReason = config.IssueReason;
                             track.IsLocomotiveHs = config.IsLocomotiveHs;
@@ -346,6 +347,7 @@ namespace Ploco.Data
                     var trackConfigJson = JsonSerializer.Serialize(new TrackConfig
                     {
                         IsOnTrain = track.IsOnTrain,
+                        TrainNumber = track.TrainNumber,
                         StopTime = track.StopTime,
                         IssueReason = track.IssueReason,
                         IsLocomotiveHs = track.IsLocomotiveHs,
@@ -355,6 +357,7 @@ namespace Ploco.Data
                         IsRightBlocked = track.IsRightBlocked
                     });
                     object configValue = track.Kind == TrackKind.Line
+                        || !string.IsNullOrWhiteSpace(track.TrainNumber)
                         || !string.IsNullOrWhiteSpace(track.LeftLabel)
                         || !string.IsNullOrWhiteSpace(track.RightLabel)
                         || track.IsLeftBlocked
@@ -545,6 +548,7 @@ namespace Ploco.Data
         private class TrackConfig
         {
             public bool IsOnTrain { get; set; }
+            public string? TrainNumber { get; set; }
             public string? StopTime { get; set; }
             public string? IssueReason { get; set; }
             public bool IsLocomotiveHs { get; set; }

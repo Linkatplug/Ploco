@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -120,6 +121,16 @@ namespace Ploco
             var dialog = new PlaceDialog { Owner = this };
             if (dialog.ShowDialog() == true)
             {
+                if (dialog.SelectedType == TileType.ArretLigne)
+                {
+                    var lineDialog = new LinePlaceDialog(dialog.SelectedName) { Owner = this };
+                    if (lineDialog.ShowDialog() == true)
+                    {
+                        AddLineTile(lineDialog);
+                    }
+                    return;
+                }
+
                 AddTile(dialog.SelectedType, dialog.SelectedName);
             }
         }
@@ -137,6 +148,107 @@ namespace Ploco
             ApplyGaragePresets(tile);
             _tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
+            PersistState();
+        }
+
+        private void AddLineTile(LinePlaceDialog dialog)
+        {
+            var tile = new TileModel
+            {
+                Name = dialog.PlaceName,
+                Type = TileType.ArretLigne,
+                X = 20 + _tiles.Count * 30,
+                Y = 20 + _tiles.Count * 30
+            };
+
+            var track = new TrackModel
+            {
+                Name = "Voie 1",
+                Kind = TrackKind.Line,
+                IsOnTrain = dialog.IsOnTrain,
+                TrainNumber = dialog.IsOnTrain ? dialog.TrainNumber : null,
+                StopTime = dialog.IsOnTrain ? dialog.StopTime : null,
+                IssueReason = dialog.IssueReason,
+                IsLocomotiveHs = dialog.IsLocomotiveHs
+            };
+
+            tile.Tracks.Add(track);
+            tile.RefreshTrackCollections();
+            _tiles.Add(tile);
+            _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
+            _repository.AddHistory("LineTrackAdded", $"Ajout de la voie {track.Name} dans {tile.DisplayTitle}.");
+
+            var missingLocos = new List<string>();
+            var unavailableLocos = new List<string>();
+            var invalidLocos = new List<string>();
+            var locomotiveNumbers = ParseLocomotiveNumbers(dialog.LocomotiveNumbers, invalidLocos);
+            foreach (var number in locomotiveNumbers)
+            {
+                var loco = _locomotives.FirstOrDefault(l => l.Number == number);
+                if (loco == null)
+                {
+                    missingLocos.Add(number.ToString());
+                    continue;
+                }
+
+                if (loco.AssignedTrackId != null)
+                {
+                    unavailableLocos.Add(number.ToString());
+                    continue;
+                }
+
+                MoveLocomotiveToTrack(loco, track, track.Locomotives.Count);
+            }
+
+            var missingHsLocos = new List<string>();
+            var invalidHsLocos = new List<string>();
+            if (dialog.IsLocomotiveHs)
+            {
+                var hsNumbers = ParseLocomotiveNumbers(dialog.HsLocomotiveNumbers, invalidHsLocos);
+                foreach (var number in hsNumbers)
+                {
+                    var loco = _locomotives.FirstOrDefault(l => l.Number == number);
+                    if (loco == null)
+                    {
+                        missingHsLocos.Add(number.ToString());
+                        continue;
+                    }
+
+                    if (loco.Status != LocomotiveStatus.HS)
+                    {
+                        loco.Status = LocomotiveStatus.HS;
+                        _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number} (HS).");
+                    }
+                }
+            }
+
+            if (invalidLocos.Any() || invalidHsLocos.Any())
+            {
+                MessageBox.Show($"Numéros invalides ignorés : {string.Join(", ", invalidLocos.Concat(invalidHsLocos))}.",
+                    "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
+            if (missingLocos.Any() || missingHsLocos.Any())
+            {
+                var missingMessage = new List<string>();
+                if (missingLocos.Any())
+                {
+                    missingMessage.Add($"Locomotives introuvables pour l'ajout : {string.Join(", ", missingLocos)}.");
+                }
+                if (missingHsLocos.Any())
+                {
+                    missingMessage.Add($"Locomotives introuvables pour HS : {string.Join(", ", missingHsLocos)}.");
+                }
+                MessageBox.Show(string.Join(Environment.NewLine, missingMessage), "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
+            if (unavailableLocos.Any())
+            {
+                MessageBox.Show($"Locomotives déjà affectées ignorées : {string.Join(", ", unavailableLocos)}.",
+                    "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
+            UpdatePoolVisibility();
             PersistState();
         }
 
@@ -229,7 +341,8 @@ namespace Ploco
 
         private void RenameZone_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TrackModel track)
+            var track = GetTrackFromSender(sender);
+            if (track != null)
             {
                 var dialog = new SimpleTextDialog("Renommer la zone", "Nom de zone :", track.Name) { Owner = this };
                 if (dialog.ShowDialog() == true)
@@ -243,7 +356,8 @@ namespace Ploco
 
         private void RemoveZone_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TrackModel track)
+            var track = GetTrackFromSender(sender);
+            if (track != null)
             {
                 var tile = _tiles.FirstOrDefault(t => t.Tracks.Contains(track));
                 if (tile == null)
@@ -287,7 +401,8 @@ namespace Ploco
 
         private void RemoveLineTrack_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is TrackModel track)
+            var track = GetTrackFromSender(sender);
+            if (track != null)
             {
                 var tile = _tiles.FirstOrDefault(t => t.Tracks.Contains(track));
                 if (tile == null)
@@ -305,6 +420,15 @@ namespace Ploco
                 tile.RefreshTrackCollections();
                 _repository.AddHistory("LineTrackRemoved", $"Suppression de la voie {track.Name} dans {tile.DisplayTitle}.");
                 UpdatePoolVisibility();
+                PersistState();
+            }
+        }
+
+        private void ZoneBlockedToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (sender is ToggleButton toggle && toggle.DataContext is TrackModel track)
+            {
+                _repository.AddHistory("ZoneBlockedUpdated", $"Mise à jour du remplissage pour {track.Name}.");
                 PersistState();
             }
         }
@@ -495,7 +619,10 @@ namespace Ploco
 
         private void Tile_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.OriginalSource is DependencyObject source && FindAncestor<Button>(source) != null)
+            if (e.OriginalSource is DependencyObject source
+                && (FindAncestor<Button>(source) != null
+                    || FindAncestor<MenuItem>(source) != null
+                    || FindAncestor<Menu>(source) != null))
             {
                 return;
             }
@@ -741,6 +868,24 @@ namespace Ploco
             }
         }
 
+        private static TrackModel? GetTrackFromSender(object sender)
+        {
+            if (sender is FrameworkElement element)
+            {
+                if (element.Tag is TrackModel trackFromTag)
+                {
+                    return trackFromTag;
+                }
+
+                if (element.DataContext is TrackModel trackFromContext)
+                {
+                    return trackFromContext;
+                }
+            }
+
+            return null;
+        }
+
         private TileModel? GetTileFromSender(object sender)
         {
             if (sender is FrameworkElement element)
@@ -793,6 +938,30 @@ namespace Ploco
                    && first.X + width > second.X
                    && first.Y < second.Y + height
                    && first.Y + height > second.Y;
+        }
+
+        private static List<int> ParseLocomotiveNumbers(string input, List<string> invalidTokens)
+        {
+            var numbers = new List<int>();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return numbers;
+            }
+
+            var tokens = input.Split(new[] { ' ', ',', ';', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var token in tokens)
+            {
+                if (int.TryParse(token, out var number))
+                {
+                    numbers.Add(number);
+                }
+                else
+                {
+                    invalidTokens.Add(token);
+                }
+            }
+
+            return numbers;
         }
     }
 }
