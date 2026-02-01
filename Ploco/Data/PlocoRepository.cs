@@ -9,10 +9,14 @@ namespace Ploco.Data
 {
     public class PlocoRepository
     {
+        private const string ActivePoolSettingKey = "ActivePool";
+        private const string HideNonActivePoolSettingKey = "HideNonActivePool";
+        private readonly string _databasePath;
         private readonly string _connectionString;
 
         public PlocoRepository(string databasePath)
         {
+            _databasePath = databasePath;
             _connectionString = $"Data Source={databasePath}";
         }
 
@@ -34,6 +38,7 @@ namespace Ploco.Data
                     series_id INTEGER NOT NULL,
                     number INTEGER NOT NULL,
                     status TEXT NOT NULL,
+                    pool TEXT NOT NULL DEFAULT 'Lineas',
                     FOREIGN KEY(series_id) REFERENCES series(id)
                 );",
                 @"CREATE TABLE IF NOT EXISTS tiles (
@@ -64,6 +69,10 @@ namespace Ploco.Data
                     timestamp TEXT NOT NULL,
                     action TEXT NOT NULL,
                     details TEXT NOT NULL
+                );",
+                @"CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
                 );"
             };
 
@@ -73,6 +82,8 @@ namespace Ploco.Data
                 command.CommandText = sql;
                 command.ExecuteNonQuery();
             }
+
+            EnsureColumn(connection, "locomotives", "pool", "TEXT NOT NULL DEFAULT 'Lineas'");
         }
 
         public AppState LoadState()
@@ -102,7 +113,7 @@ namespace Ploco.Data
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, series_id, number, status FROM locomotives;";
+                command.CommandText = "SELECT id, series_id, number, status, pool FROM locomotives;";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
@@ -114,7 +125,8 @@ namespace Ploco.Data
                         SeriesId = seriesId,
                         SeriesName = seriesName,
                         Number = reader.GetInt32(2),
-                        Status = Enum.Parse<LocomotiveStatus>(reader.GetString(3))
+                        Status = Enum.Parse<LocomotiveStatus>(reader.GetString(3)),
+                        Pool = reader.IsDBNull(4) ? "Lineas" : reader.GetString(4)
                     });
                 }
             }
@@ -190,6 +202,8 @@ namespace Ploco.Data
                 }
             }
 
+            state.ActivePoolName = GetSetting(connection, ActivePoolSettingKey) ?? "Lineas";
+            state.HideNonActivePool = string.Equals(GetSetting(connection, HideNonActivePoolSettingKey), "true", StringComparison.OrdinalIgnoreCase);
             return state;
         }
 
@@ -214,7 +228,7 @@ namespace Ploco.Data
 
             using (var insertLoco = connection.CreateCommand())
             {
-                insertLoco.CommandText = "INSERT INTO locomotives (series_id, number, status) VALUES ($seriesId, $number, $status);";
+                insertLoco.CommandText = "INSERT INTO locomotives (series_id, number, status, pool) VALUES ($seriesId, $number, $status, $pool);";
                 var seriesParam = insertLoco.CreateParameter();
                 seriesParam.ParameterName = "$seriesId";
                 insertLoco.Parameters.Add(seriesParam);
@@ -224,12 +238,16 @@ namespace Ploco.Data
                 var statusParam = insertLoco.CreateParameter();
                 statusParam.ParameterName = "$status";
                 insertLoco.Parameters.Add(statusParam);
+                var poolParam = insertLoco.CreateParameter();
+                poolParam.ParameterName = "$pool";
+                insertLoco.Parameters.Add(poolParam);
 
                 for (var number = 1301; number <= 1349; number++)
                 {
                     seriesParam.Value = seriesId;
                     numberParam.Value = number;
                     statusParam.Value = LocomotiveStatus.Ok.ToString();
+                    poolParam.Value = "Lineas";
                     insertLoco.ExecuteNonQuery();
                 }
             }
@@ -264,10 +282,11 @@ namespace Ploco.Data
                     loco.SeriesId = newSeriesId;
                 }
                 using var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO locomotives (series_id, number, status) VALUES ($seriesId, $number, $status);";
+                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool) VALUES ($seriesId, $number, $status, $pool);";
                 command.Parameters.AddWithValue("$seriesId", loco.SeriesId);
                 command.Parameters.AddWithValue("$number", loco.Number);
                 command.Parameters.AddWithValue("$status", loco.Status.ToString());
+                command.Parameters.AddWithValue("$pool", loco.Pool);
                 command.ExecuteNonQuery();
                 loco.Id = GetLastInsertRowId(connection);
             }
@@ -313,6 +332,8 @@ namespace Ploco.Data
                 }
             }
 
+            UpsertSetting(connection, ActivePoolSettingKey, state.ActivePoolName);
+            UpsertSetting(connection, HideNonActivePoolSettingKey, state.HideNonActivePool ? "true" : "false");
             transaction.Commit();
         }
 
@@ -346,11 +367,88 @@ namespace Ploco.Data
             command.ExecuteNonQuery();
         }
 
+        public List<HistoryEntry> LoadHistory()
+        {
+            var history = new List<HistoryEntry>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT timestamp, action, details FROM history ORDER BY timestamp DESC;";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                history.Add(new HistoryEntry
+                {
+                    Timestamp = DateTime.Parse(reader.GetString(0)),
+                    Action = reader.GetString(1),
+                    Details = reader.GetString(2)
+                });
+            }
+
+            return history;
+        }
+
+        public void CopyDatabaseTo(string destinationPath)
+        {
+            if (string.IsNullOrWhiteSpace(destinationPath))
+            {
+                return;
+            }
+
+            System.IO.File.Copy(_databasePath, destinationPath, true);
+        }
+
+        public void ReplaceDatabaseWith(string sourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return;
+            }
+
+            System.IO.File.Copy(sourcePath, _databasePath, true);
+        }
+
         private static int GetLastInsertRowId(SqliteConnection connection)
         {
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT last_insert_rowid();";
             return Convert.ToInt32(command.ExecuteScalar());
+        }
+
+        private static void EnsureColumn(SqliteConnection connection, string tableName, string columnName, string columnDefinition)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = $"PRAGMA table_info({tableName});";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+
+            using var alterCommand = connection.CreateCommand();
+            alterCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};";
+            alterCommand.ExecuteNonQuery();
+        }
+
+        private static string? GetSetting(SqliteConnection connection, string key)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT value FROM app_settings WHERE key = $key;";
+            command.Parameters.AddWithValue("$key", key);
+            return command.ExecuteScalar() as string;
+        }
+
+        private static void UpsertSetting(SqliteConnection connection, string key, string value)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "INSERT INTO app_settings (key, value) VALUES ($key, $value) " +
+                                  "ON CONFLICT(key) DO UPDATE SET value = excluded.value;";
+            command.Parameters.AddWithValue("$key", key);
+            command.Parameters.AddWithValue("$value", value);
+            command.ExecuteNonQuery();
         }
 
         private class TileConfig

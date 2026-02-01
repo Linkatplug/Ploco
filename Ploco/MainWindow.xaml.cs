@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Data;
+using Microsoft.Win32;
 using Ploco.Data;
 using Ploco.Dialogs;
 using Ploco.Models;
@@ -20,6 +22,8 @@ namespace Ploco
         private Point _dragStartPoint;
         private TileModel? _draggedTile;
         private Point _tileDragStart;
+        private string _activePoolName = "Lineas";
+        private bool _hideNonActivePool;
 
         public MainWindow()
         {
@@ -35,6 +39,7 @@ namespace Ploco
             LoadState();
             LocomotiveList.ItemsSource = _locomotives;
             TileCanvas.ItemsSource = _tiles;
+            InitializeLocomotiveView();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -48,6 +53,8 @@ namespace Ploco
             _tiles.Clear();
 
             var state = _repository.LoadState();
+            _activePoolName = state.ActivePoolName;
+            _hideNonActivePool = state.HideNonActivePool;
             foreach (var loco in state.Locomotives.OrderBy(l => l.SeriesName).ThenBy(l => l.Number))
             {
                 _locomotives.Add(loco);
@@ -61,6 +68,8 @@ namespace Ploco
                 }
                 _tiles.Add(tile);
             }
+
+            UpdatePoolVisibility();
         }
 
         private void PersistState()
@@ -69,9 +78,18 @@ namespace Ploco
             {
                 Series = BuildSeriesState(),
                 Locomotives = _locomotives.ToList(),
-                Tiles = _tiles.ToList()
+                Tiles = _tiles.ToList(),
+                ActivePoolName = _activePoolName,
+                HideNonActivePool = _hideNonActivePool
             };
             _repository.SaveState(state);
+        }
+
+        private void InitializeLocomotiveView()
+        {
+            var view = CollectionViewSource.GetDefaultView(_locomotives);
+            view.SortDescriptions.Clear();
+            view.SortDescriptions.Add(new System.ComponentModel.SortDescription(nameof(LocomotiveModel.Number), System.ComponentModel.ListSortDirection.Ascending));
         }
 
         private List<RollingStockSeries> BuildSeriesState()
@@ -335,7 +353,7 @@ namespace Ploco
             }
 
             loco.AssignedTrackId = targetTrack.Id;
-            _repository.AddHistory("LocomotiveMoved", $"Loco {loco.DisplayName} déplacée vers {targetTrack.Name}.");
+            _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
         }
 
         private static int GetInsertIndex(ListBox listBox, Point dropPosition)
@@ -363,9 +381,20 @@ namespace Ploco
                     var dialog = new StatusDialog(loco) { Owner = this };
                     if (dialog.ShowDialog() == true)
                     {
-                        _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.DisplayName}.");
+                        _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
                         PersistState();
                     }
+                }
+            }
+        }
+
+        private void MenuItem_SwapPool_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.Parent is ContextMenu contextMenu)
+            {
+                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
+                {
+                    SwapLocomotivePool(loco);
                 }
             }
         }
@@ -381,7 +410,7 @@ namespace Ploco
                     {
                         track.Locomotives.Remove(loco);
                         loco.AssignedTrackId = null;
-                        _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.DisplayName} retirée de {track.Name}.");
+                        _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
                         PersistState();
                     }
                 }
@@ -442,6 +471,99 @@ namespace Ploco
                 child = VisualTreeHelper.GetParent(child);
             }
             return null;
+        }
+
+        private void UpdatePoolVisibility()
+        {
+            foreach (var loco in _locomotives)
+            {
+                loco.IsVisibleInActivePool = !_hideNonActivePool ||
+                                             string.Equals(loco.Pool, _activePoolName, StringComparison.OrdinalIgnoreCase);
+            }
+
+            CollectionViewSource.GetDefaultView(_locomotives).Refresh();
+        }
+
+        private void SwapLocomotivePool(LocomotiveModel loco)
+        {
+            var previousPool = loco.Pool;
+            loco.Pool = string.Equals(loco.Pool, "Lineas", StringComparison.OrdinalIgnoreCase) ? "Sibelit" : "Lineas";
+            _repository.AddHistory("PoolSwapped", $"Loco {loco.Number} déplacée de {previousPool} vers {loco.Pool}.");
+            UpdatePoolVisibility();
+            PersistState();
+        }
+
+        private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
+        {
+            PersistState();
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Base de données Ploco (*.db)|*.db|Tous les fichiers (*.*)|*.*",
+                FileName = "ploco.db"
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                _repository.CopyDatabaseTo(dialog.FileName);
+            }
+        }
+
+        private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Base de données Ploco (*.db)|*.db|Tous les fichiers (*.*)|*.*"
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                _repository.ReplaceDatabaseWith(dialog.FileName);
+                _repository.Initialize();
+                LoadState();
+            }
+        }
+
+        private void MenuItem_PoolManagement_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new PoolTransferWindow(_locomotives, _activePoolName, _hideNonActivePool)
+            {
+                Owner = this
+            };
+            dialog.ShowDialog();
+            _activePoolName = dialog.ActivePool;
+            _hideNonActivePool = dialog.HideNonActivePool;
+            UpdatePoolVisibility();
+            PersistState();
+        }
+
+        private void MenuItem_History_Click(object sender, RoutedEventArgs e)
+        {
+            var history = _repository.LoadHistory();
+            var dialog = new HistoriqueWindow(history) { Owner = this };
+            dialog.ShowDialog();
+        }
+
+        private void MenuItem_Reset_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Réinitialiser toutes les locomotives ?", "Reset (debug)", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            foreach (var track in _tiles.SelectMany(tile => tile.Tracks))
+            {
+                track.Locomotives.Clear();
+            }
+
+            foreach (var loco in _locomotives)
+            {
+                loco.AssignedTrackId = null;
+                loco.Status = LocomotiveStatus.Ok;
+                loco.Pool = "Lineas";
+            }
+
+            _repository.AddHistory("Reset", "Réinitialisation debug des locomotives.");
+            UpdatePoolVisibility();
+            PersistState();
         }
     }
 }

@@ -7,17 +7,36 @@
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
         <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <Style x:Key="TileHeaderButton" TargetType="Button">
             <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="FontSize" Value="11"/>
         </Style>
-        <ContextMenu x:Key="LocomotiveContextMenu">
+        <ContextMenu x:Key="LocomotiveTileContextMenu">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
+            <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
             <MenuItem Header="Retirer de la tuile" Click="MenuItem_RemoveFromTile_Click"/>
+        </ContextMenu>
+        <ContextMenu x:Key="LocomotiveListContextMenu">
+            <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
+            <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
         </ContextMenu>
     </Window.Resources>
     <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="Fichier">
+                <MenuItem Header="Sauvegarder" Click="MenuItem_Save_Click"/>
+                <MenuItem Header="Charger" Click="MenuItem_Load_Click"/>
+            </MenuItem>
+            <MenuItem Header="Gestion">
+                <MenuItem Header="Gestion des parcs" Click="MenuItem_PoolManagement_Click"/>
+                <MenuItem Header="Historique" Click="MenuItem_History_Click"/>
+            </MenuItem>
+            <MenuItem Header="Option">
+                <MenuItem Header="Reset (debug)" Click="MenuItem_Reset_Click"/>
+            </MenuItem>
+        </Menu>
         <ToolBar DockPanel.Dock="Top">
             <Button Content="Ajouter dépôt" Click="AddDepot_Click"/>
             <Button Content="Ajouter arrêt en ligne" Click="AddLineStop_Click"/>
@@ -32,9 +51,25 @@
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Locomotives" FontWeight="Bold" Margin="8"/>
                     <ListBox x:Name="LocomotiveList"
-                             DisplayMemberPath="DisplayName"
                              PreviewMouseLeftButtonDown="LocomotiveList_PreviewMouseLeftButtonDown"
-                             PreviewMouseMove="LocomotiveList_PreviewMouseMove"/>
+                             PreviewMouseMove="LocomotiveList_PreviewMouseMove">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Visibility"
+                                        Value="{Binding IsVisibleInActivePool, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                        Padding="6" Margin="4" CornerRadius="4"
+                                        ContextMenu="{StaticResource LocomotiveListContextMenu}">
+                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"
+                                               HorizontalAlignment="Center"/>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </DockPanel>
             </Border>
             <Border Grid.Column="1" Margin="10" Background="#FFF7F7F7" CornerRadius="6">
@@ -90,17 +125,22 @@
                                                                         Tag="{Binding}"/>
                                                             </DockPanel>
                                                             <ListBox ItemsSource="{Binding Locomotives}"
-                                                                     DisplayMemberPath="DisplayName"
                                                                      AllowDrop="True"
                                                                      PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
                                                                      PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
                                                                      Drop="TrackLocomotives_Drop">
+                                                                <ListBox.ItemContainerStyle>
+                                                                    <Style TargetType="ListBoxItem">
+                                                                        <Setter Property="Visibility"
+                                                                                Value="{Binding IsVisibleInActivePool, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                                    </Style>
+                                                                </ListBox.ItemContainerStyle>
                                                                 <ListBox.ItemTemplate>
                                                                     <DataTemplate>
                                                                         <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                                                 Padding="4" Margin="2" CornerRadius="4"
-                                                                                ContextMenu="{StaticResource LocomotiveContextMenu}">
-                                                                            <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="Bold"/>
+                                                                                ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                            <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold"/>
                                                                         </Border>
                                                                     </DataTemplate>
                                                                 </ListBox.ItemTemplate>

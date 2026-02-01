@@ -9,70 +9,94 @@ namespace Ploco
 {
     public partial class PoolTransferWindow : Window
     {
-        public ObservableCollection<Locomotive> LineasPool { get; set; }
-        public ObservableCollection<Locomotive> SibelitPool { get; set; }
+        private readonly ObservableCollection<LocomotiveModel> _locomotives;
+        private readonly CollectionViewSource _lineasSource;
+        private readonly CollectionViewSource _sibelitSource;
 
-        public PoolTransferWindow(ObservableCollection<Locomotive> lineasPool, ObservableCollection<Locomotive> sibelitPool)
+        public string ActivePool { get; private set; }
+        public bool HideNonActivePool { get; private set; }
+
+        public PoolTransferWindow(ObservableCollection<LocomotiveModel> locomotives, string activePool, bool hideNonActivePool)
         {
             InitializeComponent();
             Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
             WindowStartupLocation = WindowStartupLocation.CenterOwner; // Centre la fenêtre sur la principale
 
-            LineasPool = lineasPool;
-            SibelitPool = sibelitPool;
+            _locomotives = locomotives;
+            ActivePool = activePool;
+            HideNonActivePool = hideNonActivePool;
 
-            ListBoxLineas.ItemsSource = LineasPool;
-            ListBoxSibelit.ItemsSource = SibelitPool;
-            ListBoxLineas.Items.Refresh();
-            ListBoxSibelit.Items.Refresh();
+            _lineasSource = new CollectionViewSource { Source = _locomotives };
+            _lineasSource.SortDescriptions.Add(new SortDescription(nameof(LocomotiveModel.Number), ListSortDirection.Ascending));
+            _lineasSource.Filter += (_, args) =>
+            {
+                if (args.Item is LocomotiveModel loco)
+                {
+                    args.Accepted = string.Equals(loco.Pool, "Lineas");
+                }
+            };
 
-            CollectionView viewLineas = (CollectionView)CollectionViewSource.GetDefaultView(LineasPool);
-            viewLineas.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
-            CollectionView viewSibelit = (CollectionView)CollectionViewSource.GetDefaultView(SibelitPool);
-            viewSibelit.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
+            _sibelitSource = new CollectionViewSource { Source = _locomotives };
+            _sibelitSource.SortDescriptions.Add(new SortDescription(nameof(LocomotiveModel.Number), ListSortDirection.Ascending));
+            _sibelitSource.Filter += (_, args) =>
+            {
+                if (args.Item is LocomotiveModel loco)
+                {
+                    args.Accepted = string.Equals(loco.Pool, "Sibelit");
+                }
+            };
+
+            ListBoxLineas.ItemsSource = _lineasSource.View;
+            ListBoxSibelit.ItemsSource = _sibelitSource.View;
+
+            ActivePoolCombo.SelectedIndex = string.Equals(ActivePool, "Sibelit") ? 1 : 0;
+            HideNonActiveCheckBox.IsChecked = HideNonActivePool;
         }
 
-        // Transfert de Sibelit vers Lineas : si la loco est sur le tapis, le transfert est refusé.
         private void BtnTransferToLineas_Click(object sender, RoutedEventArgs e)
         {
-            var selectedItems = ListBoxSibelit.SelectedItems.Cast<Locomotive>().ToList();
+            var selectedItems = ListBoxSibelit.SelectedItems.Cast<LocomotiveModel>().ToList();
             foreach (var loco in selectedItems)
             {
-                if (loco.IsOnCanvas)
-                {
-                    MessageBox.Show($"La loco {loco} est sur le tapis et ne peut être transférée.",
-                                    "Transfert impossible",
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Warning);
-                }
-                else
-                {
-                    SibelitPool.Remove(loco);
-                    if (!LineasPool.Contains(loco))
-                        LineasPool.Add(loco);
-                    // Mise à jour du pool courant
-                    loco.CurrentPool = "Lineas";
-                }
+                loco.Pool = "Lineas";
             }
+
+            RefreshViews();
         }
 
-        // Transfert de Lineas vers Sibelit.
         private void BtnTransferToSibelit_Click(object sender, RoutedEventArgs e)
         {
-            var selectedItems = ListBoxLineas.SelectedItems.Cast<Locomotive>().ToList();
+            var selectedItems = ListBoxLineas.SelectedItems.Cast<LocomotiveModel>().ToList();
             foreach (var loco in selectedItems)
             {
-                LineasPool.Remove(loco);
-                if (!SibelitPool.Contains(loco))
-                    SibelitPool.Add(loco);
-                // Mise à jour du pool courant
-                loco.CurrentPool = "Sibelit";
+                loco.Pool = "Sibelit";
             }
+
+            RefreshViews();
         }
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            DialogResult = true;
+        }
+
+        private void RefreshViews()
+        {
+            _lineasSource.View.Refresh();
+            _sibelitSource.View.Refresh();
+        }
+
+        private void ActivePoolCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (ActivePoolCombo.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Content is string poolName)
+            {
+                ActivePool = poolName;
+            }
+        }
+
+        private void HideNonActiveCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            HideNonActivePool = HideNonActiveCheckBox.IsChecked == true;
         }
     }
 }

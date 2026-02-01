@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -29,8 +30,10 @@ namespace Ploco.Models
 
     public class LocomotiveModel : INotifyPropertyChanged
     {
+        private string _pool = "Lineas";
         private LocomotiveStatus _status;
         private int? _assignedTrackId;
+        private bool _isVisibleInActivePool = true;
 
         public int Id { get; set; }
         public int SeriesId { get; set; }
@@ -50,6 +53,19 @@ namespace Ploco.Models
             }
         }
 
+        public string Pool
+        {
+            get => _pool;
+            set
+            {
+                if (_pool != value)
+                {
+                    _pool = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public int? AssignedTrackId
         {
             get => _assignedTrackId;
@@ -63,7 +79,20 @@ namespace Ploco.Models
             }
         }
 
-        public string DisplayName => $"{SeriesName}-{Number}";
+        public bool IsVisibleInActivePool
+        {
+            get => _isVisibleInActivePool;
+            set
+            {
+                if (_isVisibleInActivePool != value)
+                {
+                    _isVisibleInActivePool = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string DisplayName => Number.ToString();
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -71,6 +100,13 @@ namespace Ploco.Models
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+    }
+
+    public class HistoryEntry
+    {
+        public DateTime Timestamp { get; set; }
+        public string Action { get; set; } = string.Empty;
+        public string Details { get; set; } = string.Empty;
     }
 
     public class TrackModel : INotifyPropertyChanged
