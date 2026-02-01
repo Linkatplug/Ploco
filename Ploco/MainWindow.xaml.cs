@@ -575,7 +575,12 @@ namespace Ploco
             };
             if (dialog.ShowDialog() == true)
             {
-                _repository.ReplaceDatabaseWith(dialog.FileName);
+                if (!_repository.ReplaceDatabaseWith(dialog.FileName))
+                {
+                    MessageBox.Show("Le fichier sélectionné n'est pas une base SQLite valide.", "Chargement", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 _repository.Initialize();
                 LoadState();
             }

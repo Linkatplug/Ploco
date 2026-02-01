@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Ploco.Models;
@@ -20,6 +22,7 @@ namespace Ploco.Data
 
         public void Initialize()
         {
+            EnsureDatabaseFile();
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
@@ -425,14 +428,20 @@ namespace Ploco.Data
             System.IO.File.Copy(_databasePath, destinationPath, true);
         }
 
-        public void ReplaceDatabaseWith(string sourcePath)
+        public bool ReplaceDatabaseWith(string sourcePath)
         {
             if (string.IsNullOrWhiteSpace(sourcePath))
             {
-                return;
+                return false;
             }
 
-            System.IO.File.Copy(sourcePath, _databasePath, true);
+            if (!IsSqliteDatabase(sourcePath))
+            {
+                return false;
+            }
+
+            File.Copy(sourcePath, _databasePath, true);
+            return true;
         }
 
         private static int GetLastInsertRowId(SqliteConnection connection)
@@ -458,6 +467,39 @@ namespace Ploco.Data
             using var alterCommand = connection.CreateCommand();
             alterCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};";
             alterCommand.ExecuteNonQuery();
+        }
+
+        private void EnsureDatabaseFile()
+        {
+            if (!File.Exists(_databasePath))
+            {
+                return;
+            }
+
+            if (IsSqliteDatabase(_databasePath))
+            {
+                return;
+            }
+
+            File.Delete(_databasePath);
+        }
+
+        private static bool IsSqliteDatabase(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return false;
+            }
+
+            var header = new byte[16];
+            using var stream = File.OpenRead(path);
+            if (stream.Read(header, 0, header.Length) < header.Length)
+            {
+                return false;
+            }
+
+            var headerText = Encoding.ASCII.GetString(header);
+            return headerText.StartsWith("SQLite format 3");
         }
 
         private static void SavePlaces(SqliteConnection connection, IEnumerable<TileModel> tiles)
