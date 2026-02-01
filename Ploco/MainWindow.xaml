@@ -119,10 +119,14 @@
                                                     Padding="4" Margin="2" CornerRadius="4"
                                                     ContextMenu="{StaticResource LocomotiveTileContextMenu}">
                                                 <Grid>
-                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                               HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                                    <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                               HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                               HorizontalAlignment="Left"/>
+                                                    <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                               HorizontalAlignment="Right">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="Visibility" Value="Visible"/>
@@ -181,10 +185,14 @@
                                                                         Padding="4" Margin="2" CornerRadius="4"
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}">
                                                                     <Grid>
-                                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                                   HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                                        <Grid.RowDefinitions>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                        </Grid.RowDefinitions>
+                                                                        <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                                   HorizontalAlignment="Left"/>
+                                                                        <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                   HorizontalAlignment="Right">
                                                                             <TextBlock.Style>
                                                                                 <Style TargetType="TextBlock">
                                                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -283,10 +291,14 @@
                                                         Padding="4" Margin="2" CornerRadius="4"
                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}">
                                                     <Grid>
-                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                   HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                   HorizontalAlignment="Left"/>
+                                                        <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                   HorizontalAlignment="Right">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
                                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -436,10 +448,14 @@
                                                                         Padding="4" Margin="2" CornerRadius="4"
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}">
                                                                     <Grid>
-                                                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                                   HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                                        <Grid.RowDefinitions>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                        </Grid.RowDefinitions>
+                                                                        <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                                   HorizontalAlignment="Left"/>
+                                                                        <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                   HorizontalAlignment="Right">
                                                                             <TextBlock.Style>
                                                                                 <Style TargetType="TextBlock">
                                                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -543,10 +559,14 @@
                                                                     Padding="4" Margin="2" CornerRadius="4"
                                                                     ContextMenu="{StaticResource LocomotiveTileContextMenu}">
                                                                 <Grid>
-                                                                    <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                                               HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                                                    <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                               HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                    </Grid.RowDefinitions>
+                                                                    <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                               HorizontalAlignment="Left"/>
+                                                                    <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                               HorizontalAlignment="Right">
                                                                         <TextBlock.Style>
                                                                             <Style TargetType="TextBlock">
                                                                                 <Setter Property="Visibility" Value="Visible"/>
@@ -654,10 +674,14 @@
                                         Padding="6" Margin="4" CornerRadius="4"
                                         ContextMenu="{StaticResource LocomotiveListContextMenu}">
                                     <Grid>
-                                        <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                        <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                   HorizontalAlignment="Right" VerticalAlignment="Top">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                   HorizontalAlignment="Left"/>
+                                        <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                   HorizontalAlignment="Right">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Visible"/>

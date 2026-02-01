@@ -46,10 +46,14 @@
                     <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                             CornerRadius="4" Padding="4" Margin="2">
                         <Grid>
-                            <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                       HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                            <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                       HorizontalAlignment="Right" VerticalAlignment="Top">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                       HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                       HorizontalAlignment="Right">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -85,10 +89,14 @@
                     <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                             CornerRadius="4" Padding="4" Margin="2">
                         <Grid>
-                            <TextBlock Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                       HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                            <TextBlock Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                       HorizontalAlignment="Right" VerticalAlignment="Top">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                       HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                       HorizontalAlignment="Right">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
