@@ -500,6 +500,27 @@ namespace Ploco
             }
         }
 
+        private void LocomotiveList_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(typeof(LocomotiveModel)))
+            {
+                return;
+            }
+
+            var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+            var track = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+            if (track != null)
+            {
+                track.Locomotives.Remove(loco);
+                loco.AssignedTrackId = null;
+                _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
+            }
+
+            UpdatePoolVisibility();
+            PersistState();
+            e.Handled = true;
+        }
+
         private void TrackLocomotives_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             _dragStartPoint = e.GetPosition(null);

@@ -633,6 +633,8 @@
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                  ScrollViewer.CanContentScroll="False"
+                                 AllowDrop="True"
+                                 Drop="LocomotiveList_Drop"
                                  PreviewMouseLeftButtonDown="LocomotiveList_PreviewMouseLeftButtonDown"
                                  PreviewMouseMove="LocomotiveList_PreviewMouseMove">
                         <ListBox.ItemsPanel>

@@ -43,6 +43,7 @@ namespace Ploco
 
             ListBoxLineas.ItemsSource = _lineasSource.View;
             ListBoxSibelit.ItemsSource = _sibelitSource.View;
+            UpdateCounts();
         }
 
         private void BtnTransferToLineas_Click(object sender, RoutedEventArgs e)
@@ -76,7 +77,15 @@ namespace Ploco
         {
             _lineasSource.View.Refresh();
             _sibelitSource.View.Refresh();
+            UpdateCounts();
         }
 
+        private void UpdateCounts()
+        {
+            var sibelitCount = _locomotives.Count(loco => string.Equals(loco.Pool, "Sibelit", System.StringComparison.OrdinalIgnoreCase));
+            var lineasCount = _locomotives.Count(loco => string.Equals(loco.Pool, "Lineas", System.StringComparison.OrdinalIgnoreCase));
+            SibelitCountText.Text = $"Nombre de locomotives : {sibelitCount}";
+            LineasCountText.Text = $"Nombre de locomotives : {lineasCount}";
+        }
     }
 }
