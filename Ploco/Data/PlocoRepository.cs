@@ -241,7 +241,7 @@ namespace Ploco.Data
                     {
                         track.Locomotives.Add(loco);
                         loco.AssignedTrackId = trackId;
-                        var offset = reader.IsDBNull(3) ? null : reader.GetDouble(3);
+                        var offset = reader.IsDBNull(3) ? (double?)null : reader.GetDouble(3);
                         loco.AssignedTrackOffsetX = track.Kind == TrackKind.Line || track.Kind == TrackKind.Zone || track.Kind == TrackKind.Output
                             ? offset
                             : null;
