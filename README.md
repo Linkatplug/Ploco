@@ -27,7 +27,7 @@ Ploco est actuellement en cours de développement actif.
   - Voies de ligne
 - Indicateurs de remplissage des zones (BLOCK / BIF)
 - Arrêts de ligne avec informations train (numéro, heure d’arrêt, motif)
-- Gestion des pools (Lineas / Sibelit) avec fenêtre de transfert dédiée
+- Gestion des pools avec fenêtre de transfert dédiée
 - Historique des actions (affectations, statuts, modifications de layout)
 - Presets de layout (sauvegarde / chargement / suppression)
 - Mode sombre
