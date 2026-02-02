@@ -634,6 +634,7 @@ namespace Ploco
             EnsureTrackOffsets(targetTrack);
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
             UpdatePoolVisibility();
+            RefreshTapisT13();
         }
 
         private void UpdateLocomotiveDropOffset(LocomotiveModel loco, TrackModel track, ListBox listBox, Point dropPosition)
@@ -730,6 +731,7 @@ namespace Ploco
             {
                 _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
                 PersistState();
+                RefreshTapisT13();
             }
         }
 
@@ -768,6 +770,7 @@ namespace Ploco
                 _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
                 UpdatePoolVisibility();
                 PersistState();
+                RefreshTapisT13();
             }
         }
 
@@ -842,6 +845,7 @@ namespace Ploco
                 $"Swap Sibelit {sibelitLoco.Number} ↔ Lineas {lineasLoco.Number}.");
             UpdatePoolVisibility();
             PersistState();
+            RefreshTapisT13();
         }
 
         private static LocomotiveModel? GetLocomotiveFromMenuItem(object sender)
@@ -882,6 +886,7 @@ namespace Ploco
             loco.TractionPercent = null;
             _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number} (HS).");
             PersistState();
+            RefreshTapisT13();
         }
 
         private void LocomotiveHsCommand_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -1067,6 +1072,7 @@ namespace Ploco
             dialog.ShowDialog();
             UpdatePoolVisibility();
             PersistState();
+            RefreshTapisT13();
         }
 
         private void MenuItem_History_Click(object sender, RoutedEventArgs e)
@@ -1079,6 +1085,11 @@ namespace Ploco
         private void MenuItem_TapisT13_Click(object sender, RoutedEventArgs e)
         {
             OpenModelessWindow(() => new TapisT13Window(_locomotives, _tiles));
+        }
+
+        private void MenuItem_TapisRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshTapisT13();
         }
 
         private void MenuItem_DatabaseManagement_Click(object sender, RoutedEventArgs e)
@@ -1112,6 +1123,7 @@ namespace Ploco
             _repository.AddHistory("ResetLocomotives", "Réinitialisation des locomotives.");
             UpdatePoolVisibility();
             PersistState();
+            RefreshTapisT13();
         }
 
         private void MenuItem_ResetTiles_Click(object sender, RoutedEventArgs e)
@@ -1139,6 +1151,7 @@ namespace Ploco
             _repository.AddHistory("ResetTiles", "Suppression de toutes les tuiles.");
             UpdatePoolVisibility();
             PersistState();
+            RefreshTapisT13();
         }
 
         private void ToggleDarkMode_Click(object sender, RoutedEventArgs e)
@@ -1176,6 +1189,16 @@ namespace Ploco
 
             window.Show();
             window.Activate();
+        }
+
+        private void RefreshTapisT13()
+        {
+            if (_modelessWindows.TryGetValue(typeof(TapisT13Window), out var window)
+                && window is IRefreshableWindow refreshable
+                && window.IsVisible)
+            {
+                refreshable.RefreshData();
+            }
         }
 
         private void LocomotiveItem_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

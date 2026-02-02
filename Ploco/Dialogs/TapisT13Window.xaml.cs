@@ -143,7 +143,17 @@ namespace Ploco.Dialogs
 
         public void RefreshData()
         {
+            var selected = T13Grid.SelectedItem as T13Row;
+            var selectedKey = selected?.Locomotive;
             LoadRows(_locomotives, _tiles);
+            if (!string.IsNullOrWhiteSpace(selectedKey))
+            {
+                var row = _rows.FirstOrDefault(item => item.Locomotive == selectedKey);
+                if (row != null)
+                {
+                    T13Grid.SelectedItem = row;
+                }
+            }
         }
 
         private sealed class T13Row

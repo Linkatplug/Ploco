@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ploco.Converters"
         xmlns:helpers="clr-namespace:Ploco.Helpers"
-        Title="Ploco - Nouvelle version" Height="800" Width="1200"
+        Title="Ploco - Gestion de parcs locomotives" Height="800" Width="1200"
         Icon="pack://application:,,,/img/train_logo.ico"
         Background="{DynamicResource AppBackgroundBrush}"
         Loaded="Window_Loaded" Closing="Window_Closing">
@@ -706,6 +706,7 @@
             </MenuItem>
             <MenuItem Header="Tapis">
                 <MenuItem Header="T13" Click="MenuItem_TapisT13_Click"/>
+                <MenuItem Header="Actualiser" Click="MenuItem_TapisRefresh_Click"/>
                 <MenuItem Header="37000" IsEnabled="False"/>
             </MenuItem>
             <MenuItem Header="Vue">
