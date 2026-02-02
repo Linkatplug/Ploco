@@ -83,6 +83,10 @@ namespace Ploco
             foreach (var tile in state.Tiles)
             {
                 EnsureDefaultTracks(tile);
+                foreach (var track in tile.Tracks)
+                {
+                    EnsureTrackOffsets(track);
+                }
                 _tiles.Add(tile);
             }
 
@@ -627,6 +631,7 @@ namespace Ploco
 
             loco.AssignedTrackId = targetTrack.Id;
             loco.AssignedTrackOffsetX = null;
+            EnsureTrackOffsets(targetTrack);
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
             UpdatePoolVisibility();
         }
@@ -639,10 +644,61 @@ namespace Ploco
                 return;
             }
 
-            const double locoWidth = 40;
-            var maxX = Math.Max(0, listBox.ActualWidth - locoWidth);
+            const double slotWidth = 44;
+            var maxX = Math.Max(0, listBox.ActualWidth - slotWidth);
             var clampedX = Math.Max(0, Math.Min(dropPosition.X, maxX));
-            loco.AssignedTrackOffsetX = clampedX;
+            var desiredSlot = (int)Math.Round(clampedX / slotWidth);
+            var occupiedSlots = track.Locomotives
+                .Where(item => !ReferenceEquals(item, loco))
+                .Select(item => item.AssignedTrackOffsetX.HasValue ? (int)Math.Round(item.AssignedTrackOffsetX.Value / slotWidth) : -1)
+                .Where(slot => slot >= 0)
+                .ToHashSet();
+
+            var slot = desiredSlot;
+            while (occupiedSlots.Contains(slot))
+            {
+                slot++;
+            }
+
+            loco.AssignedTrackOffsetX = slot * slotWidth;
+            EnsureTrackOffsets(track);
+        }
+
+        private static void EnsureTrackOffsets(TrackModel track)
+        {
+            if (track.Kind != TrackKind.Line && track.Kind != TrackKind.Zone && track.Kind != TrackKind.Output)
+            {
+                foreach (var loco in track.Locomotives)
+                {
+                    loco.AssignedTrackOffsetX = null;
+                }
+                return;
+            }
+
+            const double slotWidth = 44;
+            var occupiedSlots = new HashSet<int>();
+            foreach (var loco in track.Locomotives)
+            {
+                if (loco.AssignedTrackOffsetX.HasValue)
+                {
+                    var slot = (int)Math.Round(loco.AssignedTrackOffsetX.Value / slotWidth);
+                    if (!occupiedSlots.Contains(slot))
+                    {
+                        occupiedSlots.Add(slot);
+                        loco.AssignedTrackOffsetX = slot * slotWidth;
+                        continue;
+                    }
+                }
+
+                var fallbackSlot = 0;
+                while (occupiedSlots.Contains(fallbackSlot))
+                {
+                    fallbackSlot++;
+                }
+
+                occupiedSlots.Add(fallbackSlot);
+                loco.AssignedTrackOffsetX = fallbackSlot * slotWidth;
+            }
         }
 
         private static int GetInsertIndex(ListBox listBox, Point dropPosition)
@@ -774,6 +830,7 @@ namespace Ploco
                 }
                 lineasLoco.AssignedTrackId = track.Id;
                 lineasLoco.AssignedTrackOffsetX = trackOffset;
+                EnsureTrackOffsets(track);
             }
             else
             {
