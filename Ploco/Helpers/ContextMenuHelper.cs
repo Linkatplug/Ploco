@@ -23,63 +23,71 @@ namespace Ploco.Helpers
         /// Une action à appeler pour mettre à jour l'interface après l'échange.
         /// </param>
         public static void HandleSwap(object sender,
-                              ObservableCollection<Locomotive> lineasPool,
-                              ObservableCollection<Locomotive> sibelitPool,
-                              Func<Locomotive, Border> findCanvasItemForLoco,
-                              Action updateInfoZone)
+                              ObservableCollection<LocomotiveModel> lineasPool,
+                              ObservableCollection<LocomotiveModel> sibelitPool,
+                              Func<LocomotiveModel, Border>? findCanvasItemForLoco,
+                              Action? updateInfoZone)
         {
-            MenuItem menuItem = sender as MenuItem;
-            if (menuItem == null) return;
-
-            ContextMenu contextMenu = menuItem.Parent as ContextMenu;
-            if (contextMenu == null) return;
-
-            // Le PlacementTarget est l'élément sur lequel on a cliqué.
-            Border border = contextMenu.PlacementTarget as Border;
-            if (border == null) return;
-
-            // Récupérer la locomotive depuis le DataContext ou le Tag.
-            Locomotive locoFromSibelit = border.DataContext as Locomotive ?? border.Tag as Locomotive;
-            if (locoFromSibelit == null) return;
-
-            // Ouvrir la fenêtre de swap en passant la locomotive de Sibelit et le pool Lineas.
-            SwapDialog dialog = new SwapDialog(locoFromSibelit, lineasPool);
-            bool? result = dialog.ShowDialog();
-            if (result == true)
+            if (sender is not MenuItem menuItem)
             {
-                // Récupérer la locomotive sélectionnée dans le SwapDialog.
-                Locomotive locoFromLineas = dialog.SelectedLoco;
-                if (locoFromLineas != null)
+                return;
+            }
+
+            if (menuItem.Parent is not ContextMenu contextMenu)
+            {
+                return;
+            }
+
+            if (contextMenu.PlacementTarget is not Border border)
+            {
+                return;
+            }
+
+            var locoFromSibelit = border.DataContext as LocomotiveModel ?? border.Tag as LocomotiveModel;
+            if (locoFromSibelit == null)
+            {
+                return;
+            }
+
+            var dialog = new SwapDialog(locoFromSibelit, lineasPool);
+            if (dialog.ShowDialog() != true || dialog.SelectedLoco == null)
+            {
+                return;
+            }
+
+            var locoFromLineas = dialog.SelectedLoco;
+
+            if (findCanvasItemForLoco != null)
+            {
+                var canvasItem = findCanvasItemForLoco(locoFromSibelit);
+                if (canvasItem?.Parent is Canvas canvas)
                 {
-                    // Si la locomotive de Sibelit est sur le Canvas, la retirer.
-                    if (findCanvasItemForLoco != null)
-                    {
-                        Border canvasItem = findCanvasItemForLoco(locoFromSibelit);
-                        if (canvasItem != null && canvasItem.Parent is Canvas canvas)
-                        {
-                            canvas.Children.Remove(canvasItem);
-                            locoFromSibelit.IsOnCanvas = false;
-                        }
-                    }
-
-                    // Effectuer l'échange dans les collections.
-                    if (sibelitPool.Contains(locoFromSibelit))
-                        sibelitPool.Remove(locoFromSibelit);
-                    if (!lineasPool.Contains(locoFromSibelit))
-                        lineasPool.Add(locoFromSibelit);
-
-                    if (lineasPool.Contains(locoFromLineas))
-                        lineasPool.Remove(locoFromLineas);
-                    if (!sibelitPool.Contains(locoFromLineas))
-                        sibelitPool.Add(locoFromLineas);
-
-                    // Mettre à jour les propriétés CurrentPool pour refléter l'échange.
-                    locoFromSibelit.CurrentPool = "Lineas";
-                    locoFromLineas.CurrentPool = "Sibelit";
-
-                    updateInfoZone?.Invoke();
+                    canvas.Children.Remove(canvasItem);
                 }
             }
+
+            if (sibelitPool.Contains(locoFromSibelit))
+            {
+                sibelitPool.Remove(locoFromSibelit);
+            }
+            if (!lineasPool.Contains(locoFromSibelit))
+            {
+                lineasPool.Add(locoFromSibelit);
+            }
+
+            if (lineasPool.Contains(locoFromLineas))
+            {
+                lineasPool.Remove(locoFromLineas);
+            }
+            if (!sibelitPool.Contains(locoFromLineas))
+            {
+                sibelitPool.Add(locoFromLineas);
+            }
+
+            locoFromSibelit.Pool = "Lineas";
+            locoFromLineas.Pool = "Sibelit";
+
+            updateInfoZone?.Invoke();
         }
 
         /// <summary>
@@ -89,27 +97,31 @@ namespace Ploco.Helpers
         /// <param name="updateInfoZone">
         /// Une action à appeler pour mettre à jour l'interface après modification du statut.
         /// </param>
-        public static void HandleModifierStatut(object sender, Action updateInfoZone)
+        public static void HandleModifierStatut(object sender, Action? updateInfoZone)
         {
-            MenuItem menuItem = sender as MenuItem;
-            if (menuItem == null)
+            if (sender is not MenuItem menuItem)
+            {
                 return;
+            }
 
-            ContextMenu contextMenu = menuItem.Parent as ContextMenu;
-            if (contextMenu == null)
+            if (menuItem.Parent is not ContextMenu contextMenu)
+            {
                 return;
+            }
 
-            Border border = contextMenu.PlacementTarget as Border;
-            if (border == null)
+            if (contextMenu.PlacementTarget is not Border border)
+            {
                 return;
+            }
 
-            Locomotive loco = border.DataContext as Locomotive ?? border.Tag as Locomotive;
+            var loco = border.DataContext as LocomotiveModel ?? border.Tag as LocomotiveModel;
             if (loco == null)
+            {
                 return;
+            }
 
-            ModifierStatutDialog dialog = new ModifierStatutDialog(loco);
-            bool? result = dialog.ShowDialog();
-            if (result == true)
+            var dialog = new StatusDialog(loco);
+            if (dialog.ShowDialog() == true)
             {
                 updateInfoZone?.Invoke();
             }
@@ -120,17 +132,8 @@ namespace Ploco.Helpers
         /// </summary>
         public static void HandleVoirHistorique(object sender, Window owner)
         {
-            MenuItem menuItem = sender as MenuItem;
-            if (menuItem?.Parent is ContextMenu contextMenu && contextMenu.PlacementTarget is Border border)
-            {
-                Locomotive loco = border.DataContext as Locomotive ?? border.Tag as Locomotive;
-                if (loco != null)
-                {
-                    HistoriqueDialog dialog = new HistoriqueDialog(loco);
-                    dialog.Owner = owner;
-                    dialog.ShowDialog();
-                }
-            }
+            MessageBox.Show("L'historique est disponible dans la fenêtre principale.", "Historique",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }
