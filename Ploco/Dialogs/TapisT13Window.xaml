@@ -20,6 +20,7 @@
                 <TextBlock x:Name="SummaryText" Foreground="SlateGray"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Actualiser" Margin="4,0" Click="Refresh_Click"/>
                 <Button Content="Copier colonne Locomotive" Margin="4,0" Click="CopyLocomotive_Click"/>
                 <Button Content="Copier colonne Loc HS" Margin="4,0" Click="CopyLocHs_Click"/>
                 <Button Content="Copier colonne Infos/Rapport" Margin="4,0" Click="CopyReport_Click"/>

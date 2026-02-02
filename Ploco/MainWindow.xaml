@@ -706,7 +706,6 @@
             </MenuItem>
             <MenuItem Header="Tapis">
                 <MenuItem Header="T13" Click="MenuItem_TapisT13_Click"/>
-                <MenuItem Header="Actualiser" Click="MenuItem_TapisRefresh_Click"/>
                 <MenuItem Header="37000" IsEnabled="False"/>
             </MenuItem>
             <MenuItem Header="Vue">

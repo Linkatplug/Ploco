@@ -127,6 +127,11 @@ namespace Ploco.Dialogs
             CopyColumn(row => row.Report);
         }
 
+        private void Refresh_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshData();
+        }
+
         private void CopyColumn(Func<T13Row, string> selector)
         {
             var text = string.Join(Environment.NewLine, _rows.Select(selector));

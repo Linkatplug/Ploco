@@ -1087,11 +1087,6 @@ namespace Ploco
             OpenModelessWindow(() => new TapisT13Window(_locomotives, _tiles));
         }
 
-        private void MenuItem_TapisRefresh_Click(object sender, RoutedEventArgs e)
-        {
-            RefreshTapisT13();
-        }
-
         private void MenuItem_DatabaseManagement_Click(object sender, RoutedEventArgs e)
         {
             OpenModelessWindow(() => new DatabaseManagementWindow(_repository, _locomotives, _tiles));
