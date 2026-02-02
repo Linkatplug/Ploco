@@ -18,6 +18,11 @@
         <SolidColorBrush x:Key="TrackBorderBrush" Color="#FFE0E0E0"/>
         <SolidColorBrush x:Key="ListBackgroundBrush" Color="#FFF5F5F5"/>
         <SolidColorBrush x:Key="ListBorderBrush" Color="#FFDDDDDD"/>
+        <SolidColorBrush x:Key="AppForegroundBrush" Color="#FF111111"/>
+        <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#FFF2F2F2"/>
+        <SolidColorBrush x:Key="MenuBorderBrush" Color="#FFDDDDDD"/>
+        <SolidColorBrush x:Key="ToolBarBackgroundBrush" Color="#FFF2F2F2"/>
+        <SolidColorBrush x:Key="ToolBarBorderBrush" Color="#FFDDDDDD"/>
         <Style x:Key="DropListBoxStyle" TargetType="ListBox">
             <Setter Property="MinHeight" Value="48"/>
             <Setter Property="Background" Value="{DynamicResource ListBackgroundBrush}"/>
@@ -26,6 +31,25 @@
             <Setter Property="Padding" Value="4"/>
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+        </Style>
+        <Style TargetType="Menu">
+            <Setter Property="Background" Value="{DynamicResource MenuBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+        </Style>
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+        </Style>
+        <Style TargetType="ToolBar">
+            <Setter Property="Background" Value="{DynamicResource ToolBarBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolBarBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
         </Style>
         <Style x:Key="BlockedSwitchButtonBase" TargetType="Button">
             <Setter Property="MinWidth" Value="44"/>

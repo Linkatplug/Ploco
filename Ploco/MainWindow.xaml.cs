@@ -1117,6 +1117,11 @@ namespace Ploco
                 Resources["TrackBorderBrush"] = new SolidColorBrush(Color.FromRgb(80, 80, 80));
                 Resources["ListBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(50, 50, 50));
                 Resources["ListBorderBrush"] = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+                Resources["AppForegroundBrush"] = new SolidColorBrush(Colors.WhiteSmoke);
+                Resources["MenuBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(45, 45, 45));
+                Resources["MenuBorderBrush"] = new SolidColorBrush(Color.FromRgb(70, 70, 70));
+                Resources["ToolBarBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(45, 45, 45));
+                Resources["ToolBarBorderBrush"] = new SolidColorBrush(Color.FromRgb(70, 70, 70));
             }
             else
             {
@@ -1128,6 +1133,11 @@ namespace Ploco
                 Resources["TrackBorderBrush"] = new SolidColorBrush(Color.FromRgb(224, 224, 224));
                 Resources["ListBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(245, 245, 245));
                 Resources["ListBorderBrush"] = new SolidColorBrush(Color.FromRgb(221, 221, 221));
+                Resources["AppForegroundBrush"] = new SolidColorBrush(Color.FromRgb(17, 17, 17));
+                Resources["MenuBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(242, 242, 242));
+                Resources["MenuBorderBrush"] = new SolidColorBrush(Color.FromRgb(221, 221, 221));
+                Resources["ToolBarBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(242, 242, 242));
+                Resources["ToolBarBorderBrush"] = new SolidColorBrush(Color.FromRgb(221, 221, 221));
             }
         }
 
