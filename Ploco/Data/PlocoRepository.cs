@@ -65,6 +65,7 @@ namespace Ploco.Data
                     track_id INTEGER NOT NULL,
                     loco_id INTEGER NOT NULL,
                     position INTEGER NOT NULL,
+                    offset_x REAL,
                     PRIMARY KEY(track_id, loco_id),
                     FOREIGN KEY(track_id) REFERENCES tracks(id),
                     FOREIGN KEY(loco_id) REFERENCES locomotives(id)
@@ -95,6 +96,7 @@ namespace Ploco.Data
             EnsureColumn(connection, "locomotives", "hs_reason", "TEXT");
             EnsureColumn(connection, "tracks", "type", "TEXT NOT NULL DEFAULT 'Main'");
             EnsureColumn(connection, "tracks", "config_json", "TEXT");
+            EnsureColumn(connection, "track_locomotives", "offset_x", "REAL");
         }
 
         public AppState LoadState()
@@ -170,6 +172,14 @@ namespace Ploco.Data
                         {
                             tile.LocationPreset = config.LocationPreset;
                             tile.GarageTrackNumber = config.GarageTrackNumber;
+                            if (config.Width.HasValue)
+                            {
+                                tile.Width = config.Width.Value;
+                            }
+                            if (config.Height.HasValue)
+                            {
+                                tile.Height = config.Height.Value;
+                            }
                         }
                     }
 
@@ -218,7 +228,7 @@ namespace Ploco.Data
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT track_id, loco_id, position FROM track_locomotives ORDER BY position;";
+                command.CommandText = "SELECT track_id, loco_id, position, offset_x FROM track_locomotives ORDER BY position;";
                 using var reader = command.ExecuteReader();
                 var locosById = state.Locomotives.ToDictionary(l => l.Id);
                 var tracksById = state.Tiles.SelectMany(t => t.Tracks).ToDictionary(t => t.Id);
@@ -231,6 +241,10 @@ namespace Ploco.Data
                     {
                         track.Locomotives.Add(loco);
                         loco.AssignedTrackId = trackId;
+                        var offset = reader.IsDBNull(3) ? null : reader.GetDouble(3);
+                        loco.AssignedTrackOffsetX = track.Kind == TrackKind.Line || track.Kind == TrackKind.Zone || track.Kind == TrackKind.Output
+                            ? offset
+                            : null;
                     }
                 }
             }
@@ -339,7 +353,9 @@ namespace Ploco.Data
                 var configJson = JsonSerializer.Serialize(new TileConfig
                 {
                     LocationPreset = tile.LocationPreset,
-                    GarageTrackNumber = tile.GarageTrackNumber
+                    GarageTrackNumber = tile.GarageTrackNumber,
+                    Width = tile.Width,
+                    Height = tile.Height
                 });
                 command.Parameters.AddWithValue("$config", configJson);
                 command.ExecuteNonQuery();
@@ -382,10 +398,14 @@ namespace Ploco.Data
                     foreach (var loco in track.Locomotives)
                     {
                         using var assignCommand = connection.CreateCommand();
-                        assignCommand.CommandText = "INSERT INTO track_locomotives (track_id, loco_id, position) VALUES ($trackId, $locoId, $position);";
+                        assignCommand.CommandText = "INSERT INTO track_locomotives (track_id, loco_id, position, offset_x) VALUES ($trackId, $locoId, $position, $offsetX);";
                         assignCommand.Parameters.AddWithValue("$trackId", track.Id);
                         assignCommand.Parameters.AddWithValue("$locoId", loco.Id);
                         assignCommand.Parameters.AddWithValue("$position", locoPosition++);
+                        object offsetValue = track.Kind == TrackKind.Line || track.Kind == TrackKind.Zone || track.Kind == TrackKind.Output
+                            ? (object?)loco.AssignedTrackOffsetX ?? DBNull.Value
+                            : DBNull.Value;
+                        assignCommand.Parameters.AddWithValue("$offsetX", offsetValue);
                         assignCommand.ExecuteNonQuery();
                     }
                 }
@@ -574,6 +594,8 @@ namespace Ploco.Data
         {
             public string? LocationPreset { get; set; }
             public int? GarageTrackNumber { get; set; }
+            public double? Width { get; set; }
+            public double? Height { get; set; }
         }
 
         private class TrackConfig

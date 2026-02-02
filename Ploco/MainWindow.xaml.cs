@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -19,19 +20,25 @@ namespace Ploco
 {
     public partial class MainWindow : Window
     {
+        public static readonly RoutedUICommand LocomotiveHsCommand = new("Loc HS", "LocomotiveHsCommand", typeof(MainWindow));
         private readonly PlocoRepository _repository;
         private readonly ObservableCollection<LocomotiveModel> _locomotives = new();
         private readonly ObservableCollection<TileModel> _tiles = new();
         private readonly List<LayoutPreset> _layoutPresets = new();
         private const string LayoutPresetFileName = "layout_presets.json";
+        private const double MinTileWidth = 260;
+        private const double MinTileHeight = 180;
         private bool _isDarkMode;
         private Point _dragStartPoint;
         private TileModel? _draggedTile;
         private Point _tileDragStart;
+        private bool _isResizingTile;
         public MainWindow()
         {
             InitializeComponent();
             _repository = new PlocoRepository("ploco.db");
+            InputBindings.Add(new KeyBinding(LocomotiveHsCommand, new KeyGesture(Key.H, ModifierKeys.Control)));
+            CommandBindings.Add(new CommandBinding(LocomotiveHsCommand, LocomotiveHsCommand_Executed, LocomotiveHsCommand_CanExecute));
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -515,6 +522,7 @@ namespace Ploco
             {
                 track.Locomotives.Remove(loco);
                 loco.AssignedTrackId = null;
+                loco.AssignedTrackOffsetX = null;
                 _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
             }
 
@@ -561,6 +569,7 @@ namespace Ploco
                 var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
                 var insertIndex = GetInsertIndex(listBox, e.GetPosition(listBox));
                 MoveLocomotiveToTrack(loco, track, insertIndex);
+                UpdateLocomotiveDropOffset(loco, track, listBox, e.GetPosition(listBox));
                 PersistState();
                 e.Handled = true;
             }
@@ -615,8 +624,23 @@ namespace Ploco
             }
 
             loco.AssignedTrackId = targetTrack.Id;
+            loco.AssignedTrackOffsetX = null;
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
             UpdatePoolVisibility();
+        }
+
+        private void UpdateLocomotiveDropOffset(LocomotiveModel loco, TrackModel track, ListBox listBox, Point dropPosition)
+        {
+            if (track.Kind != TrackKind.Line && track.Kind != TrackKind.Zone && track.Kind != TrackKind.Output)
+            {
+                loco.AssignedTrackOffsetX = null;
+                return;
+            }
+
+            const double locoWidth = 40;
+            var maxX = Math.Max(0, listBox.ActualWidth - locoWidth);
+            var clampedX = Math.Max(0, Math.Min(dropPosition.X, maxX));
+            loco.AssignedTrackOffsetX = clampedX;
         }
 
         private static int GetInsertIndex(ListBox listBox, Point dropPosition)
@@ -637,48 +661,139 @@ namespace Ploco
 
         private void MenuItem_ModifierStatut_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem menuItem && menuItem.Parent is ContextMenu contextMenu)
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null)
             {
-                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
-                {
-                    var dialog = new StatusDialog(loco) { Owner = this };
-                    if (dialog.ShowDialog() == true)
-                    {
-                        _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
-                        PersistState();
-                    }
-                }
+                return;
+            }
+
+            var dialog = new StatusDialog(loco) { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
+                PersistState();
             }
         }
 
         private void MenuItem_SwapPool_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem menuItem && menuItem.Parent is ContextMenu contextMenu)
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco != null)
             {
-                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
-                {
-                    SwapLocomotivePool(loco);
-                }
+                SwapLocomotivePool(loco);
+            }
+        }
+
+        private void MenuItem_LocHs_Click(object sender, RoutedEventArgs e)
+        {
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco != null)
+            {
+                MarkLocomotiveHs(loco);
             }
         }
 
         private void MenuItem_RemoveFromTile_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem menuItem && menuItem.Parent is ContextMenu contextMenu)
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null)
             {
-                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
+                return;
+            }
+
+            var track = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+            if (track != null)
+            {
+                track.Locomotives.Remove(loco);
+                loco.AssignedTrackId = null;
+                loco.AssignedTrackOffsetX = null;
+                _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
+                UpdatePoolVisibility();
+                PersistState();
+            }
+        }
+
+        private static LocomotiveModel? GetLocomotiveFromMenuItem(object sender)
+        {
+            if (sender is not MenuItem menuItem)
+            {
+                return null;
+            }
+
+            if (menuItem.CommandParameter is LocomotiveModel parameter)
+            {
+                return parameter;
+            }
+
+            if (menuItem.DataContext is LocomotiveModel dataContext)
+            {
+                return dataContext;
+            }
+
+            var contextMenu = menuItem.Parent as ContextMenu
+                ?? ItemsControl.ItemsControlFromItemContainer(menuItem) as ContextMenu;
+            if (contextMenu?.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
+            {
+                return loco;
+            }
+
+            return null;
+        }
+
+        private void MarkLocomotiveHs(LocomotiveModel loco)
+        {
+            if (loco.Status == LocomotiveStatus.HS)
+            {
+                return;
+            }
+
+            loco.Status = LocomotiveStatus.HS;
+            loco.TractionPercent = null;
+            _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number} (HS).");
+            PersistState();
+        }
+
+        private void LocomotiveHsCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var loco = GetFocusedLocomotive();
+            if (loco != null)
+            {
+                MarkLocomotiveHs(loco);
+            }
+        }
+
+        private void LocomotiveHsCommand_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = GetFocusedLocomotive() != null;
+        }
+
+        private LocomotiveModel? GetFocusedLocomotive()
+        {
+            if (Keyboard.FocusedElement is DependencyObject element)
+            {
+                var loco = GetLocomotiveFromElement(element);
+                if (loco != null)
                 {
-                    var track = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
-                    if (track != null)
-                    {
-                        track.Locomotives.Remove(loco);
-                        loco.AssignedTrackId = null;
-                        _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
-                        UpdatePoolVisibility();
-                        PersistState();
-                    }
+                    return loco;
                 }
             }
+
+            return LocomotiveList.SelectedItem as LocomotiveModel;
+        }
+
+        private static LocomotiveModel? GetLocomotiveFromElement(DependencyObject? element)
+        {
+            while (element != null)
+            {
+                if (element is FrameworkElement frameworkElement && frameworkElement.DataContext is LocomotiveModel loco)
+                {
+                    return loco;
+                }
+
+                element = VisualTreeHelper.GetParent(element);
+            }
+
+            return null;
         }
 
         private void Tile_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -686,7 +801,13 @@ namespace Ploco
             if (e.OriginalSource is DependencyObject source
                 && (FindAncestor<Button>(source) != null
                     || FindAncestor<MenuItem>(source) != null
-                    || FindAncestor<Menu>(source) != null))
+                    || FindAncestor<Menu>(source) != null
+                    || FindAncestor<Thumb>(source) != null))
+            {
+                return;
+            }
+
+            if (_isResizingTile)
             {
                 return;
             }
@@ -701,7 +822,7 @@ namespace Ploco
 
         private void Tile_MouseMove(object sender, MouseEventArgs e)
         {
-            if (_draggedTile == null || e.LeftButton != MouseButtonState.Pressed)
+            if (_draggedTile == null || e.LeftButton != MouseButtonState.Pressed || _isResizingTile)
             {
                 return;
             }
@@ -726,6 +847,27 @@ namespace Ploco
                 border.ReleaseMouseCapture();
             }
             _draggedTile = null;
+        }
+
+        private void TileResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+        {
+            if (sender is Thumb thumb && thumb.DataContext is TileModel tile)
+            {
+                _isResizingTile = true;
+                tile.Width = Math.Max(MinTileWidth, tile.Width + e.HorizontalChange);
+                tile.Height = Math.Max(MinTileHeight, tile.Height + e.VerticalChange);
+            }
+        }
+
+        private void TileResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            _isResizingTile = false;
+            if (sender is Thumb thumb && thumb.DataContext is TileModel tile)
+            {
+                ResolveTileOverlap(tile);
+                _repository.AddHistory("TileResized", $"Tuile {tile.Name} redimensionnée.");
+                PersistState();
+            }
         }
 
         private static T? FindAncestor<T>(DependencyObject child) where T : DependencyObject
@@ -834,6 +976,7 @@ namespace Ploco
             foreach (var loco in _locomotives)
             {
                 loco.AssignedTrackId = null;
+                loco.AssignedTrackOffsetX = null;
                 loco.Status = LocomotiveStatus.Ok;
                 loco.TractionPercent = null;
                 loco.HsReason = null;
@@ -861,6 +1004,7 @@ namespace Ploco
                     {
                         track.Locomotives.Remove(loco);
                         loco.AssignedTrackId = null;
+                        loco.AssignedTrackOffsetX = null;
                     }
                 }
             }
@@ -1047,8 +1191,6 @@ namespace Ploco
 
         private void ResolveTileOverlap(TileModel tile)
         {
-            const double tileWidth = 360;
-            const double tileHeight = 220;
             const double step = 20;
 
             var hasOverlap = true;
@@ -1062,7 +1204,7 @@ namespace Ploco
                         continue;
                     }
 
-                    if (IsOverlapping(tile, other, tileWidth, tileHeight))
+                    if (IsOverlapping(tile, other))
                     {
                         tile.X += step;
                         tile.Y += step;
@@ -1073,12 +1215,12 @@ namespace Ploco
             }
         }
 
-        private static bool IsOverlapping(TileModel first, TileModel second, double width, double height)
+        private static bool IsOverlapping(TileModel first, TileModel second)
         {
-            return first.X < second.X + width
-                   && first.X + width > second.X
-                   && first.Y < second.Y + height
-                   && first.Y + height > second.Y;
+            return first.X < second.X + second.Width
+                   && first.X + first.Width > second.X
+                   && first.Y < second.Y + second.Height
+                   && first.Y + first.Height > second.Y;
         }
 
         private static List<int> ParseLocomotiveNumbers(string input, List<string> invalidTokens)
@@ -1217,6 +1359,8 @@ namespace Ploco
                     Type = tile.Type,
                     X = tile.X,
                     Y = tile.Y,
+                    Width = tile.Width,
+                    Height = tile.Height,
                     Tracks = tile.Tracks.Select(track => new LayoutTrack
                     {
                         Name = track.Name,
@@ -1276,6 +1420,8 @@ namespace Ploco
                     Type = tile.Type,
                     X = tile.X,
                     Y = tile.Y,
+                    Width = tile.Width,
+                    Height = tile.Height,
                     Tracks = tile.Tracks.Select(track => new LayoutTrack
                     {
                         Name = track.Name,
@@ -1302,6 +1448,7 @@ namespace Ploco
                     {
                         track.Locomotives.Remove(loco);
                         loco.AssignedTrackId = null;
+                        loco.AssignedTrackOffsetX = null;
                     }
                 }
                 _tiles.Remove(tile);
@@ -1314,7 +1461,9 @@ namespace Ploco
                     Name = layoutTile.Name,
                     Type = layoutTile.Type,
                     X = layoutTile.X,
-                    Y = layoutTile.Y
+                    Y = layoutTile.Y,
+                    Width = layoutTile.Width > 0 ? layoutTile.Width : MinTileWidth,
+                    Height = layoutTile.Height > 0 ? layoutTile.Height : MinTileHeight
                 };
                 foreach (var layoutTrack in layoutTile.Tracks)
                 {
@@ -1355,6 +1504,8 @@ namespace Ploco
             public TileType Type { get; set; }
             public double X { get; set; }
             public double Y { get; set; }
+            public double Width { get; set; }
+            public double Height { get; set; }
             public List<LayoutTrack> Tracks { get; set; } = new();
         }
 

@@ -42,6 +42,7 @@ namespace Ploco.Models
         private LocomotiveStatus _status;
         private int? _tractionPercent;
         private string? _hsReason;
+        private double? _assignedTrackOffsetX;
         private int? _assignedTrackId;
         private bool _isVisibleInActivePool = true;
 
@@ -112,6 +113,19 @@ namespace Ploco.Models
                 if (_assignedTrackId != value)
                 {
                     _assignedTrackId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public double? AssignedTrackOffsetX
+        {
+            get => _assignedTrackOffsetX;
+            set
+            {
+                if (_assignedTrackOffsetX != value)
+                {
+                    _assignedTrackOffsetX = value;
                     OnPropertyChanged();
                 }
             }
@@ -349,6 +363,8 @@ namespace Ploco.Models
         private string _name = string.Empty;
         private double _x;
         private double _y;
+        private double _width = 360;
+        private double _height = 220;
         private readonly ObservableCollection<TrackModel> _outputTracks = new();
         private readonly ObservableCollection<TrackModel> _zoneTracks = new();
         private readonly ObservableCollection<TrackModel> _lineTracks = new();
@@ -408,6 +424,32 @@ namespace Ploco.Models
                 if (_y != value)
                 {
                     _y = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public double Width
+        {
+            get => _width;
+            set
+            {
+                if (Math.Abs(_width - value) > 0.1)
+                {
+                    _width = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public double Height
+        {
+            get => _height;
+            set
+            {
+                if (Math.Abs(_height - value) > 0.1)
+                {
+                    _height = value;
                     OnPropertyChanged();
                 }
             }

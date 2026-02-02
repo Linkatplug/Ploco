@@ -108,214 +108,45 @@
         </Style>
         <ContextMenu x:Key="LocomotiveTileContextMenu">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
+            <MenuItem Header="Loc HS" Click="MenuItem_LocHs_Click" InputGestureText="Ctrl+H"/>
             <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
             <MenuItem Header="Retirer de la tuile" Click="MenuItem_RemoveFromTile_Click"/>
         </ContextMenu>
         <ContextMenu x:Key="LocomotiveListContextMenu">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
+            <MenuItem Header="Loc HS" Click="MenuItem_LocHs_Click" InputGestureText="Ctrl+H"/>
             <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
         </ContextMenu>
         <DataTemplate x:Key="DepotTileTemplate">
             <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="8" Width="360" MinHeight="220"
+                    CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="180"
                     AllowDrop="True"
                     Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <Menu Grid.Column="1" HorizontalAlignment="Right">
-                            <MenuItem Header="...">
-                                <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
-                                <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
-                                <Separator/>
-                                <MenuItem Header="Ajouter voie de sortie" Click="AddDepotOutput_Click" Tag="{Binding}"/>
-                            </MenuItem>
-                        </Menu>
-                    </Grid>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="Locomotives" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
-                            <Grid>
-                                <ListBox x:Name="DepotMainList"
-                                         DataContext="{Binding MainTrack}"
-                                         ItemsSource="{Binding Locomotives}"
-                                         Style="{StaticResource DropListBoxStyle}"
-                                         AllowDrop="True"
-                                         PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                         PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                         Drop="TrackLocomotives_Drop">
-                                    <ListBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel Orientation="Horizontal"/>
-                                        </ItemsPanelTemplate>
-                                    </ListBox.ItemsPanel>
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                    Padding="4" Margin="2" CornerRadius="4"
-                                                    ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                               HorizontalAlignment="Left"/>
-                                                    <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                               HorizontalAlignment="Right" Margin="0,2,0,0">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding TractionDisplay}" Value="">
-                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                                <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding ElementName=DepotMainList, Path=HasItems}" Value="False">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Grid>
-                            <ItemsControl ItemsSource="{Binding OutputTracks}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
-                                            <StackPanel>
-                                                <DockPanel>
-                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" DockPanel.Dock="Left"/>
-                                                    <TextBlock Text="Sortie" Foreground="SlateGray" DockPanel.Dock="Right" Margin="8,0,0,0"/>
-                                                </DockPanel>
-                                                <Grid>
-                                                    <ListBox x:Name="DepotOutputList"
-                                                             ItemsSource="{Binding Locomotives}"
-                                                             Style="{StaticResource DropListBoxStyle}"
-                                                             AllowDrop="True"
-                                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                             Drop="TrackLocomotives_Drop">
-                                                        <ListBox.ItemsPanel>
-                                                            <ItemsPanelTemplate>
-                                                                <WrapPanel Orientation="Horizontal"/>
-                                                            </ItemsPanelTemplate>
-                                                        </ListBox.ItemsPanel>
-                                                        <ListBox.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                                        Padding="4" Margin="2" CornerRadius="4"
-                                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                                    <Grid>
-                                                                        <Grid.RowDefinitions>
-                                                                            <RowDefinition Height="Auto"/>
-                                                                            <RowDefinition Height="Auto"/>
-                                                                        </Grid.RowDefinitions>
-                                                                        <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                                                   HorizontalAlignment="Left"/>
-                                                                        <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                                   HorizontalAlignment="Right" Margin="0,2,0,0">
-                                                                            <TextBlock.Style>
-                                                                                <Style TargetType="TextBlock">
-                                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                                    <Style.Triggers>
-                                                                                        <DataTrigger Binding="{Binding TractionDisplay}" Value="">
-                                                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                                                        </DataTrigger>
-                                                                                    </Style.Triggers>
-                                                                                </Style>
-                                                                            </TextBlock.Style>
-                                                                        </TextBlock>
-                                                                    </Grid>
-                                                                </Border>
-                                                            </DataTemplate>
-                                                        </ListBox.ItemTemplate>
-                                                    </ListBox>
-                                                    <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding ElementName=DepotOutputList, Path=HasItems}" Value="False">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Grid>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
-                </StackPanel>
-            </Border>
-        </DataTemplate>
-        <DataTemplate x:Key="GarageTileTemplate">
-            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="8" Width="360" MinHeight="220"
-                    AllowDrop="True"
-                    Drop="Tile_Drop"
-                    MouseLeftButtonDown="Tile_MouseLeftButtonDown"
-                    MouseMove="Tile_MouseMove"
-                    MouseLeftButtonUp="Tile_MouseLeftButtonUp">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <Menu Grid.Column="1" HorizontalAlignment="Right">
-                            <MenuItem Header="...">
-                                <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
-                                <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
-                                <Separator/>
-                                <MenuItem Header="Ajouter zone" Click="AddGarageZone_Click" Tag="{Binding}"/>
-                            </MenuItem>
-                        </Menu>
-                    </Grid>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                            <Menu Grid.Column="1" HorizontalAlignment="Right">
+                                <MenuItem Header="...">
+                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Ajouter voie de sortie" Click="AddDepotOutput_Click" Tag="{Binding}"/>
+                                </MenuItem>
+                            </Menu>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <StackPanel.Style>
-                                    <Style TargetType="StackPanel">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding MainTrack}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </StackPanel.Style>
-                                <TextBlock Text="Zone principale" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
+                                <TextBlock Text="Locomotives" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
                                 <Grid>
-                                    <ListBox x:Name="GarageMainList"
+                                    <ListBox x:Name="DepotMainList"
                                              DataContext="{Binding MainTrack}"
                                              ItemsSource="{Binding Locomotives}"
                                              Style="{StaticResource DropListBoxStyle}"
@@ -364,7 +195,7 @@
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding ElementName=GarageMainList, Path=HasItems}" Value="False">
+                                                    <DataTrigger Binding="{Binding ElementName=DepotMainList, Path=HasItems}" Value="False">
                                                         <Setter Property="Visibility" Value="Visible"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -372,63 +203,282 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                 </Grid>
-                            </StackPanel>
-                            <ItemsControl ItemsSource="{Binding ZoneTracks}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
-                                            <StackPanel>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding LeftLabel}" FontWeight="SemiBold" Foreground="SlateGray">
+                                <ItemsControl ItemsSource="{Binding OutputTracks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+                                                        <TextBlock Text="Sortie" Foreground="SlateGray" DockPanel.Dock="Right" Margin="8,0,0,0"/>
+                                                    </DockPanel>
+                                                    <Grid>
+                                                        <ListBox x:Name="DepotOutputList"
+                                                                 ItemsSource="{Binding Locomotives}"
+                                                                 Style="{StaticResource DropListBoxStyle}"
+                                                                 AllowDrop="True"
+                                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                                 Drop="TrackLocomotives_Drop">
+                                                            <ListBox.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <Canvas />
+                                                                </ItemsPanelTemplate>
+                                                            </ListBox.ItemsPanel>
+                                                            <ListBox.ItemContainerStyle>
+                                                                <Style TargetType="ListBoxItem">
+                                                                    <Setter Property="Canvas.Left" Value="{Binding AssignedTrackOffsetX, TargetNullValue=0}"/>
+                                                                    <Setter Property="Canvas.Top" Value="0"/>
+                                                                </Style>
+                                                            </ListBox.ItemContainerStyle>
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                        <Grid>
+                                                                            <Grid.RowDefinitions>
+                                                                                <RowDefinition Height="Auto"/>
+                                                                                <RowDefinition Height="Auto"/>
+                                                                            </Grid.RowDefinitions>
+                                                                            <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                                       HorizontalAlignment="Left"/>
+                                                                            <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                       HorizontalAlignment="Right" Margin="0,2,0,0">
+                                                                                <TextBlock.Style>
+                                                                                    <Style TargetType="TextBlock">
+                                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </TextBlock.Style>
+                                                                            </TextBlock>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                        <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
-                                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding LeftLabel}" Value="">
-                                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </TextBlock.Style>
-                                                        </TextBlock>
-                                                        <Button Style="{StaticResource LeftBlockedSwitchStyle}"
-                                                                Click="ToggleLeftBlocked_Click"/>
-                                                    </StackPanel>
-                                                    <Grid Grid.Column="1">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center">
-                                                            <TextBlock.Style>
-                                                                <Style TargetType="TextBlock">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding Name}" Value="917">
-                                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </TextBlock.Style>
-                                                        </TextBlock>
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                            <StackPanel.Style>
-                                                                <Style TargetType="StackPanel">
                                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding Name}" Value="917">
+                                                                        <DataTrigger Binding="{Binding ElementName=DepotOutputList, Path=HasItems}" Value="False">
                                                                             <Setter Property="Visibility" Value="Visible"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
-                                                            </StackPanel.Style>
-                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                                                            <Menu VerticalAlignment="Center">
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </StackPanel>
+                    <Thumb Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           Cursor="SizeNWSE" DragDelta="TileResizeThumb_DragDelta" DragCompleted="TileResizeThumb_DragCompleted"
+                           Background="#55000000" BorderBrush="#FF7A7A7A" BorderThickness="1"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+        <DataTemplate x:Key="GarageTileTemplate">
+            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="180"
+                    AllowDrop="True"
+                    Drop="Tile_Drop"
+                    MouseLeftButtonDown="Tile_MouseLeftButtonDown"
+                    MouseMove="Tile_MouseMove"
+                    MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <Grid>
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                            <Menu Grid.Column="1" HorizontalAlignment="Right">
+                                <MenuItem Header="...">
+                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Ajouter zone" Click="AddGarageZone_Click" Tag="{Binding}"/>
+                                </MenuItem>
+                            </Menu>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MainTrack}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="Zone principale" FontSize="12" Foreground="Gray" Margin="0,4,0,2"/>
+                                    <Grid>
+                                        <ListBox x:Name="GarageMainList"
+                                                 DataContext="{Binding MainTrack}"
+                                                 ItemsSource="{Binding Locomotives}"
+                                                 Style="{StaticResource DropListBoxStyle}"
+                                                 AllowDrop="True"
+                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                 Drop="TrackLocomotives_Drop">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
+                                                            <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                       HorizontalAlignment="Left"/>
+                                                            <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                       HorizontalAlignment="Right" Margin="0,2,0,0">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ElementName=GarageMainList, Path=HasItems}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </StackPanel>
+                                <ItemsControl ItemsSource="{Binding ZoneTracks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                                <StackPanel>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding LeftLabel}" FontWeight="SemiBold" Foreground="SlateGray">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding LeftLabel}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding LeftLabel}" Value="">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <Button Style="{StaticResource LeftBlockedSwitchStyle}"
+                                                                    Click="ToggleLeftBlocked_Click"/>
+                                                        </StackPanel>
+                                                        <Grid Grid.Column="1">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Name}" Value="917">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <StackPanel.Style>
+                                                                    <Style TargetType="StackPanel">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Name}" Value="917">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </StackPanel.Style>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                                                <Menu VerticalAlignment="Center">
+                                                                    <MenuItem Header="...">
+                                                                        <MenuItem Header="Renommer zone" Click="RenameZone_Click" Tag="{Binding}"/>
+                                                                        <MenuItem Header="Supprimer zone" Click="RemoveZone_Click" Tag="{Binding}"/>
+                                                                    </MenuItem>
+                                                                </Menu>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                            <Button Style="{StaticResource RightBlockedSwitchStyle}"
+                                                                    Click="ToggleRightBlocked_Click"/>
+                                                            <TextBlock Text="{Binding RightLabel}" FontWeight="SemiBold" Foreground="SlateGray">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding RightLabel}" Value="">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <Menu HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                                <Menu.Style>
+                                                                    <Style TargetType="Menu">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Name}" Value="917">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Menu.Style>
                                                                 <MenuItem Header="...">
                                                                     <MenuItem Header="Renommer zone" Click="RenameZone_Click" Tag="{Binding}"/>
                                                                     <MenuItem Header="Supprimer zone" Click="RemoveZone_Click" Tag="{Binding}"/>
@@ -436,44 +486,130 @@
                                                             </Menu>
                                                         </StackPanel>
                                                     </Grid>
-                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                        <Button Style="{StaticResource RightBlockedSwitchStyle}"
-                                                                Click="ToggleRightBlocked_Click"/>
-                                                        <TextBlock Text="{Binding RightLabel}" FontWeight="SemiBold" Foreground="SlateGray">
+                                                    <Grid>
+                                                        <ListBox x:Name="GarageZoneList"
+                                                                 ItemsSource="{Binding Locomotives}"
+                                                                 Style="{StaticResource DropListBoxStyle}"
+                                                                 AllowDrop="True"
+                                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                                 Drop="TrackLocomotives_Drop">
+                                                            <ListBox.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <Canvas />
+                                                                </ItemsPanelTemplate>
+                                                            </ListBox.ItemsPanel>
+                                                            <ListBox.ItemContainerStyle>
+                                                                <Style TargetType="ListBoxItem">
+                                                                    <Setter Property="Canvas.Left" Value="{Binding AssignedTrackOffsetX, TargetNullValue=0}"/>
+                                                                    <Setter Property="Canvas.Top" Value="0"/>
+                                                                </Style>
+                                                            </ListBox.ItemContainerStyle>
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                        <Grid>
+                                                                            <Grid.RowDefinitions>
+                                                                                <RowDefinition Height="Auto"/>
+                                                                                <RowDefinition Height="Auto"/>
+                                                                            </Grid.RowDefinitions>
+                                                                            <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                                       HorizontalAlignment="Left"/>
+                                                                            <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                       HorizontalAlignment="Right" Margin="0,2,0,0">
+                                                                                <TextBlock.Style>
+                                                                                    <Style TargetType="TextBlock">
+                                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </TextBlock.Style>
+                                                                            </TextBlock>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                        <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding RightLabel}" Value="{x:Null}">
-                                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding RightLabel}" Value="">
-                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <DataTrigger Binding="{Binding ElementName=GarageZoneList, Path=HasItems}" Value="False">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </TextBlock.Style>
                                                         </TextBlock>
-                                                        <Menu HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                            <Menu.Style>
-                                                                <Style TargetType="Menu">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding Name}" Value="917">
-                                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Menu.Style>
-                                                            <MenuItem Header="...">
-                                                                <MenuItem Header="Renommer zone" Click="RenameZone_Click" Tag="{Binding}"/>
-                                                                <MenuItem Header="Supprimer zone" Click="RemoveZone_Click" Tag="{Binding}"/>
-                                                            </MenuItem>
-                                                        </Menu>
-                                                    </StackPanel>
-                                                </Grid>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </StackPanel>
+                    <Thumb Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           Cursor="SizeNWSE" DragDelta="TileResizeThumb_DragDelta" DragCompleted="TileResizeThumb_DragCompleted"
+                           Background="#55000000" BorderBrush="#FF7A7A7A" BorderThickness="1"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+        <DataTemplate x:Key="LineTileTemplate">
+            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="180"
+                    AllowDrop="True"
+                    Drop="Tile_Drop"
+                    MouseLeftButtonDown="Tile_MouseLeftButtonDown"
+                    MouseMove="Tile_MouseMove"
+                    MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <Grid>
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                            <Menu Grid.Column="1" HorizontalAlignment="Right">
+                                <MenuItem Header="...">
+                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Ajouter voie" Click="AddLineTrack_Click" Tag="{Binding}"/>
+                                </MenuItem>
+                            </Menu>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding LineTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                            <StackPanel>
                                                 <Grid>
-                                                    <ListBox x:Name="GarageZoneList"
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                    <Menu Grid.Column="1" HorizontalAlignment="Right">
+                                                        <MenuItem Header="...">
+                                                            <MenuItem Header="Renommer voie" Click="RenameLineTrack_Click" Tag="{Binding}"/>
+                                                            <MenuItem Header="Supprimer voie" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
+                                                        </MenuItem>
+                                                    </Menu>
+                                                </Grid>
+                                                <TextBlock Text="{Binding LineInfo}" FontSize="11" Foreground="SlateGray" Margin="0,2,0,4"/>
+                                                <Grid>
+                                                    <ListBox x:Name="LineTrackList"
                                                              ItemsSource="{Binding Locomotives}"
                                                              Style="{StaticResource DropListBoxStyle}"
                                                              AllowDrop="True"
@@ -482,9 +618,15 @@
                                                              Drop="TrackLocomotives_Drop">
                                                         <ListBox.ItemsPanel>
                                                             <ItemsPanelTemplate>
-                                                                <WrapPanel Orientation="Horizontal"/>
+                                                                <Canvas />
                                                             </ItemsPanelTemplate>
                                                         </ListBox.ItemsPanel>
+                                                        <ListBox.ItemContainerStyle>
+                                                            <Style TargetType="ListBoxItem">
+                                                                <Setter Property="Canvas.Left" Value="{Binding AssignedTrackOffsetX, TargetNullValue=0}"/>
+                                                                <Setter Property="Canvas.Top" Value="0"/>
+                                                            </Style>
+                                                        </ListBox.ItemContainerStyle>
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
@@ -521,7 +663,7 @@
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding ElementName=GarageZoneList, Path=HasItems}" Value="False">
+                                                                    <DataTrigger Binding="{Binding ElementName=LineTrackList, Path=HasItems}" Value="False">
                                                                         <Setter Property="Visibility" Value="Visible"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
@@ -534,119 +676,12 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
-                </StackPanel>
-            </Border>
-        </DataTemplate>
-        <DataTemplate x:Key="LineTileTemplate">
-            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="8" Width="360" MinHeight="220"
-                    AllowDrop="True"
-                    Drop="Tile_Drop"
-                    MouseLeftButtonDown="Tile_MouseLeftButtonDown"
-                    MouseMove="Tile_MouseMove"
-                    MouseLeftButtonUp="Tile_MouseLeftButtonUp">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
-                        <Menu Grid.Column="1" HorizontalAlignment="Right">
-                            <MenuItem Header="...">
-                                <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
-                                <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
-                                <Separator/>
-                                <MenuItem Header="Ajouter voie" Click="AddLineTrack_Click" Tag="{Binding}"/>
-                            </MenuItem>
-                        </Menu>
-                    </Grid>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding LineTracks}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
-                                        <StackPanel>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <Menu Grid.Column="1" HorizontalAlignment="Right">
-                                                    <MenuItem Header="...">
-                                                        <MenuItem Header="Renommer voie" Click="RenameLineTrack_Click" Tag="{Binding}"/>
-                                                        <MenuItem Header="Supprimer voie" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
-                                                    </MenuItem>
-                                                </Menu>
-                                            </Grid>
-                                            <TextBlock Text="{Binding LineInfo}" FontSize="11" Foreground="SlateGray" Margin="0,2,0,4"/>
-                                            <Grid>
-                                                <ListBox x:Name="LineTrackList"
-                                                         ItemsSource="{Binding Locomotives}"
-                                                         Style="{StaticResource DropListBoxStyle}"
-                                                         AllowDrop="True"
-                                                         PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                         PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                         Drop="TrackLocomotives_Drop">
-                                                    <ListBox.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <WrapPanel Orientation="Horizontal"/>
-                                                        </ItemsPanelTemplate>
-                                                    </ListBox.ItemsPanel>
-                                                    <ListBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                                    Padding="4" Margin="2" CornerRadius="4"
-                                                                    ContextMenu="{StaticResource LocomotiveTileContextMenu}">
-                                                                <Grid>
-                                                                    <Grid.RowDefinitions>
-                                                                        <RowDefinition Height="Auto"/>
-                                                                        <RowDefinition Height="Auto"/>
-                                                                    </Grid.RowDefinitions>
-                                                                    <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
-                                                                               HorizontalAlignment="Left"/>
-                                                                    <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
-                                                                               HorizontalAlignment="Right" Margin="0,2,0,0">
-                                                                        <TextBlock.Style>
-                                                                            <Style TargetType="TextBlock">
-                                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                                                <Style.Triggers>
-                                                                                    <DataTrigger Binding="{Binding TractionDisplay}" Value="">
-                                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                                    </DataTrigger>
-                                                                                </Style.Triggers>
-                                                                            </Style>
-                                                                        </TextBlock.Style>
-                                                                    </TextBlock>
-                                                                </Grid>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ListBox.ItemTemplate>
-                                                </ListBox>
-                                                <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ElementName=LineTrackList, Path=HasItems}" Value="False">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </StackPanel>
+                        </ScrollViewer>
+                    </StackPanel>
+                    <Thumb Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           Cursor="SizeNWSE" DragDelta="TileResizeThumb_DragDelta" DragCompleted="TileResizeThumb_DragCompleted"
+                           Background="#55000000" BorderBrush="#FF7A7A7A" BorderThickness="1"/>
+                </Grid>
             </Border>
         </DataTemplate>
         <helpers:TileTemplateSelector x:Key="TileTemplateSelector"
