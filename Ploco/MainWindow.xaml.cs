@@ -14,6 +14,7 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using Ploco.Data;
 using Ploco.Dialogs;
+using Ploco.Helpers;
 using Ploco.Models;
 
 namespace Ploco
@@ -33,6 +34,7 @@ namespace Ploco
         private TileModel? _draggedTile;
         private Point _tileDragStart;
         private bool _isResizingTile;
+        private readonly Dictionary<Type, Window> _modelessWindows = new();
         public MainWindow()
         {
             InitializeComponent();
@@ -680,7 +682,7 @@ namespace Ploco
             var loco = GetLocomotiveFromMenuItem(sender);
             if (loco != null)
             {
-                SwapLocomotivePool(loco);
+                OpenSwapDialog(loco);
             }
         }
 
@@ -711,6 +713,78 @@ namespace Ploco
                 UpdatePoolVisibility();
                 PersistState();
             }
+        }
+
+        private void OpenSwapDialog(LocomotiveModel loco)
+        {
+            if (!string.Equals(loco.Pool, "Sibelit", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("Le swap est réservé aux locomotives de la pool Sibelit.", "Swap", MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var lineasCandidates = _locomotives
+                .Where(item => string.Equals(item.Pool, "Lineas", StringComparison.OrdinalIgnoreCase)
+                               && item.AssignedTrackId == null)
+                .OrderBy(item => item.Number)
+                .ToList();
+            if (!lineasCandidates.Any())
+            {
+                MessageBox.Show("Aucune locomotive Lineas disponible pour le swap.", "Swap", MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new SwapDialog(loco, new ObservableCollection<LocomotiveModel>(lineasCandidates))
+            {
+                Owner = this
+            };
+            if (dialog.ShowDialog() == true && dialog.SelectedLoco != null)
+            {
+                ApplySwap(loco, dialog.SelectedLoco);
+            }
+        }
+
+        private void ApplySwap(LocomotiveModel sibelitLoco, LocomotiveModel lineasLoco)
+        {
+            var track = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(sibelitLoco));
+            var trackIndex = track?.Locomotives.IndexOf(sibelitLoco) ?? -1;
+            var trackOffset = sibelitLoco.AssignedTrackOffsetX;
+
+            if (track != null)
+            {
+                track.Locomotives.Remove(sibelitLoco);
+            }
+
+            sibelitLoco.AssignedTrackId = null;
+            sibelitLoco.AssignedTrackOffsetX = null;
+            sibelitLoco.Pool = "Lineas";
+
+            lineasLoco.Pool = "Sibelit";
+            if (track != null)
+            {
+                if (trackIndex >= 0 && trackIndex <= track.Locomotives.Count)
+                {
+                    track.Locomotives.Insert(trackIndex, lineasLoco);
+                }
+                else
+                {
+                    track.Locomotives.Add(lineasLoco);
+                }
+                lineasLoco.AssignedTrackId = track.Id;
+                lineasLoco.AssignedTrackOffsetX = trackOffset;
+            }
+            else
+            {
+                lineasLoco.AssignedTrackId = null;
+                lineasLoco.AssignedTrackOffsetX = null;
+            }
+
+            _repository.AddHistory("LocomotiveSwapped",
+                $"Swap Sibelit {sibelitLoco.Number} ↔ Lineas {lineasLoco.Number}.");
+            UpdatePoolVisibility();
+            PersistState();
         }
 
         private static LocomotiveModel? GetLocomotiveFromMenuItem(object sender)
@@ -894,15 +968,6 @@ namespace Ploco
             LocomotiveList.Items.Refresh();
         }
 
-        private void SwapLocomotivePool(LocomotiveModel loco)
-        {
-            var previousPool = loco.Pool;
-            loco.Pool = string.Equals(loco.Pool, "Lineas", StringComparison.OrdinalIgnoreCase) ? "Sibelit" : "Lineas";
-            _repository.AddHistory("PoolSwapped", $"Loco {loco.Number} déplacée de {previousPool} vers {loco.Pool}.");
-            UpdatePoolVisibility();
-            PersistState();
-        }
-
         private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
         {
             PersistState();
@@ -956,8 +1021,7 @@ namespace Ploco
 
         private void MenuItem_TapisT13_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new TapisT13Window(_locomotives, _tiles) { Owner = this };
-            dialog.ShowDialog();
+            OpenModelessWindow(() => new TapisT13Window(_locomotives, _tiles));
         }
 
         private void MenuItem_ResetLocomotives_Click(object sender, RoutedEventArgs e)
@@ -1022,6 +1086,58 @@ namespace Ploco
                 _isDarkMode = menuItem.IsChecked;
                 ApplyTheme(_isDarkMode);
             }
+        }
+
+        private void OpenModelessWindow<TWindow>(Func<TWindow> factory) where TWindow : Window
+        {
+            var windowType = typeof(TWindow);
+            if (_modelessWindows.TryGetValue(windowType, out var existing) && existing.IsVisible)
+            {
+                if (existing is IRefreshableWindow refreshable)
+                {
+                    refreshable.RefreshData();
+                }
+
+                existing.Activate();
+                return;
+            }
+
+            var window = factory();
+            window.Owner = this;
+            window.Closed += (_, _) => _modelessWindows.Remove(windowType);
+            _modelessWindows[windowType] = window;
+
+            if (window is IRefreshableWindow newRefreshable)
+            {
+                newRefreshable.RefreshData();
+            }
+
+            window.Show();
+            window.Activate();
+        }
+
+        private void LocomotiveItem_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not FrameworkElement element)
+            {
+                return;
+            }
+
+            var contextMenu = element.ContextMenu;
+            if (contextMenu == null)
+            {
+                return;
+            }
+
+            if (FindAncestor<ListBoxItem>(element) is ListBoxItem listBoxItem)
+            {
+                listBoxItem.IsSelected = true;
+            }
+
+            contextMenu.DataContext = element.DataContext;
+            contextMenu.PlacementTarget = element;
+            contextMenu.IsOpen = true;
+            e.Handled = true;
         }
 
         private void SaveLayoutPreset_Click(object sender, RoutedEventArgs e)

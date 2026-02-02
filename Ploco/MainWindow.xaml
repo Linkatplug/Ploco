@@ -161,9 +161,10 @@
                                         </ListBox.ItemsPanel>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                        Padding="4" Margin="2" CornerRadius="4"
-                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                            <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                    Padding="4" Margin="2" CornerRadius="4"
+                                                    ContextMenu="{StaticResource LocomotiveTileContextMenu}"
+                                                    PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                     <Grid>
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition Height="Auto"/>
@@ -235,7 +236,8 @@
                                                                 <DataTemplate>
                                                                     <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                                             Padding="4" Margin="2" CornerRadius="4"
-                                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}"
+                                                                            PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                         <Grid>
                                                                             <Grid.RowDefinitions>
                                                                                 <RowDefinition Height="Auto"/>
@@ -346,7 +348,8 @@
                                                 <DataTemplate>
                                                     <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                             Padding="4" Margin="2" CornerRadius="4"
-                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}"
+                                                            PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                         <Grid>
                                                             <Grid.RowDefinitions>
                                                                 <RowDefinition Height="Auto"/>
@@ -509,7 +512,8 @@
                                                                 <DataTemplate>
                                                                     <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                                             Padding="4" Margin="2" CornerRadius="4"
-                                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                            ContextMenu="{StaticResource LocomotiveTileContextMenu}"
+                                                                            PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                         <Grid>
                                                                             <Grid.RowDefinitions>
                                                                                 <RowDefinition Height="Auto"/>
@@ -631,7 +635,8 @@
                                                             <DataTemplate>
                                                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                                                         Padding="4" Margin="2" CornerRadius="4"
-                                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}">
+                                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}"
+                                                                        PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                     <Grid>
                                                                         <Grid.RowDefinitions>
                                                                             <RowDefinition Height="Auto"/>
@@ -751,7 +756,8 @@
                             <DataTemplate>
                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
                                         Padding="6" Margin="4" CornerRadius="4"
-                                        ContextMenu="{StaticResource LocomotiveListContextMenu}">
+                                        ContextMenu="{StaticResource LocomotiveListContextMenu}"
+                                        PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>

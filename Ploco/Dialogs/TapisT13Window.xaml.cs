@@ -3,19 +3,24 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using Ploco.Helpers;
 using Ploco.Models;
 
 namespace Ploco.Dialogs
 {
-    public partial class TapisT13Window : Window
+    public partial class TapisT13Window : Window, IRefreshableWindow
     {
         private readonly ObservableCollection<T13Row> _rows = new();
+        private readonly IEnumerable<LocomotiveModel> _locomotives;
+        private readonly IEnumerable<TileModel> _tiles;
 
         public TapisT13Window(IEnumerable<LocomotiveModel> locomotives, IEnumerable<TileModel> tiles)
         {
             InitializeComponent();
             T13Grid.ItemsSource = _rows;
-            LoadRows(locomotives, tiles);
+            _locomotives = locomotives;
+            _tiles = tiles;
+            LoadRows(_locomotives, _tiles);
         }
 
         private void LoadRows(IEnumerable<LocomotiveModel> locomotives, IEnumerable<TileModel> tiles)
@@ -134,6 +139,11 @@ namespace Ploco.Dialogs
             var hsCount = _rows.Count(r => r.IsHs);
             var okCount = total - hsCount;
             SummaryText.Text = $"Total : {total} · HS : {hsCount} · OK : {okCount}";
+        }
+
+        public void RefreshData()
+        {
+            LoadRows(_locomotives, _tiles);
         }
 
         private sealed class T13Row
