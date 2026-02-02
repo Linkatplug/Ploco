@@ -39,7 +39,7 @@
                         <Border Width="40" Height="30" Margin="5"
                                 Background="{Binding Statut, Converter={StaticResource StatutToBrushConverter}}"
                                 ContextMenu="{StaticResource LocomotivesContextMenu}">
-                            <TextBlock Text="{Binding NumeroSerie}" 
+                            <TextBlock Text="{Binding Number}" 
                                        Foreground="White" 
                                        VerticalAlignment="Center" 
                                        HorizontalAlignment="Center" 
@@ -63,7 +63,7 @@
                         <Border Width="40" Height="30" Margin="5"
                                 Background="{Binding Statut, Converter={StaticResource StatutToBrushConverter}}"
                                 ContextMenu="{StaticResource LocomotivesContextMenu}">
-                            <TextBlock Text="{Binding NumeroSerie}" 
+                            <TextBlock Text="{Binding Number}" 
                                        Foreground="White" 
                                        VerticalAlignment="Center" 
                                        HorizontalAlignment="Center" 
