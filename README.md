@@ -41,6 +41,3 @@ Développé par **LinkAtPlug**
 
 ## Licence
 Ce projet est sous licence MIT. Consultez `LICENSE` pour plus d'informations.
-
-## Captures d'écran (nouvelle version)
-> À mettre à jour avec les nouvelles captures de la version en cours.
