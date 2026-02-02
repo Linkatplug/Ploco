@@ -31,7 +31,7 @@ locomotives par glisser-déposer, avec un suivi détaillé de leur état et de l
 3. **Ajouter/éditer des voies** : menu contextuel de la tuile (ex. *Ajouter voie de sortie*, *Ajouter zone*, *Ajouter voie*).
 4. **Déplacer une locomotive** : glissez-la depuis la liste de gauche vers une voie.
 5. **Modifier le statut** : clic droit sur la locomotive puis *Modifier statut* ou *Loc HS*.
-6. **Swap de pool** : clic droit et *Swap* pour basculer Lineas/Sibelit.
+6. **Swap de pool** : clic droit et *Swap* pour basculer une loc entre les pools.
 7. **Gestion des parcs & historique** : menu *Gestion*.
 8. **Presets & mode sombre** : menu *Vue* pour les presets, *Option* pour le thème.
 9. **Sauvegarde/chargement** : menu *Fichier* (état stocké dans `ploco.db`).
