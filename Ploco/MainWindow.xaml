@@ -32,6 +32,10 @@
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="{DynamicResource ListBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ListBorderBrush}"/>
+        </Style>
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
         </Style>
@@ -41,6 +45,12 @@
             <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
         </Style>
         <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource MenuBackgroundBrush}"/>
+        </Style>
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="{DynamicResource MenuBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
         </Style>
         <Style TargetType="ToolBar">
