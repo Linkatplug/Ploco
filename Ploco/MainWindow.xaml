@@ -715,6 +715,7 @@
             </MenuItem>
             <MenuItem Header="Option">
                 <MenuItem Header="Mode sombre" IsCheckable="True" Click="ToggleDarkMode_Click"/>
+                <MenuItem Header="Gestion base de données" Click="MenuItem_DatabaseManagement_Click"/>
                 <MenuItem Header="Réinitialiser">
                     <MenuItem Header="Réinitialiser locomotives" Click="MenuItem_ResetLocomotives_Click"/>
                     <MenuItem Header="Réinitialiser tuiles" Click="MenuItem_ResetTiles_Click"/>

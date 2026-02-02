@@ -487,6 +487,81 @@ namespace Ploco.Data
             return history;
         }
 
+        public Dictionary<string, int> GetTableCounts()
+        {
+            var tables = new[]
+            {
+                "series",
+                "locomotives",
+                "tiles",
+                "tracks",
+                "track_locomotives",
+                "history",
+                "places"
+            };
+
+            var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            foreach (var table in tables)
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = $"SELECT COUNT(*) FROM {table};";
+                var count = Convert.ToInt32(command.ExecuteScalar());
+                result[table] = count;
+            }
+
+            return result;
+        }
+
+        public Dictionary<TrackKind, int> GetTrackKindCounts()
+        {
+            var result = new Dictionary<TrackKind, int>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT type, COUNT(*) FROM tracks GROUP BY type;";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var kindText = reader.GetString(0);
+                if (Enum.TryParse(kindText, out TrackKind kind))
+                {
+                    result[kind] = reader.GetInt32(1);
+                }
+            }
+
+            return result;
+        }
+
+        public void ClearHistory()
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            ExecuteNonQuery(connection, "DELETE FROM history;");
+        }
+
+        public void ResetOperationalState()
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "UPDATE locomotives SET traction_percent = NULL, hs_reason = NULL;";
+                command.ExecuteNonQuery();
+            }
+
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "UPDATE tracks SET config_json = NULL WHERE type = 'Line';";
+                command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+        }
+
         public void CopyDatabaseTo(string destinationPath)
         {
             if (string.IsNullOrWhiteSpace(destinationPath))
