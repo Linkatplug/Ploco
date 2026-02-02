@@ -9,16 +9,20 @@ namespace Ploco.Dialogs
     {
         private readonly LocomotiveModel _locomotive;
 
-        public StatusDialog(LocomotiveModel locomotive)
+        public StatusDialog(LocomotiveModel locomotive, LocomotiveStatus? forcedStatus = null)
         {
             InitializeComponent();
             _locomotive = locomotive;
             LocoLabel.Text = locomotive.DisplayName;
-            StatusCombo.SelectedIndex = (int)locomotive.Status;
+            StatusCombo.SelectedIndex = (int)(forcedStatus ?? locomotive.Status);
             TractionMotorsText.Text = locomotive.TractionPercent.HasValue
                 ? TractionPercentToMotors(locomotive.TractionPercent.Value).ToString()
                 : string.Empty;
             HsReasonText.Text = locomotive.HsReason ?? string.Empty;
+            if (forcedStatus.HasValue)
+            {
+                StatusCombo.IsEnabled = false;
+            }
             UpdatePanels();
         }
 
@@ -56,7 +60,13 @@ namespace Ploco.Dialogs
 
                 if (status == LocomotiveStatus.HS)
                 {
-                    _locomotive.HsReason = string.IsNullOrWhiteSpace(HsReasonText.Text) ? null : HsReasonText.Text.Trim();
+                    if (string.IsNullOrWhiteSpace(HsReasonText.Text))
+                    {
+                        MessageBox.Show("Veuillez renseigner une raison HS.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    _locomotive.HsReason = HsReasonText.Text.Trim();
                 }
                 else
                 {

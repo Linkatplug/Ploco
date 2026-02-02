@@ -877,16 +877,13 @@ namespace Ploco
 
         private void MarkLocomotiveHs(LocomotiveModel loco)
         {
-            if (loco.Status == LocomotiveStatus.HS)
+            var dialog = new StatusDialog(loco, LocomotiveStatus.HS) { Owner = this };
+            if (dialog.ShowDialog() == true)
             {
-                return;
+                _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number} (HS).");
+                PersistState();
+                RefreshTapisT13();
             }
-
-            loco.Status = LocomotiveStatus.HS;
-            loco.TractionPercent = null;
-            _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number} (HS).");
-            PersistState();
-            RefreshTapisT13();
         }
 
         private void LocomotiveHsCommand_Executed(object sender, ExecutedRoutedEventArgs e)

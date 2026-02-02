@@ -43,10 +43,12 @@ namespace Ploco.Dialogs
                 var isHs = loco.Status == LocomotiveStatus.HS;
                 var locHs = isHs ? trainInfo : string.Empty;
                 var report = isHs ? trainInfo : string.Empty;
+                var motif = isHs ? (loco.HsReason ?? string.Empty) : string.Empty;
 
                 _rows.Add(new T13Row
                 {
                     Locomotive = loco.Number.ToString(),
+                    Motif = motif,
                     LocHs = locHs,
                     Report = report,
                     IsHs = isHs
@@ -164,6 +166,7 @@ namespace Ploco.Dialogs
         private sealed class T13Row
         {
             public string Locomotive { get; set; } = string.Empty;
+            public string Motif { get; set; } = string.Empty;
             public string LocHs { get; set; } = string.Empty;
             public string Report { get; set; } = string.Empty;
             public bool IsHs { get; set; }

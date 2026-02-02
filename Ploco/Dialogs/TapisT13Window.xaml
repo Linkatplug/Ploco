@@ -39,6 +39,7 @@
                   CanUserSortColumns="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Locomotive" Binding="{Binding Locomotive}" Width="*"/>
+                <DataGridTextColumn Header="Statut / Motif" Binding="{Binding Motif}" Width="*"/>
                 <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*"/>
                 <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*"/>
             </DataGrid.Columns>
