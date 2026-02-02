@@ -82,7 +82,14 @@ Ploco est actuellement en cours de développement actif.
   Menu *Vue* pour les presets  
   Menu *Options* pour le thème
 
----
+### Screenshot
+
+<img width="1425" height="878" alt="YYycwUrT2z" src="https://github.com/user-attachments/assets/3d616e8d-e754-49af-87cb-ee7857e5a180" />
+<img width="1425" height="878" alt="FrtPaT2jaB" src="https://github.com/user-attachments/assets/6f175149-239a-46e0-95d2-b33ed69a6510" />
+<img width="1425" height="878" alt="OTYYviWRnH" src="https://github.com/user-attachments/assets/23124c25-8855-4e65-8837-c4ca1752ae29" />
+<img width="1425" height="878" alt="7tDbuq8MHB" src="https://github.com/user-attachments/assets/d2fbe378-b1d1-49d3-a3b9-481ecd9157a9" />
+<img width="1425" height="878" alt="DEIlEmP72y" src="https://github.com/user-attachments/assets/ff065709-afba-4f10-ab6d-344b25382622" />
+<img width="1425" height="878" alt="Hlu7fSlRMC" src="https://github.com/user-attachments/assets/d83e76e5-1ed7-4cb6-b904-a28c8c5ad7b9" />
 
 ## Auteur
 
