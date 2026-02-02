@@ -1,31 +1,40 @@
 # Ploco - Gestion des Locomotives
 
 ## Description
-Ploco est une application en cours de dev sur Windows qui permettant de gérer un parc de locomotives de manière visuelle.
-L'interface propose un système de glisser-déposer permettant de placer et déplacer les locomotives sur un tapis représentant les voies.
+Ploco est une application Windows (WPF) en cours de développement qui permet de gérer un parc de locomotives de manière visuelle.
+La nouvelle version repose sur un canvas de tuiles (dépôts, voies de garage, arrêts de ligne) où l'on dépose les
+locomotives par glisser-déposer, avec un suivi détaillé de leur état et de leur position.
 
 ## Fonctionnalités
-- Gestion des locomotives avec un suivi de leur statut
-- Système de glisser-déposer pour organiser les locomotives
-- Historique des affectations
-- Modification des statuts avec codes couleur
-- Sauvegarde et chargement de l'état du logiciel
-- Menu de gestion des locomotives et options avancées
-- Image de fond représentant les voies ferrées
-- En cours de dev... et ca va être long XD 
+- Gestion du parc (statut OK / manque de traction / HS, avec pourcentage de traction et motif HS)
+- Système de glisser-déposer pour déplacer les locomotives entre les voies
+- Canvas de tuiles redimensionnables/déplaçables : dépôts, voies de garage et arrêts de ligne
+- Voies configurables : voies principales, voies de sortie, zones de garage, voies de ligne
+- Gestion des zones avec indicateurs de remplissage (BLOCK/BIF)
+- Arrêts de ligne avec infos train (numéro, heure d'arrêt, motif)
+- Gestion des pools (Lineas/Sibelit) et fenêtre dédiée de transfert
+- Historique des actions (affectations, changements de statut, modifications de tuiles)
+- Presets de layout (enregistrer/charger/supprimer une configuration de tuiles)
+- Mode sombre
+- Sauvegarde automatique via base SQLite locale (`ploco.db`) + presets dans `layout_presets.json`
+- En cours de dev... et ça va être long XD
 
 ## Dépendances
 - .NET 8.0
 - WPF (Windows Presentation Foundation)
 - Newtonsoft.Json (pour la gestion des sauvegardes)
+- Microsoft.Data.Sqlite (persistance locale)
 
 ## Utilisation
-1. **Ajouter une locomotive** : Faites glisser une locomotive depuis la liste sur la gauche.
-2. **Modifier le statut** : Clic droit sur une locomotive puis "Modifier statut".
-3. **Swap de pool** : Clic droit et "Swap" pour changer une locomotive de pool.
-4. **Sauvegarde et chargement** : Utilisez le menu "Fichier".
-5. **Réinitialisation** : Via "Options > Reset", remet toutes les locomotives en état initial. (Fonction débug)
-
+1. **Ajouter un lieu (tuile)** : bouton *Ajouter un lieu*, puis choisissez le type (dépôt, voie de garage, arrêt de ligne).
+2. **Déplacer/redimensionner une tuile** : cliquez-glissez la tuile ; utilisez la poignée en bas à droite pour la taille.
+3. **Ajouter/éditer des voies** : menu contextuel de la tuile (ex. *Ajouter voie de sortie*, *Ajouter zone*, *Ajouter voie*).
+4. **Déplacer une locomotive** : glissez-la depuis la liste de gauche vers une voie.
+5. **Modifier le statut** : clic droit sur la locomotive puis *Modifier statut* ou *Loc HS*.
+6. **Swap de pool** : clic droit et *Swap* pour basculer Lineas/Sibelit.
+7. **Gestion des parcs & historique** : menu *Gestion*.
+8. **Presets & mode sombre** : menu *Vue* pour les presets, *Option* pour le thème.
+9. **Sauvegarde/chargement** : menu *Fichier* (état stocké dans `ploco.db`).
 
 ## Auteur
 Développé par **LinkAtPlug**
@@ -33,8 +42,5 @@ Développé par **LinkAtPlug**
 ## Licence
 Ce projet est sous licence MIT. Consultez `LICENSE` pour plus d'informations.
 
-![4ZPhFxkmIV](https://github.com/user-attachments/assets/e6ea7714-d27d-4161-bafc-e0b1cda9cd02)
-![I3ZE7NencD](https://github.com/user-attachments/assets/2c7a75b1-df1c-4406-9842-6beda22c6273)
-![MhSGAG2G5y](https://github.com/user-attachments/assets/6d6feb56-54b7-416d-94d9-3def87f3667b)
-![pL4ddoc27S](https://github.com/user-attachments/assets/e31b6228-eba9-4320-bc53-e3cbd2a0549c)
-![RjI4oKo6OI](https://github.com/user-attachments/assets/915f17ec-e473-420e-8225-cc263ff78348)
+## Captures d'écran (nouvelle version)
+> À mettre à jour avec les nouvelles captures de la version en cours.
