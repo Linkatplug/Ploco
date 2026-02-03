@@ -908,7 +908,8 @@
                 <ScrollViewer x:Name="TileScrollViewer"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto"
-                              PanningMode="Both">
+                              PanningMode="Both"
+                              SizeChanged="TileScrollViewer_SizeChanged">
                     <ItemsControl x:Name="TileCanvas">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>

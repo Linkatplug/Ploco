@@ -59,6 +59,11 @@ namespace Ploco
             UpdateTileCanvasExtent();
         }
 
+        private void TileScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateTileCanvasExtent();
+        }
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var result = MessageBox.Show("Êtes-vous sûr de vouloir quitter ?", "Quitter", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -1046,7 +1051,7 @@ namespace Ploco
             if (sender is Border border && border.DataContext is TileModel tile)
             {
                 _draggedTile = tile;
-                _tileDragStart = e.GetPosition(TileCanvas);
+                _tileDragStart = GetDropPositionInWorkspace(e);
                 border.CaptureMouse();
             }
         }
@@ -1058,7 +1063,7 @@ namespace Ploco
                 return;
             }
 
-            var currentPosition = e.GetPosition(TileCanvas);
+            var currentPosition = GetDropPositionInWorkspace(e);
             var offset = currentPosition - _tileDragStart;
             _draggedTile.X = Math.Max(0, _draggedTile.X + offset.X);
             _draggedTile.Y = Math.Max(0, _draggedTile.Y + offset.Y);
@@ -1829,15 +1834,30 @@ namespace Ploco
 
             if (!_tiles.Any())
             {
-                TileCanvas.Width = 0;
-                TileCanvas.Height = 0;
+                TileCanvas.Width = Math.Max(0, TileScrollViewer?.ViewportWidth ?? 0);
+                TileCanvas.Height = Math.Max(0, TileScrollViewer?.ViewportHeight ?? 0);
                 return;
             }
 
             var maxX = _tiles.Max(tile => tile.X + tile.Width);
             var maxY = _tiles.Max(tile => tile.Y + tile.Height);
-            TileCanvas.Width = Math.Max(0, maxX + CanvasPadding);
-            TileCanvas.Height = Math.Max(0, maxY + CanvasPadding);
+            var viewportWidth = TileScrollViewer?.ViewportWidth ?? 0;
+            var viewportHeight = TileScrollViewer?.ViewportHeight ?? 0;
+            TileCanvas.Width = Math.Max(viewportWidth, maxX + CanvasPadding);
+            TileCanvas.Height = Math.Max(viewportHeight, maxY + CanvasPadding);
+        }
+
+        private Point GetDropPositionInWorkspace(MouseEventArgs e)
+        {
+            if (TileScrollViewer == null || TileCanvas == null)
+            {
+                return e.GetPosition(null);
+            }
+
+            var viewportPosition = e.GetPosition(TileScrollViewer);
+            return new Point(
+                viewportPosition.X + TileScrollViewer.HorizontalOffset,
+                viewportPosition.Y + TileScrollViewer.VerticalOffset);
         }
 
         private static JsonSerializerOptions GetPresetSerializerOptions()
