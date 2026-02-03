@@ -563,7 +563,7 @@ namespace Ploco.Dialogs
 
             for (var pageIndex = 0; pageIndex < pdf.NumberOfPages; pageIndex++)
             {
-                var page = pdf.GetPage(pageIndex);
+                var page = pdf.GetPage(pageIndex + 1);
                 _pdfPageSizes[pageIndex] = (page.Width, page.Height);
                 var words = page.GetWords().ToList();
                 var rowCandidates = words
