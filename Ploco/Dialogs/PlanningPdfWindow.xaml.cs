@@ -568,7 +568,7 @@ namespace Ploco.Dialogs
                     .Select(w => new
                     {
                         Id = w.Text.StartsWith("@") ? w.Text : $"@{w.Text}",
-                        Y = w.BoundingBox.Center.Y
+                        Y = (w.BoundingBox.Bottom + w.BoundingBox.Top) / 2
                     })
                     .GroupBy(item => item.Id)
                     .Select(group => new PdfTemplateRowMapping
@@ -580,7 +580,7 @@ namespace Ploco.Dialogs
 
                 var timeCandidates = words
                     .Where(w => timeRegex.IsMatch(w.Text))
-                    .Select(w => new { Hour = int.Parse(w.Text, CultureInfo.InvariantCulture), X = w.BoundingBox.Center.X })
+                    .Select(w => new { Hour = int.Parse(w.Text, CultureInfo.InvariantCulture), X = (w.BoundingBox.Left + w.BoundingBox.Right) / 2 })
                     .GroupBy(item => item.Hour)
                     .Select(group => new { Hour = group.Key, X = group.Average(item => item.X) })
                     .ToList();
