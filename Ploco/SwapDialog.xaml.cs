@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
 using System.Linq;
@@ -10,11 +9,11 @@ namespace Ploco
 {
     public partial class SwapDialog : Window
     {
-        public Locomotive LocoFromSibelit { get; set; }
-        public ObservableCollection<Locomotive> LineasPool { get; set; }
-        public Locomotive SelectedLoco { get; set; }  // La loco sélectionnée dans le ComboBox
+        public LocomotiveModel LocoFromSibelit { get; }
+        public ObservableCollection<LocomotiveModel> LineasPool { get; }
+        public LocomotiveModel? SelectedLoco { get; private set; }
 
-        public SwapDialog(Locomotive locoFromSibelit, ObservableCollection<Locomotive> lineasPool)
+        public SwapDialog(LocomotiveModel locoFromSibelit, ObservableCollection<LocomotiveModel> lineasPool)
         {
             InitializeComponent();
             Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
@@ -24,12 +23,13 @@ namespace Ploco
             LineasPool = lineasPool;
 
             // Afficher la loco de Sibelit dans un TextBlock pour information
-            tbLocoSibelit.Text = LocoFromSibelit.ToString();
+            tbLocoSibelit.Text = LocoFromSibelit.Number.ToString();
 
             // Remplir le ComboBox avec la pool Lineas et trier par NumeroSerie
             cbLineas.ItemsSource = LineasPool;
             CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(LineasPool);
-            view.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
+            view.SortDescriptions.Add(new System.ComponentModel.SortDescription(nameof(LocomotiveModel.Number), System.ComponentModel.ListSortDirection.Ascending));
+            cbLineas.DisplayMemberPath = nameof(LocomotiveModel.DisplayName);
 
             if (cbLineas.Items.Count > 0)
                 cbLineas.SelectedIndex = 0;
@@ -47,18 +47,7 @@ namespace Ploco
             }
 
             // La loco sélectionnée dans la pool Lineas est celle avec laquelle on souhaite effectuer le swap
-            SelectedLoco = cbLineas.SelectedItem as Locomotive;
-
-            // Archive les informations du swap dans un fichier log
-            string logEntry = $"Action: Swap, Loc Sibelit: {LocoFromSibelit}, Loc Lineas: {SelectedLoco}, Date: {tbDateTime.Text}, Message: {tbMessage.Text}";
-            try
-            {
-                System.IO.File.AppendAllText("SwapLog.txt", logEntry + Environment.NewLine);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Erreur lors de l'enregistrement du swap : " + ex.Message);
-            }
+            SelectedLoco = cbLineas.SelectedItem as LocomotiveModel;
 
             // Le swap effectif (mise à jour des pools et de CurrentPool) se fera dans le code appelant
             this.DialogResult = true;

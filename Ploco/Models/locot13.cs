@@ -15,11 +15,11 @@ namespace Ploco.Models
     {
         private bool _isOnCanvas;
         private StatutLocomotive _statut;
-        private string _currentPool;             // Propriété ajoutée pour le pool actuel
-        private string _defautMoteurDetails;
-        private string _emDetails;
-        private string _atevapDetails;
-        private string _modificationNotes;
+        private string _currentPool = string.Empty;             // Propriété ajoutée pour le pool actuel
+        private string _defautMoteurDetails = string.Empty;
+        private string _emDetails = string.Empty;
+        private string _atevapDetails = string.Empty;
+        private string _modificationNotes = string.Empty;
         private DateTime? _lastModificationDate;
 
         public int NumeroSerie { get; set; }

@@ -51,9 +51,8 @@ namespace Ploco
         private void btnValider_Click(object sender, RoutedEventArgs e)
         {
             // Récupérer le nouveau statut depuis le ComboBox.
-            if (cbStatut.SelectedItem is ComboBoxItem selectedItem && selectedItem.Tag != null)
+            if (cbStatut.SelectedItem is ComboBoxItem selectedItem && selectedItem.Tag is string statutString && !string.IsNullOrWhiteSpace(statutString))
             {
-                string statutString = selectedItem.Tag.ToString();
                 if (Enum.TryParse(statutString, out StatutLocomotive statut))
                 {
                     NewStatut = statut;
