@@ -535,7 +535,10 @@ namespace Ploco.Dialogs
 
         private void UpdateZoomLabel()
         {
-            ZoomLabel.Text = $"{_zoom:P0}";
+            if (ZoomLabel != null)
+            {
+                ZoomLabel.Text = $"{_zoom:P0}";
+            }
         }
 
         private static int GetPdfPageCount(string filePath)
