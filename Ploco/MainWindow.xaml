@@ -689,10 +689,111 @@
                 </Grid>
             </Border>
         </DataTemplate>
+        <DataTemplate x:Key="RollingLineTileTemplate">
+            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="220"
+                    AllowDrop="True"
+                    Drop="Tile_Drop"
+                    MouseLeftButtonDown="Tile_MouseLeftButtonDown"
+                    MouseMove="Tile_MouseMove"
+                    MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <Grid>
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                            <Menu Grid.Column="1" HorizontalAlignment="Right">
+                                <MenuItem Header="...">
+                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Ajouter une ligne" Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
+                                </MenuItem>
+                            </Menu>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding RollingLineTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <Grid Margin="0,4,0,0">
+                                                    <ListBox x:Name="RollingLineTrackList"
+                                                             ItemsSource="{Binding Locomotives}"
+                                                             Style="{StaticResource DropListBoxStyle}"
+                                                             AllowDrop="True"
+                                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
+                                                             Drop="TrackLocomotives_Drop">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}"
+                                                                        PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
+                                                                    <Grid>
+                                                                        <Grid.RowDefinitions>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                        </Grid.RowDefinitions>
+                                                                        <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                                   HorizontalAlignment="Left"/>
+                                                                        <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                   HorizontalAlignment="Right" Margin="0,2,0,0">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                    <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ElementName=RollingLineTrackList, Path=HasItems}" Value="False">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <Button Content="Ajouter une ligne" Margin="0,6,0,0" HorizontalAlignment="Right"
+                                Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
+                    </StackPanel>
+                    <Thumb Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           Cursor="SizeNWSE" DragDelta="TileResizeThumb_DragDelta" DragCompleted="TileResizeThumb_DragCompleted"
+                           Background="#55000000" BorderBrush="#FF7A7A7A" BorderThickness="1"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
         <helpers:TileTemplateSelector x:Key="TileTemplateSelector"
                                     DepotTemplate="{StaticResource DepotTileTemplate}"
                                     GarageTemplate="{StaticResource GarageTileTemplate}"
-                                    LineTemplate="{StaticResource LineTileTemplate}"/>
+                                    LineTemplate="{StaticResource LineTileTemplate}"
+                                    RollingLineTemplate="{StaticResource RollingLineTileTemplate}"/>
     </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">

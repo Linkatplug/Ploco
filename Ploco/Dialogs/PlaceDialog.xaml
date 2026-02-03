@@ -9,6 +9,7 @@
             <ComboBoxItem Content="Dépôt" Tag="Depot"/>
             <ComboBoxItem Content="Garage" Tag="VoieGarage"/>
             <ComboBoxItem Content="En ligne" Tag="ArretLigne"/>
+            <ComboBoxItem Content="Ligne de roulement" Tag="RollingLine"/>
         </ComboBox>
 
         <StackPanel x:Name="DepotPanel" Visibility="Collapsed">

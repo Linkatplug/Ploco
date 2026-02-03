@@ -42,6 +42,7 @@ namespace Ploco.Data
                     pool TEXT NOT NULL DEFAULT 'Lineas',
                     traction_percent INTEGER,
                     hs_reason TEXT,
+                    maintenance_date TEXT,
                     FOREIGN KEY(series_id) REFERENCES series(id)
                 );",
                 @"CREATE TABLE IF NOT EXISTS tiles (
@@ -94,6 +95,7 @@ namespace Ploco.Data
             EnsureColumn(connection, "locomotives", "pool", "TEXT NOT NULL DEFAULT 'Lineas'");
             EnsureColumn(connection, "locomotives", "traction_percent", "INTEGER");
             EnsureColumn(connection, "locomotives", "hs_reason", "TEXT");
+            EnsureColumn(connection, "locomotives", "maintenance_date", "TEXT");
             EnsureColumn(connection, "tracks", "type", "TEXT NOT NULL DEFAULT 'Main'");
             EnsureColumn(connection, "tracks", "config_json", "TEXT");
             EnsureColumn(connection, "track_locomotives", "offset_x", "REAL");
@@ -126,7 +128,7 @@ namespace Ploco.Data
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, series_id, number, status, pool, traction_percent, hs_reason FROM locomotives;";
+                command.CommandText = "SELECT id, series_id, number, status, pool, traction_percent, hs_reason, maintenance_date FROM locomotives;";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
@@ -143,7 +145,8 @@ namespace Ploco.Data
                         Status = status,
                         Pool = reader.IsDBNull(4) ? "Lineas" : reader.GetString(4),
                         TractionPercent = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                        HsReason = reader.IsDBNull(6) ? null : reader.GetString(6)
+                        HsReason = reader.IsDBNull(6) ? null : reader.GetString(6),
+                        MaintenanceDate = reader.IsDBNull(7) ? null : reader.GetString(7)
                     });
                 }
             }
@@ -331,13 +334,14 @@ namespace Ploco.Data
                     loco.SeriesId = newSeriesId;
                 }
                 using var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool, traction_percent, hs_reason) VALUES ($seriesId, $number, $status, $pool, $traction, $reason);";
+                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool, traction_percent, hs_reason, maintenance_date) VALUES ($seriesId, $number, $status, $pool, $traction, $reason, $maintenance);";
                 command.Parameters.AddWithValue("$seriesId", loco.SeriesId);
                 command.Parameters.AddWithValue("$number", loco.Number);
                 command.Parameters.AddWithValue("$status", loco.Status.ToString());
                 command.Parameters.AddWithValue("$pool", loco.Pool);
                 command.Parameters.AddWithValue("$traction", (object?)loco.TractionPercent ?? DBNull.Value);
                 command.Parameters.AddWithValue("$reason", string.IsNullOrWhiteSpace(loco.HsReason) ? DBNull.Value : loco.HsReason);
+                command.Parameters.AddWithValue("$maintenance", string.IsNullOrWhiteSpace(loco.MaintenanceDate) ? DBNull.Value : loco.MaintenanceDate);
                 command.ExecuteNonQuery();
                 loco.Id = GetLastInsertRowId(connection);
             }

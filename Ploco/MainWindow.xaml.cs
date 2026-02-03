@@ -159,6 +159,12 @@ namespace Ploco
                     return;
                 }
 
+                if (dialog.SelectedType == TileType.RollingLine)
+                {
+                    AddRollingLineTile(dialog.SelectedName);
+                    return;
+                }
+
                 AddTile(dialog.SelectedType, dialog.SelectedName);
             }
         }
@@ -277,6 +283,32 @@ namespace Ploco
             }
 
             UpdatePoolVisibility();
+            PersistState();
+        }
+
+        private void AddRollingLineTile(string name)
+        {
+            var tile = new TileModel
+            {
+                Name = name,
+                Type = TileType.RollingLine,
+                X = 20 + _tiles.Count * 30,
+                Y = 20 + _tiles.Count * 30
+            };
+
+            for (var number = 1101; number <= 1123; number++)
+            {
+                tile.Tracks.Add(new TrackModel
+                {
+                    Name = number.ToString(),
+                    Kind = TrackKind.RollingLine
+                });
+            }
+
+            tile.RefreshTrackCollections();
+            _tiles.Add(tile);
+            _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
+            _repository.AddHistory("RollingLineAdded", $"Lignes 1101 à 1123 ajoutées dans {tile.DisplayTitle}.");
             PersistState();
         }
 
@@ -427,6 +459,51 @@ namespace Ploco
             }
         }
 
+        private void AddRollingLineTrack_Click(object sender, RoutedEventArgs e)
+        {
+            var tile = GetTileFromSender(sender);
+            if (tile == null || tile.Type != TileType.RollingLine)
+            {
+                return;
+            }
+
+            var nextNumber = GetNextRollingLineNumber(tile);
+            var dialog = new SimpleTextDialog("Ajouter une ligne", "Numéro de ligne :", nextNumber.ToString()) { Owner = this };
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            if (!int.TryParse(dialog.ResponseText, out var number))
+            {
+                MessageBox.Show("Veuillez saisir un numéro valide.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (number <= nextNumber - 1)
+            {
+                MessageBox.Show($"Le numéro doit être supérieur ou égal à {nextNumber}.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (tile.Tracks.Any(t => t.Kind == TrackKind.RollingLine && string.Equals(t.Name, number.ToString(), StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show("Ce numéro de ligne existe déjà.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var track = new TrackModel
+            {
+                Name = number.ToString(),
+                Kind = TrackKind.RollingLine
+            };
+
+            InsertRollingLineTrack(tile, track);
+            tile.RefreshTrackCollections();
+            _repository.AddHistory("RollingLineAdded", $"Ajout de la ligne {track.Name} dans {tile.DisplayTitle}.");
+            PersistState();
+        }
+
         private void RemoveLineTrack_Click(object sender, RoutedEventArgs e)
         {
             var track = GetTrackFromSender(sender);
@@ -573,6 +650,12 @@ namespace Ploco
             if (e.Data.GetDataPresent(typeof(LocomotiveModel)))
             {
                 var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+                if (track.Kind == TrackKind.RollingLine && track.Locomotives.Any() && !track.Locomotives.Contains(loco))
+                {
+                    MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
                 var insertIndex = GetInsertIndex(listBox, e.GetPosition(listBox));
                 MoveLocomotiveToTrack(loco, track, insertIndex);
                 UpdateLocomotiveDropOffset(loco, track, listBox, e.GetPosition(listBox));
@@ -606,6 +689,13 @@ namespace Ploco
 
         private void MoveLocomotiveToTrack(LocomotiveModel loco, TrackModel targetTrack, int insertIndex)
         {
+            if (targetTrack.Kind == TrackKind.RollingLine && targetTrack.Locomotives.Any() && !targetTrack.Locomotives.Contains(loco))
+            {
+                MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             var currentTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
             if (currentTrack != null)
             {
@@ -1284,16 +1374,58 @@ namespace Ploco
                 return tile.LineTracks.FirstOrDefault();
             }
 
+            if (tile.Type == TileType.RollingLine)
+            {
+                return tile.RollingLineTracks.FirstOrDefault(t => !t.Locomotives.Any())
+                       ?? tile.RollingLineTracks.FirstOrDefault();
+            }
+
             return tile.MainTrack;
         }
 
         private void EnsureDefaultTracks(TileModel tile)
         {
-            if (!tile.Tracks.Any() && tile.Type != TileType.ArretLigne)
+            if (!tile.Tracks.Any() && tile.Type != TileType.ArretLigne && tile.Type != TileType.RollingLine)
             {
                 tile.Tracks.Add(CreateDefaultTrack(tile));
             }
             tile.RefreshTrackCollections();
+        }
+
+        private static int GetNextRollingLineNumber(TileModel tile)
+        {
+            var numbers = tile.Tracks
+                .Where(t => t.Kind == TrackKind.RollingLine)
+                .Select(t => int.TryParse(t.Name, out var value) ? value : 0)
+                .Where(value => value > 0)
+                .ToList();
+
+            var maxNumber = numbers.Any() ? numbers.Max() : 1123;
+            return maxNumber + 1;
+        }
+
+        private static void InsertRollingLineTrack(TileModel tile, TrackModel track)
+        {
+            var insertIndex = tile.Tracks.Count;
+            if (int.TryParse(track.Name, out var number))
+            {
+                for (var index = 0; index < tile.Tracks.Count; index++)
+                {
+                    var existing = tile.Tracks[index];
+                    if (existing.Kind != TrackKind.RollingLine)
+                    {
+                        continue;
+                    }
+
+                    if (int.TryParse(existing.Name, out var existingNumber) && existingNumber > number)
+                    {
+                        insertIndex = index;
+                        break;
+                    }
+                }
+            }
+
+            tile.Tracks.Insert(insertIndex, track);
         }
 
         private void ApplyGaragePresets(TileModel tile)
