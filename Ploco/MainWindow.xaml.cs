@@ -1177,6 +1177,11 @@ namespace Ploco
             OpenModelessWindow(() => new TapisT13Window(_locomotives, _tiles));
         }
 
+        private void MenuItem_PlanningPdf_Click(object sender, RoutedEventArgs e)
+        {
+            OpenModelessWindow(() => new PlanningPdfWindow(_repository));
+        }
+
         private void MenuItem_DatabaseManagement_Click(object sender, RoutedEventArgs e)
         {
             OpenModelessWindow(() => new DatabaseManagementWindow(_repository, _locomotives, _tiles));

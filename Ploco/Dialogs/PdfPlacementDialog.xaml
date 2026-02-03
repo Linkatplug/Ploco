@@ -1,0 +1,64 @@
+<Window x:Class="Ploco.Dialogs.PdfPlacementDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Modifier placement" Height="420" Width="420"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Statut" FontWeight="SemiBold"/>
+        <ComboBox x:Name="StatusCombo" Grid.Row="1" Margin="0,6,0,12">
+            <ComboBoxItem Content="OK" Tag="Ok"/>
+            <ComboBoxItem Content="Manque de traction" Tag="ManqueTraction"/>
+            <ComboBoxItem Content="HS" Tag="HS"/>
+        </ComboBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
+            <StackPanel Width="120">
+                <TextBlock Text="Traction (%)" FontWeight="SemiBold"/>
+                <TextBox x:Name="TractionText" Margin="0,6,12,0"/>
+            </StackPanel>
+            <StackPanel Width="120">
+                <TextBlock Text="Moteurs HS" FontWeight="SemiBold"/>
+                <TextBox x:Name="MotorsHsText" Margin="0,6,0,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Margin="0,0,0,12">
+            <TextBlock Text="Raison HS" FontWeight="SemiBold"/>
+            <TextBox x:Name="HsReasonText" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <CheckBox x:Name="OnTrainCheck" Grid.Row="4" Content="Sur train" Margin="0,0,0,8"/>
+
+        <Grid Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                <TextBlock Text="Train N°" FontWeight="SemiBold"/>
+                <TextBox x:Name="TrainNumberText" Margin="0,6,0,12"/>
+                <TextBlock Text="Heure d'arrêt" FontWeight="SemiBold"/>
+                <TextBox x:Name="TrainStopText" Margin="0,6,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Commentaire" FontWeight="SemiBold"/>
+                <TextBox x:Name="CommentText" Margin="0,6,0,0" AcceptsReturn="True" Height="120"/>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Valider" Width="90" Margin="0,0,6,0" Click="Validate_Click"/>
+            <Button Content="Annuler" Width="90" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

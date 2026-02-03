@@ -82,6 +82,46 @@ namespace Ploco.Data
                     type TEXT NOT NULL,
                     name TEXT NOT NULL,
                     UNIQUE(type, name)
+                );",
+                @"CREATE TABLE IF NOT EXISTS pdf_documents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_path TEXT NOT NULL,
+                    document_date TEXT NOT NULL,
+                    template_hash TEXT NOT NULL,
+                    page_count INTEGER NOT NULL
+                );",
+                @"CREATE TABLE IF NOT EXISTS pdf_template_calibrations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    template_hash TEXT NOT NULL,
+                    page_index INTEGER NOT NULL,
+                    x_start REAL NOT NULL,
+                    x_end REAL NOT NULL
+                );",
+                @"CREATE TABLE IF NOT EXISTS pdf_template_rows (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    calibration_id INTEGER NOT NULL,
+                    roulement_id TEXT NOT NULL,
+                    y_center REAL NOT NULL,
+                    FOREIGN KEY(calibration_id) REFERENCES pdf_template_calibrations(id)
+                );",
+                @"CREATE TABLE IF NOT EXISTS pdf_placements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pdf_document_id INTEGER NOT NULL,
+                    page_index INTEGER NOT NULL,
+                    roulement_id TEXT NOT NULL,
+                    minute_of_day INTEGER NOT NULL,
+                    loc_number INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    traction_percent INTEGER,
+                    motors_hs_count INTEGER,
+                    hs_reason TEXT,
+                    on_train INTEGER NOT NULL,
+                    train_number TEXT,
+                    train_stop_time TEXT,
+                    comment TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(pdf_document_id) REFERENCES pdf_documents(id)
                 );"
             };
 
@@ -99,6 +139,285 @@ namespace Ploco.Data
             EnsureColumn(connection, "tracks", "type", "TEXT NOT NULL DEFAULT 'Main'");
             EnsureColumn(connection, "tracks", "config_json", "TEXT");
             EnsureColumn(connection, "track_locomotives", "offset_x", "REAL");
+        }
+
+        public PdfDocumentModel? GetPdfDocument(string filePath, DateTime date)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"SELECT id, file_path, document_date, template_hash, page_count
+                                    FROM pdf_documents
+                                    WHERE file_path = $path AND document_date = $date;";
+            command.Parameters.AddWithValue("$path", filePath);
+            command.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+            {
+                return null;
+            }
+
+            return new PdfDocumentModel
+            {
+                Id = reader.GetInt32(0),
+                FilePath = reader.GetString(1),
+                DocumentDate = DateTime.Parse(reader.GetString(2)),
+                TemplateHash = reader.GetString(3),
+                PageCount = reader.GetInt32(4)
+            };
+        }
+
+        public PdfDocumentModel SavePdfDocument(PdfDocumentModel document)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            if (document.Id > 0)
+            {
+                command.CommandText = @"UPDATE pdf_documents
+                                        SET file_path = $path,
+                                            document_date = $date,
+                                            template_hash = $hash,
+                                            page_count = $count
+                                        WHERE id = $id;";
+                command.Parameters.AddWithValue("$id", document.Id);
+            }
+            else
+            {
+                command.CommandText = @"INSERT INTO pdf_documents (file_path, document_date, template_hash, page_count)
+                                        VALUES ($path, $date, $hash, $count);";
+            }
+
+            command.Parameters.AddWithValue("$path", document.FilePath);
+            command.Parameters.AddWithValue("$date", document.DocumentDate.ToString("yyyy-MM-dd"));
+            command.Parameters.AddWithValue("$hash", document.TemplateHash);
+            command.Parameters.AddWithValue("$count", document.PageCount);
+            command.ExecuteNonQuery();
+
+            if (document.Id == 0)
+            {
+                document.Id = GetLastInsertRowId(connection);
+            }
+
+            return document;
+        }
+
+        public List<PdfTemplateCalibrationModel> LoadTemplateCalibrations(string templateHash)
+        {
+            var calibrations = new List<PdfTemplateCalibrationModel>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = @"SELECT id, template_hash, page_index, x_start, x_end
+                                        FROM pdf_template_calibrations
+                                        WHERE template_hash = $hash;";
+                command.Parameters.AddWithValue("$hash", templateHash);
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    calibrations.Add(new PdfTemplateCalibrationModel
+                    {
+                        Id = reader.GetInt32(0),
+                        TemplateHash = reader.GetString(1),
+                        PageIndex = reader.GetInt32(2),
+                        XStart = reader.GetDouble(3),
+                        XEnd = reader.GetDouble(4)
+                    });
+                }
+            }
+
+            foreach (var calibration in calibrations)
+            {
+                calibration.Rows = LoadTemplateRows(connection, calibration.Id);
+            }
+
+            return calibrations;
+        }
+
+        public void SaveTemplateCalibration(PdfTemplateCalibrationModel calibration)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+
+            using (var command = connection.CreateCommand())
+            {
+                if (calibration.Id > 0)
+                {
+                    command.CommandText = @"UPDATE pdf_template_calibrations
+                                            SET x_start = $xStart, x_end = $xEnd
+                                            WHERE id = $id;";
+                    command.Parameters.AddWithValue("$id", calibration.Id);
+                }
+                else
+                {
+                    command.CommandText = @"INSERT INTO pdf_template_calibrations (template_hash, page_index, x_start, x_end)
+                                            VALUES ($hash, $pageIndex, $xStart, $xEnd);";
+                    command.Parameters.AddWithValue("$hash", calibration.TemplateHash);
+                    command.Parameters.AddWithValue("$pageIndex", calibration.PageIndex);
+                }
+
+                command.Parameters.AddWithValue("$xStart", calibration.XStart);
+                command.Parameters.AddWithValue("$xEnd", calibration.XEnd);
+                command.ExecuteNonQuery();
+
+                if (calibration.Id == 0)
+                {
+                    calibration.Id = GetLastInsertRowId(connection);
+                }
+            }
+
+            using (var deleteRows = connection.CreateCommand())
+            {
+                deleteRows.CommandText = "DELETE FROM pdf_template_rows WHERE calibration_id = $id;";
+                deleteRows.Parameters.AddWithValue("$id", calibration.Id);
+                deleteRows.ExecuteNonQuery();
+            }
+
+            foreach (var row in calibration.Rows)
+            {
+                using var insertRow = connection.CreateCommand();
+                insertRow.CommandText = @"INSERT INTO pdf_template_rows (calibration_id, roulement_id, y_center)
+                                          VALUES ($calibrationId, $roulementId, $yCenter);";
+                insertRow.Parameters.AddWithValue("$calibrationId", calibration.Id);
+                insertRow.Parameters.AddWithValue("$roulementId", row.RoulementId);
+                insertRow.Parameters.AddWithValue("$yCenter", row.YCenter);
+                insertRow.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+        }
+
+        public List<PdfPlacementModel> LoadPlacements(int pdfDocumentId)
+        {
+            var placements = new List<PdfPlacementModel>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"SELECT id, pdf_document_id, page_index, roulement_id, minute_of_day,
+                                           loc_number, status, traction_percent, motors_hs_count, hs_reason,
+                                           on_train, train_number, train_stop_time, comment, created_at, updated_at
+                                    FROM pdf_placements
+                                    WHERE pdf_document_id = $docId;";
+            command.Parameters.AddWithValue("$docId", pdfDocumentId);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                placements.Add(new PdfPlacementModel
+                {
+                    Id = reader.GetInt32(0),
+                    PdfDocumentId = reader.GetInt32(1),
+                    PageIndex = reader.GetInt32(2),
+                    RoulementId = reader.GetString(3),
+                    MinuteOfDay = reader.GetInt32(4),
+                    LocNumber = reader.GetInt32(5),
+                    Status = Enum.TryParse(reader.GetString(6), out LocomotiveStatus status) ? status : LocomotiveStatus.Ok,
+                    TractionPercent = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    MotorsHsCount = reader.IsDBNull(8) ? null : reader.GetInt32(8),
+                    HsReason = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    OnTrain = reader.GetInt32(10) == 1,
+                    TrainNumber = reader.IsDBNull(11) ? null : reader.GetString(11),
+                    TrainStopTime = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    Comment = reader.IsDBNull(13) ? null : reader.GetString(13),
+                    CreatedAt = DateTime.Parse(reader.GetString(14)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(15))
+                });
+            }
+
+            return placements;
+        }
+
+        public void SavePlacement(PdfPlacementModel placement)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            if (placement.Id > 0)
+            {
+                command.CommandText = @"UPDATE pdf_placements
+                                        SET page_index = $pageIndex,
+                                            roulement_id = $roulementId,
+                                            minute_of_day = $minute,
+                                            loc_number = $locNumber,
+                                            status = $status,
+                                            traction_percent = $traction,
+                                            motors_hs_count = $motorsHs,
+                                            hs_reason = $hsReason,
+                                            on_train = $onTrain,
+                                            train_number = $trainNumber,
+                                            train_stop_time = $trainStopTime,
+                                            comment = $comment,
+                                            updated_at = $updatedAt
+                                        WHERE id = $id;";
+                command.Parameters.AddWithValue("$id", placement.Id);
+            }
+            else
+            {
+                command.CommandText = @"INSERT INTO pdf_placements (pdf_document_id, page_index, roulement_id, minute_of_day, loc_number,
+                                            status, traction_percent, motors_hs_count, hs_reason, on_train, train_number, train_stop_time,
+                                            comment, created_at, updated_at)
+                                        VALUES ($docId, $pageIndex, $roulementId, $minute, $locNumber,
+                                            $status, $traction, $motorsHs, $hsReason, $onTrain, $trainNumber, $trainStopTime,
+                                            $comment, $createdAt, $updatedAt);";
+                command.Parameters.AddWithValue("$docId", placement.PdfDocumentId);
+                placement.CreatedAt = placement.CreatedAt == default ? DateTime.UtcNow : placement.CreatedAt;
+                command.Parameters.AddWithValue("$createdAt", placement.CreatedAt.ToString("O"));
+            }
+
+            placement.UpdatedAt = DateTime.UtcNow;
+            command.Parameters.AddWithValue("$pageIndex", placement.PageIndex);
+            command.Parameters.AddWithValue("$roulementId", placement.RoulementId);
+            command.Parameters.AddWithValue("$minute", placement.MinuteOfDay);
+            command.Parameters.AddWithValue("$locNumber", placement.LocNumber);
+            command.Parameters.AddWithValue("$status", placement.Status.ToString());
+            command.Parameters.AddWithValue("$traction", (object?)placement.TractionPercent ?? DBNull.Value);
+            command.Parameters.AddWithValue("$motorsHs", (object?)placement.MotorsHsCount ?? DBNull.Value);
+            command.Parameters.AddWithValue("$hsReason", string.IsNullOrWhiteSpace(placement.HsReason) ? DBNull.Value : placement.HsReason);
+            command.Parameters.AddWithValue("$onTrain", placement.OnTrain ? 1 : 0);
+            command.Parameters.AddWithValue("$trainNumber", string.IsNullOrWhiteSpace(placement.TrainNumber) ? DBNull.Value : placement.TrainNumber);
+            command.Parameters.AddWithValue("$trainStopTime", string.IsNullOrWhiteSpace(placement.TrainStopTime) ? DBNull.Value : placement.TrainStopTime);
+            command.Parameters.AddWithValue("$comment", string.IsNullOrWhiteSpace(placement.Comment) ? DBNull.Value : placement.Comment);
+            command.Parameters.AddWithValue("$updatedAt", placement.UpdatedAt.ToString("O"));
+            command.ExecuteNonQuery();
+
+            if (placement.Id == 0)
+            {
+                placement.Id = GetLastInsertRowId(connection);
+            }
+        }
+
+        public void DeletePlacement(int placementId)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM pdf_placements WHERE id = $id;";
+            command.Parameters.AddWithValue("$id", placementId);
+            command.ExecuteNonQuery();
+        }
+
+        private static List<PdfTemplateRowMapping> LoadTemplateRows(SqliteConnection connection, int calibrationId)
+        {
+            var rows = new List<PdfTemplateRowMapping>();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"SELECT id, calibration_id, roulement_id, y_center
+                                    FROM pdf_template_rows
+                                    WHERE calibration_id = $id;";
+            command.Parameters.AddWithValue("$id", calibrationId);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                rows.Add(new PdfTemplateRowMapping
+                {
+                    Id = reader.GetInt32(0),
+                    CalibrationId = reader.GetInt32(1),
+                    RoulementId = reader.GetString(2),
+                    YCenter = reader.GetDouble(3)
+                });
+            }
+            return rows;
         }
 
         public AppState LoadState()

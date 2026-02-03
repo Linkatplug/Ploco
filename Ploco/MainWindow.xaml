@@ -828,6 +828,8 @@
             <MenuItem Header="Tapis">
                 <MenuItem Header="T13" Click="MenuItem_TapisT13_Click"/>
                 <MenuItem Header="37000" IsEnabled="False"/>
+                <Separator/>
+                <MenuItem Header="Planning PDF" Click="MenuItem_PlanningPdf_Click"/>
             </MenuItem>
             <MenuItem Header="Vue">
                 <MenuItem Header="Charger un preset" x:Name="ViewPresetsMenu"/>
