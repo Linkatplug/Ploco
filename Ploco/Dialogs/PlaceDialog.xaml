@@ -9,7 +9,6 @@
             <ComboBoxItem Content="Dépôt" Tag="Depot"/>
             <ComboBoxItem Content="Garage" Tag="VoieGarage"/>
             <ComboBoxItem Content="En ligne" Tag="ArretLigne"/>
-            <ComboBoxItem Content="Ligne de roulement" Tag="LigneRoulement"/>
         </ComboBox>
 
         <StackPanel x:Name="DepotPanel" Visibility="Collapsed">
@@ -22,11 +21,6 @@
             <ComboBox x:Name="GarageNameCombo" Margin="0,6,0,6" SelectionChanged="GarageNameCombo_SelectionChanged"/>
             <TextBlock x:Name="CustomGarageLabel" Text="Nom personnalisé" FontWeight="SemiBold" Visibility="Collapsed"/>
             <TextBox x:Name="CustomGarageName" Margin="0,6,0,12" Visibility="Collapsed"/>
-        </StackPanel>
-
-        <StackPanel x:Name="RollingLinePanel" Visibility="Collapsed">
-            <TextBlock Text="Nom de la ligne de roulement" FontWeight="SemiBold"/>
-            <TextBox x:Name="RollingLineName" Margin="0,6,0,12" Text="Ligne de roulement"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

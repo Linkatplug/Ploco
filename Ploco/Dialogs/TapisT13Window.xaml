@@ -39,32 +39,9 @@
                   CanUserSortColumns="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Locomotive" Binding="{Binding Locomotive}" Width="*"/>
-                <DataGridTextColumn Header="Date entretien" Binding="{Binding DateEntretien}" Width="*"/>
                 <DataGridTextColumn Header="Statut / Motif" Binding="{Binding Motif}" Width="*"/>
-                <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="Black"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsHs}" Value="True">
-                                    <Setter Property="Foreground" Value="Red"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="Black"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsHs}" Value="True">
-                                    <Setter Property="Foreground" Value="Red"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*"/>
+                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 

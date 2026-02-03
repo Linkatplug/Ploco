@@ -29,6 +29,14 @@ namespace Ploco.Models
         Line
     }
 
+    public enum TrackKind
+    {
+        Main,
+        Output,
+        Zone,
+        Line
+    }
+
     public class RollingStockSeries
     {
         public int Id { get; set; }
@@ -43,10 +51,8 @@ namespace Ploco.Models
         private LocomotiveStatus _status;
         private int? _tractionPercent;
         private string? _hsReason;
-        private string? _maintenanceDate;
         private double? _assignedTrackOffsetX;
         private int? _assignedTrackId;
-        private int? _assignedRollingLineId;
         private bool _isVisibleInActivePool = true;
 
         public int Id { get; set; }
@@ -95,19 +101,6 @@ namespace Ploco.Models
             }
         }
 
-        public string? MaintenanceDate
-        {
-            get => _maintenanceDate;
-            set
-            {
-                if (_maintenanceDate != value)
-                {
-                    _maintenanceDate = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
         public string Pool
         {
             get => _pool;
@@ -129,19 +122,6 @@ namespace Ploco.Models
                 if (_assignedTrackId != value)
                 {
                     _assignedTrackId = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public int? AssignedRollingLineId
-        {
-            get => _assignedRollingLineId;
-            set
-            {
-                if (_assignedRollingLineId != value)
-                {
-                    _assignedRollingLineId = value;
                     OnPropertyChanged();
                 }
             }
@@ -387,36 +367,6 @@ namespace Ploco.Models
         }
     }
 
-    public class RollingLineModel : INotifyPropertyChanged
-    {
-        private int _number;
-
-        public int Id { get; set; }
-        public int TileId { get; set; }
-
-        public int Number
-        {
-            get => _number;
-            set
-            {
-                if (_number != value)
-                {
-                    _number = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public ObservableCollection<LocomotiveModel> Locomotives { get; } = new ObservableCollection<LocomotiveModel>();
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-
     public class TileModel : INotifyPropertyChanged
     {
         private string _name = string.Empty;
@@ -427,7 +377,6 @@ namespace Ploco.Models
         private readonly ObservableCollection<TrackModel> _outputTracks = new();
         private readonly ObservableCollection<TrackModel> _zoneTracks = new();
         private readonly ObservableCollection<TrackModel> _lineTracks = new();
-        private readonly ObservableCollection<RollingLineModel> _rollingLines = new();
 
         public int Id { get; set; }
         private TileType _type;
@@ -519,7 +468,6 @@ namespace Ploco.Models
         public ObservableCollection<TrackModel> OutputTracks => _outputTracks;
         public ObservableCollection<TrackModel> ZoneTracks => _zoneTracks;
         public ObservableCollection<TrackModel> LineTracks => _lineTracks;
-        public ObservableCollection<RollingLineModel> RollingLines => _rollingLines;
 
         public string DisplayTitle
         {
@@ -528,7 +476,6 @@ namespace Ploco.Models
                 return Type switch
                 {
                     TileType.Depot => $"Dépôt {Name}",
-                    TileType.LigneRoulement => string.IsNullOrWhiteSpace(Name) ? "Ligne de roulement" : Name,
                     _ => Name
                 };
             }

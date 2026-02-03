@@ -47,7 +47,6 @@ namespace Ploco.Dialogs
         {
             DepotPanel.Visibility = Visibility.Collapsed;
             GaragePanel.Visibility = Visibility.Collapsed;
-            RollingLinePanel.Visibility = Visibility.Collapsed;
             if (TypeCombo.SelectedItem is ComboBoxItem item && item.Tag is string tag)
             {
                 SelectedType = Enum.Parse<TileType>(tag);
@@ -64,9 +63,6 @@ namespace Ploco.Dialogs
                     GarageNameCombo.SelectedIndex = 0;
                     break;
                 case TileType.ArretLigne:
-                    break;
-                case TileType.LigneRoulement:
-                    RollingLinePanel.Visibility = Visibility.Visible;
                     break;
             }
         }
@@ -86,7 +82,6 @@ namespace Ploco.Dialogs
                 TileType.Depot => DepotNameCombo.SelectedItem as string ?? string.Empty,
                 TileType.VoieGarage => ResolveGarageName(),
                 TileType.ArretLigne => string.Empty,
-                TileType.LigneRoulement => RollingLineName.Text.Trim(),
                 _ => string.Empty
             };
 

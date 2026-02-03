@@ -9,7 +9,6 @@ namespace Ploco.Helpers
         public DataTemplate? DepotTemplate { get; set; }
         public DataTemplate? GarageTemplate { get; set; }
         public DataTemplate? LineTemplate { get; set; }
-        public DataTemplate? RollingLineTemplate { get; set; }
 
         public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
@@ -23,7 +22,6 @@ namespace Ploco.Helpers
                 TileType.Depot => DepotTemplate,
                 TileType.VoieGarage => GarageTemplate,
                 TileType.ArretLigne => LineTemplate,
-                TileType.LigneRoulement => RollingLineTemplate,
                 _ => base.SelectTemplate(item, container)
             };
         }

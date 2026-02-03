@@ -40,17 +40,14 @@ namespace Ploco.Dialogs
                         : $"{location} {track.TrainNumber}"
                     : location;
 
-                var rollingLineNumber = ResolveRollingLineNumber(loco, tiles);
-                var rollingLineInfo = rollingLineNumber.HasValue ? rollingLineNumber.Value.ToString() : string.Empty;
                 var isHs = loco.Status == LocomotiveStatus.HS;
-                var locHs = isHs ? (string.IsNullOrWhiteSpace(rollingLineInfo) ? trainInfo : rollingLineInfo) : string.Empty;
-                var report = string.IsNullOrWhiteSpace(rollingLineInfo) ? (isHs ? trainInfo : string.Empty) : rollingLineInfo;
+                var locHs = isHs ? trainInfo : string.Empty;
+                var report = isHs ? trainInfo : string.Empty;
                 var motif = isHs ? (loco.HsReason ?? string.Empty) : string.Empty;
 
                 _rows.Add(new T13Row
                 {
                     Locomotive = loco.Number.ToString(),
-                    DateEntretien = loco.MaintenanceDate ?? string.Empty,
                     Motif = motif,
                     LocHs = locHs,
                     Report = report,
@@ -81,19 +78,6 @@ namespace Ploco.Dialogs
             }
 
             return GetLocationAbbreviation(tile.Name);
-        }
-
-        private static int? ResolveRollingLineNumber(LocomotiveModel locomotive, IEnumerable<TileModel> tiles)
-        {
-            foreach (var line in tiles.SelectMany(tile => tile.RollingLines))
-            {
-                if (line.Locomotives.Contains(locomotive))
-                {
-                    return line.Number;
-                }
-            }
-
-            return null;
         }
 
         private static string GetLocationAbbreviation(string name)
@@ -182,7 +166,6 @@ namespace Ploco.Dialogs
         private sealed class T13Row
         {
             public string Locomotive { get; set; } = string.Empty;
-            public string DateEntretien { get; set; } = string.Empty;
             public string Motif { get; set; } = string.Empty;
             public string LocHs { get; set; } = string.Empty;
             public string Report { get; set; } = string.Empty;

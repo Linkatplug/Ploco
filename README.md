@@ -1,40 +1,103 @@
-# Ploco - Gestion des Locomotives
+# Ploco – Gestion de Parc de Locomotives
 
 ## Description
-Ploco est une application en cours de dev sur Windows qui permettant de gérer un parc de locomotives de manière visuelle.
-L'interface propose un système de glisser-déposer permettant de placer et déplacer les locomotives sur un tapis représentant les voies.
+
+**Ploco** est une application Windows (WPF) destinée à la gestion visuelle d’un parc de locomotives.
+
+L’application repose sur un **canvas de tuiles** représentant des dépôts, des voies de garage et des arrêts de ligne.  
+Les locomotives peuvent être déplacées par **glisser-déposer**, avec un suivi précis de leur état et de leur position, le tout sauvegardé localement.
+
+Ploco est actuellement en cours de développement actif.
+
+---
 
 ## Fonctionnalités
-- Gestion des locomotives avec un suivi de leur statut
-- Système de glisser-déposer pour organiser les locomotives
-- Historique des affectations
-- Modification des statuts avec codes couleur
-- Sauvegarde et chargement de l'état du logiciel
-- Menu de gestion des locomotives et options avancées
-- Image de fond représentant les voies ferrées
-- En cours de dev... et ca va être long XD 
 
-## Dépendances
+- Gestion visuelle du parc de locomotives (OK / traction réduite / HS)
+- Pourcentage de traction et motif HS obligatoire
+- Glisser-déposer des locomotives entre les voies
+- Canvas de tuiles :
+  - Dépôts
+  - Voies de garage
+  - Arrêts de ligne
+- Voies configurables :
+  - Voies principales
+  - Voies de sortie
+  - Zones de garage
+  - Voies de ligne
+- Indicateurs de remplissage des zones (BLOCK / BIF)
+- Arrêts de ligne avec informations train (numéro, heure d’arrêt, motif)
+- Gestion des pools avec fenêtre de transfert dédiée
+- Historique des actions (affectations, statuts, modifications de layout)
+- Presets de layout (sauvegarde / chargement / suppression)
+- Mode sombre
+- Sauvegarde locale automatique
+- Aucun serveur externe requis
+
+---
+
+## Stack technique
+
 - .NET 8.0
 - WPF (Windows Presentation Foundation)
-- Newtonsoft.Json (pour la gestion des sauvegardes)
+- SQLite (persistance locale)
+- Newtonsoft.Json (gestion des layouts et presets)
+- Microsoft.Data.Sqlite
+
+---
+
+## Données et persistance
+
+- Base de données principale : `ploco.db`
+- Presets de layout : `layout_presets.json`
+- Toutes les données sont stockées localement
+
+---
 
 ## Utilisation
-1. **Ajouter une locomotive** : Faites glisser une locomotive depuis la liste sur la gauche.
-2. **Modifier le statut** : Clic droit sur une locomotive puis "Modifier statut".
-3. **Swap de pool** : Clic droit et "Swap" pour changer une locomotive de pool.
-4. **Sauvegarde et chargement** : Utilisez le menu "Fichier".
-5. **Réinitialisation** : Via "Options > Reset", remet toutes les locomotives en état initial. (Fonction débug)
 
+- **Ajouter un lieu (tuile)**  
+  Bouton *Ajouter un lieu*, puis sélection du type (dépôt, voie de garage, arrêt de ligne)
+
+- **Déplacer ou redimensionner une tuile**  
+  Glisser la tuile pour la déplacer  
+  Utiliser la poignée en bas à droite pour la redimensionner
+
+- **Configurer les voies**  
+  Menu contextuel de la tuile (ajout de voie, zone, sortie, etc.)
+
+- **Déplacer une locomotive**  
+  Glisser la locomotive depuis la liste vers une voie
+
+- **Modifier le statut d’une locomotive**  
+  Clic droit → modifier statut ou déclarer HS
+
+- **Changer de pool**  
+  Clic droit → swap de pool
+
+- **Gestion des parcs et historique**  
+  Menu *Gestion*
+
+- **Presets et thème**  
+  Menu *Vue* pour les presets  
+  Menu *Options* pour le thème
+
+### Screenshot
+
+<img width="1425" height="878" alt="YYycwUrT2z" src="https://github.com/user-attachments/assets/3d616e8d-e754-49af-87cb-ee7857e5a180" />
+<img width="1425" height="878" alt="FrtPaT2jaB" src="https://github.com/user-attachments/assets/6f175149-239a-46e0-95d2-b33ed69a6510" />
+<img width="1425" height="878" alt="OTYYviWRnH" src="https://github.com/user-attachments/assets/23124c25-8855-4e65-8837-c4ca1752ae29" />
+<img width="1425" height="878" alt="7tDbuq8MHB" src="https://github.com/user-attachments/assets/d2fbe378-b1d1-49d3-a3b9-481ecd9157a9" />
+<img width="1425" height="878" alt="DEIlEmP72y" src="https://github.com/user-attachments/assets/ff065709-afba-4f10-ab6d-344b25382622" />
+<img width="1425" height="878" alt="Hlu7fSlRMC" src="https://github.com/user-attachments/assets/d83e76e5-1ed7-4cb6-b904-a28c8c5ad7b9" />
 
 ## Auteur
+
 Développé par **LinkAtPlug**
 
-## Licence
-Ce projet est sous licence MIT. Consultez `LICENSE` pour plus d'informations.
+---
 
-![4ZPhFxkmIV](https://github.com/user-attachments/assets/e6ea7714-d27d-4161-bafc-e0b1cda9cd02)
-![I3ZE7NencD](https://github.com/user-attachments/assets/2c7a75b1-df1c-4406-9842-6beda22c6273)
-![MhSGAG2G5y](https://github.com/user-attachments/assets/6d6feb56-54b7-416d-94d9-3def87f3667b)
-![pL4ddoc27S](https://github.com/user-attachments/assets/e31b6228-eba9-4320-bc53-e3cbd2a0549c)
-![RjI4oKo6OI](https://github.com/user-attachments/assets/915f17ec-e473-420e-8225-cc263ff78348)
+## Licence
+
+Ce projet est distribué sous licence MIT.  
+Voir le fichier `LICENSE` pour plus d’informations.

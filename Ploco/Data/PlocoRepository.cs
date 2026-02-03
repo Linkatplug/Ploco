@@ -108,7 +108,6 @@ namespace Ploco.Data
             EnsureColumn(connection, "locomotives", "pool", "TEXT NOT NULL DEFAULT 'Lineas'");
             EnsureColumn(connection, "locomotives", "traction_percent", "INTEGER");
             EnsureColumn(connection, "locomotives", "hs_reason", "TEXT");
-            EnsureColumn(connection, "locomotives", "maintenance_date", "TEXT");
             EnsureColumn(connection, "tracks", "type", "TEXT NOT NULL DEFAULT 'Main'");
             EnsureColumn(connection, "tracks", "config_json", "TEXT");
             EnsureColumn(connection, "track_locomotives", "offset_x", "REAL");
@@ -141,7 +140,7 @@ namespace Ploco.Data
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, series_id, number, status, pool, traction_percent, hs_reason, maintenance_date FROM locomotives;";
+                command.CommandText = "SELECT id, series_id, number, status, pool, traction_percent, hs_reason FROM locomotives;";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
@@ -158,8 +157,7 @@ namespace Ploco.Data
                         Status = status,
                         Pool = reader.IsDBNull(4) ? "Lineas" : reader.GetString(4),
                         TractionPercent = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                        HsReason = reader.IsDBNull(6) ? null : reader.GetString(6),
-                        MaintenanceDate = reader.IsDBNull(7) ? null : reader.GetString(7)
+                        HsReason = reader.IsDBNull(6) ? null : reader.GetString(6)
                     });
                 }
             }
@@ -265,43 +263,6 @@ namespace Ploco.Data
                 }
             }
 
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = "SELECT id, tile_id, line_number, position FROM rolling_lines ORDER BY position;";
-                using var reader = command.ExecuteReader();
-                while (reader.Read())
-                {
-                    var line = new RollingLineModel
-                    {
-                        Id = reader.GetInt32(0),
-                        TileId = reader.GetInt32(1),
-                        Number = reader.GetInt32(2)
-                    };
-                    if (tiles.TryGetValue(line.TileId, out var tile))
-                    {
-                        tile.RollingLines.Add(line);
-                    }
-                }
-            }
-
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = "SELECT line_id, loco_id FROM rolling_line_locomotives;";
-                using var reader = command.ExecuteReader();
-                var locosById = state.Locomotives.ToDictionary(l => l.Id);
-                var linesById = state.Tiles.SelectMany(t => t.RollingLines).ToDictionary(l => l.Id);
-                while (reader.Read())
-                {
-                    var lineId = reader.GetInt32(0);
-                    var locoId = reader.GetInt32(1);
-                    if (linesById.TryGetValue(lineId, out var line) && locosById.TryGetValue(locoId, out var loco))
-                    {
-                        line.Locomotives.Add(loco);
-                        loco.AssignedRollingLineId = lineId;
-                    }
-                }
-            }
-
             foreach (var tile in state.Tiles)
             {
                 tile.RefreshTrackCollections();
@@ -386,14 +347,13 @@ namespace Ploco.Data
                     loco.SeriesId = newSeriesId;
                 }
                 using var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool, traction_percent, hs_reason, maintenance_date) VALUES ($seriesId, $number, $status, $pool, $traction, $reason, $maintenance);";
+                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool, traction_percent, hs_reason) VALUES ($seriesId, $number, $status, $pool, $traction, $reason);";
                 command.Parameters.AddWithValue("$seriesId", loco.SeriesId);
                 command.Parameters.AddWithValue("$number", loco.Number);
                 command.Parameters.AddWithValue("$status", loco.Status.ToString());
                 command.Parameters.AddWithValue("$pool", loco.Pool);
                 command.Parameters.AddWithValue("$traction", (object?)loco.TractionPercent ?? DBNull.Value);
                 command.Parameters.AddWithValue("$reason", string.IsNullOrWhiteSpace(loco.HsReason) ? DBNull.Value : loco.HsReason);
-                command.Parameters.AddWithValue("$maintenance", string.IsNullOrWhiteSpace(loco.MaintenanceDate) ? DBNull.Value : loco.MaintenanceDate);
                 command.ExecuteNonQuery();
                 loco.Id = GetLastInsertRowId(connection);
             }
@@ -416,29 +376,6 @@ namespace Ploco.Data
                 command.Parameters.AddWithValue("$config", configJson);
                 command.ExecuteNonQuery();
                 tile.Id = GetLastInsertRowId(connection);
-
-                var linePosition = 0;
-                foreach (var line in tile.RollingLines)
-                {
-                    using var lineCommand = connection.CreateCommand();
-                    lineCommand.CommandText = "INSERT INTO rolling_lines (tile_id, line_number, position) VALUES ($tileId, $number, $position);";
-                    lineCommand.Parameters.AddWithValue("$tileId", tile.Id);
-                    lineCommand.Parameters.AddWithValue("$number", line.Number);
-                    lineCommand.Parameters.AddWithValue("$position", linePosition++);
-                    lineCommand.ExecuteNonQuery();
-                    line.Id = GetLastInsertRowId(connection);
-
-                    if (line.Locomotives.Count > 0)
-                    {
-                        var loco = line.Locomotives.First();
-                        using var assignCommand = connection.CreateCommand();
-                        assignCommand.CommandText = "INSERT INTO rolling_line_locomotives (line_id, loco_id) VALUES ($lineId, $locoId);";
-                        assignCommand.Parameters.AddWithValue("$lineId", line.Id);
-                        assignCommand.Parameters.AddWithValue("$locoId", loco.Id);
-                        assignCommand.ExecuteNonQuery();
-                        loco.AssignedRollingLineId = line.Id;
-                    }
-                }
 
                 var trackPosition = 0;
                 foreach (var track in tile.Tracks)
@@ -575,8 +512,6 @@ namespace Ploco.Data
                 "tiles",
                 "tracks",
                 "track_locomotives",
-                "rolling_lines",
-                "rolling_line_locomotives",
                 "history",
                 "places"
             };
