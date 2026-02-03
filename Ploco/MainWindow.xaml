@@ -32,6 +32,12 @@
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
+        <Style x:Key="RollingLineDropListStyle" TargetType="ListBox" BasedOn="{StaticResource DropListBoxStyle}">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MinWidth" Value="160"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+        </Style>
         <Style TargetType="ListBox">
             <Setter Property="Background" Value="{DynamicResource ListBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ListBorderBrush}"/>
@@ -691,7 +697,7 @@
         </DataTemplate>
         <DataTemplate x:Key="RollingLineTileTemplate">
             <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="220"
+                    CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="200"
                     AllowDrop="True"
                     Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
@@ -718,17 +724,27 @@
                             <ItemsControl ItemsSource="{Binding RollingLineTracks}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,6">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <Grid Margin="0,4,0,0">
+                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="4" Margin="0,2,0,2">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="48"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <Grid Grid.Column="1">
                                                     <ListBox x:Name="RollingLineTrackList"
                                                              ItemsSource="{Binding Locomotives}"
-                                                             Style="{StaticResource DropListBoxStyle}"
+                                                             Style="{StaticResource RollingLineDropListStyle}"
                                                              AllowDrop="True"
+                                                             HorizontalAlignment="Stretch"
                                                              PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
                                                              PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
                                                              Drop="TrackLocomotives_Drop">
+                                                        <ListBox.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ListBox.ItemsPanel>
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
@@ -774,7 +790,7 @@
                                                         </TextBlock.Style>
                                                     </TextBlock>
                                                 </Grid>
-                                            </StackPanel>
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -889,7 +905,10 @@
                 </DockPanel>
             </Border>
             <Border Grid.Column="1" Margin="10" Background="{DynamicResource CanvasBackgroundBrush}" CornerRadius="6">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="TileScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              PanningMode="Both">
                     <ItemsControl x:Name="TileCanvas">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>

@@ -29,6 +29,7 @@ namespace Ploco
         private const string LayoutPresetFileName = "layout_presets.json";
         private const double MinTileWidth = 260;
         private const double MinTileHeight = 180;
+        private const double CanvasPadding = 80;
         private bool _isDarkMode;
         private Point _dragStartPoint;
         private TileModel? _draggedTile;
@@ -55,6 +56,7 @@ namespace Ploco
             LocomotiveList.ItemsSource = _locomotives;
             TileCanvas.ItemsSource = _tiles;
             InitializeLocomotiveView();
+            UpdateTileCanvasExtent();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -91,6 +93,7 @@ namespace Ploco
             }
 
             UpdatePoolVisibility();
+            UpdateTileCanvasExtent();
         }
 
         private void PersistState()
@@ -183,6 +186,7 @@ namespace Ploco
             _tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void AddLineTile(LinePlaceDialog dialog)
@@ -284,6 +288,7 @@ namespace Ploco
 
             UpdatePoolVisibility();
             PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void AddRollingLineTile(string name)
@@ -310,6 +315,7 @@ namespace Ploco
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             _repository.AddHistory("RollingLineAdded", $"Lignes 1101 à 1123 ajoutées dans {tile.DisplayTitle}.");
             PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void DeleteTile_Click(object sender, RoutedEventArgs e)
@@ -332,6 +338,7 @@ namespace Ploco
             _repository.AddHistory("TileDeleted", $"Suppression du lieu {tile.DisplayTitle}.");
             UpdatePoolVisibility();
             PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void RenameTile_Click(object sender, RoutedEventArgs e)
@@ -502,6 +509,7 @@ namespace Ploco
             tile.RefreshTrackCollections();
             _repository.AddHistory("RollingLineAdded", $"Ajout de la ligne {track.Name} dans {tile.DisplayTitle}.");
             PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void RemoveLineTrack_Click(object sender, RoutedEventArgs e)
@@ -1055,6 +1063,7 @@ namespace Ploco
             _draggedTile.X = Math.Max(0, _draggedTile.X + offset.X);
             _draggedTile.Y = Math.Max(0, _draggedTile.Y + offset.Y);
             _tileDragStart = currentPosition;
+            UpdateTileCanvasExtent();
         }
 
         private void Tile_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -1064,6 +1073,7 @@ namespace Ploco
                 ResolveTileOverlap(_draggedTile);
                 _repository.AddHistory("TileMoved", $"Tuile {_draggedTile.Name} déplacée.");
                 PersistState();
+                UpdateTileCanvasExtent();
             }
             if (sender is Border border)
             {
@@ -1079,6 +1089,7 @@ namespace Ploco
                 _isResizingTile = true;
                 tile.Width = Math.Max(MinTileWidth, tile.Width + e.HorizontalChange);
                 tile.Height = Math.Max(MinTileHeight, tile.Height + e.VerticalChange);
+                UpdateTileCanvasExtent();
             }
         }
 
@@ -1090,6 +1101,7 @@ namespace Ploco
                 ResolveTileOverlap(tile);
                 _repository.AddHistory("TileResized", $"Tuile {tile.Name} redimensionnée.");
                 PersistState();
+                UpdateTileCanvasExtent();
             }
         }
 
@@ -1805,6 +1817,27 @@ namespace Ploco
                 tile.RefreshTrackCollections();
                 _tiles.Add(tile);
             }
+            UpdateTileCanvasExtent();
+        }
+
+        private void UpdateTileCanvasExtent()
+        {
+            if (TileCanvas == null)
+            {
+                return;
+            }
+
+            if (!_tiles.Any())
+            {
+                TileCanvas.Width = 0;
+                TileCanvas.Height = 0;
+                return;
+            }
+
+            var maxX = _tiles.Max(tile => tile.X + tile.Width);
+            var maxY = _tiles.Max(tile => tile.Y + tile.Height);
+            TileCanvas.Width = Math.Max(0, maxX + CanvasPadding);
+            TileCanvas.Height = Math.Max(0, maxY + CanvasPadding);
         }
 
         private static JsonSerializerOptions GetPresetSerializerOptions()
