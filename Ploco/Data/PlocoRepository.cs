@@ -175,6 +175,7 @@ namespace Ploco.Data
                         {
                             tile.LocationPreset = config.LocationPreset;
                             tile.GarageTrackNumber = config.GarageTrackNumber;
+                            tile.RollingLineCount = config.RollingLineCount;
                             if (config.Width.HasValue)
                             {
                                 tile.Width = config.Width.Value;
@@ -358,6 +359,7 @@ namespace Ploco.Data
                 {
                     LocationPreset = tile.LocationPreset,
                     GarageTrackNumber = tile.GarageTrackNumber,
+                    RollingLineCount = tile.RollingLineCount,
                     Width = tile.Width,
                     Height = tile.Height
                 });
@@ -673,6 +675,7 @@ namespace Ploco.Data
         {
             public string? LocationPreset { get; set; }
             public int? GarageTrackNumber { get; set; }
+            public int? RollingLineCount { get; set; }
             public double? Width { get; set; }
             public double? Height { get; set; }
         }

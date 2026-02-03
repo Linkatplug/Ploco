@@ -34,7 +34,7 @@
         </Style>
         <Style x:Key="RollingLineDropListStyle" TargetType="ListBox" BasedOn="{StaticResource DropListBoxStyle}">
             <Setter Property="MinHeight" Value="28"/>
-            <Setter Property="MinWidth" Value="160"/>
+            <Setter Property="MinWidth" Value="110"/>
             <Setter Property="Padding" Value="2"/>
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
         </Style>
@@ -716,7 +716,7 @@
                                     <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
                                     <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
                                     <Separator/>
-                                    <MenuItem Header="Ajouter une ligne" Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Configurer lignes" Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
                                 </MenuItem>
                             </Menu>
                         </Grid>
@@ -724,22 +724,26 @@
                             <ItemsControl ItemsSource="{Binding RollingLineTracks}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="4" Margin="0,2,0,2">
+                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="3" Margin="0,2,0,2"
+                                                AllowDrop="True"
+                                                Background="Transparent"
+                                                DragOver="RollingLineRow_DragOver"
+                                                DragLeave="RollingLineRow_DragLeave"
+                                                Drop="RollingLineRow_Drop">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="48"/>
-                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="40"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                 <Grid Grid.Column="1">
                                                     <ListBox x:Name="RollingLineTrackList"
                                                              ItemsSource="{Binding Locomotives}"
                                                              Style="{StaticResource RollingLineDropListStyle}"
-                                                             AllowDrop="True"
-                                                             HorizontalAlignment="Stretch"
+                                                             AllowDrop="False"
+                                                             HorizontalAlignment="Left"
                                                              PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                             Drop="TrackLocomotives_Drop">
+                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove">
                                                         <ListBox.ItemsPanel>
                                                             <ItemsPanelTemplate>
                                                                 <WrapPanel Orientation="Horizontal"/>
@@ -796,7 +800,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <Button Content="Ajouter une ligne" Margin="0,6,0,0" HorizontalAlignment="Right"
+                        <Button Content="Configurer lignes" Margin="0,6,0,0" HorizontalAlignment="Right"
                                 Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
                     </StackPanel>
                     <Thumb Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"

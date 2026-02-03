@@ -419,6 +419,20 @@ namespace Ploco.Models
 
         public string? LocationPreset { get; set; }
         public int? GarageTrackNumber { get; set; }
+        private int? _rollingLineCount;
+
+        public int? RollingLineCount
+        {
+            get => _rollingLineCount;
+            set
+            {
+                if (_rollingLineCount != value)
+                {
+                    _rollingLineCount = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public double X
         {
