@@ -25,6 +25,10 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.6" />
     <PackageReference Include="UglyToad.PdfPig" Version="0.1.9-alpha001-patch1" />
+    <PackageReference Include="UglyToad.PdfPig.Core" Version="1.7.0-custom-5" />
+    <PackageReference Include="UglyToad.PdfPig.Fonts" Version="1.7.0-custom-5" />
+    <PackageReference Include="UglyToad.PdfPig.Tokenization" Version="1.7.0-custom-5" />
+    <PackageReference Include="UglyToad.PdfPig.Tokens" Version="1.7.0-custom-5" />
     <PackageReference Include="Docnet.Core" Version="2.3.0" />
     <PackageReference Include="PdfSharpCore" Version="1.3.47" />
   </ItemGroup>
