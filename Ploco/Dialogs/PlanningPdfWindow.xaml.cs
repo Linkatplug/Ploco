@@ -31,6 +31,7 @@ namespace Ploco.Dialogs
         private PdfDocumentModel? _document;
         private readonly Dictionary<int, PdfTemplateCalibrationModel> _calibrations = new();
         private readonly Dictionary<int, (double Width, double Height)> _pdfPageSizes = new();
+        private readonly CalibrationEditorViewModel _calibrationEditor = new();
         private double _zoom = 1.0;
         private bool _isDraggingToken;
         private PdfPlacementViewModel? _draggedPlacement;
@@ -44,6 +45,7 @@ namespace Ploco.Dialogs
             _repository = repository;
             PdfPages.ItemsSource = _pages;
             DocumentDatePicker.SelectedDate = DateTime.Today;
+            DataContext = new { Calibration = _calibrationEditor };
             UpdateZoomLabel();
         }
 
@@ -74,6 +76,7 @@ namespace Ploco.Dialogs
             _pages.Clear();
             _calibrations.Clear();
             _pdfPageSizes.Clear();
+            _calibrationEditor.Reset();
 
             var date = DocumentDatePicker.SelectedDate ?? DateTime.Today;
             var templateHash = ComputeFileHash(filePath);
@@ -108,6 +111,7 @@ namespace Ploco.Dialogs
 
             RenderPages(filePath);
             LoadPlacements();
+            SetActiveCalibration(0);
         }
 
         private void RenderPages(string filePath)
@@ -198,6 +202,7 @@ namespace Ploco.Dialogs
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+            SetActiveCalibration(page.PageIndex);
 
             var dropPoint = GetCanvasPoint(e.GetPosition(canvas));
             if (_isDraggingToken && _draggedPlacement != null)
@@ -315,6 +320,7 @@ namespace Ploco.Dialogs
                 return;
             }
 
+            SetActiveCalibration(page.PageIndex);
             if (!_calibrations.TryGetValue(page.PageIndex, out var calibration))
             {
                 calibration = new PdfTemplateCalibrationModel
@@ -335,12 +341,14 @@ namespace Ploco.Dialogs
             {
                 calibration.XStart = pdfX;
                 _calibrationStep = CalibrationStep.SelectEnd;
+                _calibrationEditor.UpdateFromCalibration(calibration);
                 MessageBox.Show("Cliquez sur la position 24:00.", "Calibrage", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else if (_calibrationStep == CalibrationStep.SelectEnd)
             {
                 calibration.XEnd = pdfX;
                 _calibrationStep = CalibrationStep.SelectRows;
+                _calibrationEditor.UpdateFromCalibration(calibration);
                 MessageBox.Show("Cliquez sur une ligne et saisissez son identifiant.", "Calibrage", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else if (_calibrationStep == CalibrationStep.SelectRows)
@@ -356,6 +364,7 @@ namespace Ploco.Dialogs
                         RoulementId = input.ResponseText.Trim(),
                         YCenter = pdfY
                     });
+                    _calibrationEditor.UpdateFromCalibration(calibration);
                 }
             }
 
@@ -517,10 +526,53 @@ namespace Ploco.Dialogs
 
             _isCalibrationMode = !_isCalibrationMode;
             _calibrationStep = _isCalibrationMode ? CalibrationStep.SelectStart : CalibrationStep.None;
+            _calibrationEditor.HelpText = _isCalibrationMode
+                ? "Cliquez sur la page pour définir 00:00, puis 24:00, puis plusieurs lignes."
+                : "Mode calibrage désactivé.";
             MessageBox.Show(_isCalibrationMode
                     ? "Mode calibrage activé. Cliquez sur la position 00:00."
                     : "Mode calibrage désactivé.",
                 "Calibrage", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ApplyCalibration_Click(object sender, RoutedEventArgs e)
+        {
+            if (_document == null)
+            {
+                return;
+            }
+
+            if (!_calibrationEditor.TryBuildCalibration(out var calibration))
+            {
+                MessageBox.Show("Calibration invalide. Vérifiez les valeurs X.", "Calibration",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _calibrations[calibration.PageIndex] = calibration;
+            _repository.SaveTemplateCalibration(calibration);
+            MessageBox.Show("Calibration enregistrée.", "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void AddCalibrationRow_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SimpleTextDialog("Ajouter un roulement", "Identifiant (ex: @1101) :", string.Empty) { Owner = this };
+            if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.ResponseText))
+            {
+                _calibrationEditor.Rows.Add(new PdfTemplateRowMapping
+                {
+                    RoulementId = dialog.ResponseText.Trim(),
+                    YCenter = 0
+                });
+            }
+        }
+
+        private void RemoveCalibrationRow_Click(object sender, RoutedEventArgs e)
+        {
+            if (_calibrationEditor.Rows.Any())
+            {
+                _calibrationEditor.Rows.RemoveAt(_calibrationEditor.Rows.Count - 1);
+            }
         }
 
         private void ZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -539,6 +591,27 @@ namespace Ploco.Dialogs
             {
                 ZoomLabel.Text = $"{_zoom:P0}";
             }
+        }
+
+        private void SetActiveCalibration(int pageIndex)
+        {
+            if (_document == null)
+            {
+                return;
+            }
+
+            if (!_calibrations.TryGetValue(pageIndex, out var calibration))
+            {
+                calibration = new PdfTemplateCalibrationModel
+                {
+                    TemplateHash = _document.TemplateHash,
+                    PageIndex = pageIndex,
+                    XStart = 0,
+                    XEnd = 0
+                };
+            }
+
+            _calibrationEditor.UpdateFromCalibration(calibration);
         }
 
         private static int GetPdfPageCount(string filePath)
@@ -784,6 +857,137 @@ namespace Ploco.Dialogs
             SelectStart,
             SelectEnd,
             SelectRows
+        }
+
+        private sealed class CalibrationEditorViewModel : System.ComponentModel.INotifyPropertyChanged
+        {
+            private string _pageLabel = "Aucune";
+            private string _xStartText = string.Empty;
+            private string _xEndText = string.Empty;
+            private string _helpText = "Sélectionnez une page pour éditer la calibration.";
+            private int _pageIndex;
+            private string _templateHash = string.Empty;
+
+            public ObservableCollection<PdfTemplateRowMapping> Rows { get; } = new();
+
+            public string PageLabel
+            {
+                get => _pageLabel;
+                set
+                {
+                    if (_pageLabel != value)
+                    {
+                        _pageLabel = value;
+                        OnPropertyChanged(nameof(PageLabel));
+                    }
+                }
+            }
+
+            public string XStartText
+            {
+                get => _xStartText;
+                set
+                {
+                    if (_xStartText != value)
+                    {
+                        _xStartText = value;
+                        OnPropertyChanged(nameof(XStartText));
+                    }
+                }
+            }
+
+            public string XEndText
+            {
+                get => _xEndText;
+                set
+                {
+                    if (_xEndText != value)
+                    {
+                        _xEndText = value;
+                        OnPropertyChanged(nameof(XEndText));
+                    }
+                }
+            }
+
+            public string HelpText
+            {
+                get => _helpText;
+                set
+                {
+                    if (_helpText != value)
+                    {
+                        _helpText = value;
+                        OnPropertyChanged(nameof(HelpText));
+                    }
+                }
+            }
+
+            public void UpdateFromCalibration(PdfTemplateCalibrationModel calibration)
+            {
+                _pageIndex = calibration.PageIndex;
+                _templateHash = calibration.TemplateHash;
+                PageLabel = $"Page {calibration.PageIndex + 1}";
+                XStartText = calibration.XStart.ToString(CultureInfo.InvariantCulture);
+                XEndText = calibration.XEnd.ToString(CultureInfo.InvariantCulture);
+                Rows.Clear();
+                foreach (var row in calibration.Rows.OrderBy(r => r.YCenter))
+                {
+                    Rows.Add(new PdfTemplateRowMapping
+                    {
+                        RoulementId = row.RoulementId,
+                        YCenter = row.YCenter
+                    });
+                }
+            }
+
+            public bool TryBuildCalibration(out PdfTemplateCalibrationModel calibration)
+            {
+                calibration = new PdfTemplateCalibrationModel
+                {
+                    TemplateHash = _templateHash,
+                    PageIndex = _pageIndex
+                };
+
+                if (!double.TryParse(XStartText, NumberStyles.Float, CultureInfo.InvariantCulture, out var xStart))
+                {
+                    return false;
+                }
+
+                if (!double.TryParse(XEndText, NumberStyles.Float, CultureInfo.InvariantCulture, out var xEnd))
+                {
+                    return false;
+                }
+
+                calibration.XStart = xStart;
+                calibration.XEnd = xEnd;
+                calibration.Rows = Rows
+                    .Where(r => !string.IsNullOrWhiteSpace(r.RoulementId))
+                    .Select(r => new PdfTemplateRowMapping
+                    {
+                        RoulementId = r.RoulementId,
+                        YCenter = r.YCenter
+                    })
+                    .ToList();
+                return true;
+            }
+
+            public void Reset()
+            {
+                _pageIndex = 0;
+                _templateHash = string.Empty;
+                PageLabel = "Aucune";
+                XStartText = string.Empty;
+                XEndText = string.Empty;
+                Rows.Clear();
+                HelpText = "Sélectionnez une page pour éditer la calibration.";
+            }
+
+            public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+            private void OnPropertyChanged(string propertyName)
+            {
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+            }
         }
     }
 }
