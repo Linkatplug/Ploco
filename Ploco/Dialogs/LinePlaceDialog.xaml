@@ -1,0 +1,45 @@
+<Window x:Class="Ploco.Dialogs.LinePlaceDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configurer un lieu en ligne" Height="520" Width="460"
+        WindowStartupLocation="CenterOwner">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12">
+            <TextBlock Text="Nom du lieu" FontWeight="SemiBold"/>
+            <TextBox x:Name="PlaceNameText" Margin="0,6,0,12"/>
+
+            <TextBlock Text="Nom de la voie" FontWeight="SemiBold"/>
+            <TextBox x:Name="TrackNameText" Margin="0,6,0,12"/>
+
+            <TextBlock Text="Locomotives à ajouter (séparées par espace ou virgule)" FontWeight="SemiBold"/>
+            <TextBox x:Name="LocomotiveNumbersText" Margin="0,6,0,12"/>
+
+            <TextBlock Text="Raison de l'incident" FontWeight="SemiBold"/>
+            <TextBox x:Name="IssueReasonText" Margin="0,6,0,12"/>
+
+            <CheckBox x:Name="OnTrainCheck" Content="Locomotive sur un train ?" Margin="0,0,0,6"
+                      Checked="OnTrainCheck_Checked" Unchecked="OnTrainCheck_Checked"/>
+
+            <StackPanel x:Name="TrainDetailsPanel" Visibility="Collapsed">
+                <TextBlock Text="Numéro de train" FontWeight="SemiBold"/>
+                <TextBox x:Name="TrainNumberText" Margin="0,6,0,12"/>
+
+                <TextBlock Text="Heure d'arrêt" FontWeight="SemiBold"/>
+                <TextBox x:Name="StopTimeText" Margin="0,6,0,12"/>
+            </StackPanel>
+
+            <CheckBox x:Name="IsHsCheck" Content="Locomotive HS ?" Margin="0,0,0,6"
+                      Checked="IsHsCheck_Checked" Unchecked="IsHsCheck_Checked"/>
+
+            <StackPanel x:Name="HsLocomotivesPanel" Visibility="Collapsed">
+                <TextBlock Text="Locomotives HS (séparées par espace ou virgule)" FontWeight="SemiBold"/>
+                <TextBox x:Name="HsLocomotivesText" Margin="0,6,0,12"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Valider" Width="80" Margin="0,0,6,0" Click="Validate_Click"/>
+                <Button Content="Annuler" Width="80" Click="Cancel_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

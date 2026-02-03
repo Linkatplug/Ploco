@@ -1,0 +1,75 @@
+<Window x:Class="Ploco.Dialogs.TapisT13Window"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Tapis T13" Height="520" Width="680"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Synthèse des locomotives T13 (pool Sibelit)" FontWeight="Bold"/>
+                <TextBlock x:Name="SummaryText" Foreground="SlateGray"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Actualiser" Margin="4,0" Click="Refresh_Click"/>
+                <Button Content="Copier colonne Locomotive" Margin="4,0" Click="CopyLocomotive_Click"/>
+                <Button Content="Copier colonne Loc HS" Margin="4,0" Click="CopyLocHs_Click"/>
+                <Button Content="Copier colonne Infos/Rapport" Margin="4,0" Click="CopyReport_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <DataGrid Grid.Row="1"
+                  x:Name="T13Grid"
+                  AutoGenerateColumns="False"
+                  HeadersVisibility="Column"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserReorderColumns="False"
+                  CanUserResizeRows="False"
+                  CanUserSortColumns="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Locomotive" Binding="{Binding Locomotive}" Width="*"/>
+                <DataGridTextColumn Header="Date entretien" Binding="{Binding DateEntretien}" Width="*"/>
+                <DataGridTextColumn Header="Statut / Motif" Binding="{Binding Motif}" Width="*"/>
+                <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="Black"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHs}" Value="True">
+                                    <Setter Property="Foreground" Value="Red"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="Black"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHs}" Value="True">
+                                    <Setter Property="Foreground" Value="Red"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="Fermer" Width="90" Click="Close_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

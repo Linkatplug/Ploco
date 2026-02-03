@@ -9,10 +9,10 @@ namespace Ploco
 {
     public partial class ParcLocoWindow : Window
     {
-        public ObservableCollection<Locomotive> SibelitPool { get; set; }
-        public ObservableCollection<Locomotive> LineasPool { get; set; }
+        public ObservableCollection<LocomotiveModel> SibelitPool { get; set; }
+        public ObservableCollection<LocomotiveModel> LineasPool { get; set; }
 
-        public ParcLocoWindow(ObservableCollection<Locomotive> sibelitPool, ObservableCollection<Locomotive> lineasPool)
+        public ParcLocoWindow(ObservableCollection<LocomotiveModel> sibelitPool, ObservableCollection<LocomotiveModel> lineasPool)
         {
             InitializeComponent();
             Owner = Application.Current.MainWindow; // Définit la fenêtre principale comme propriétaire
@@ -23,9 +23,9 @@ namespace Ploco
             ItemsControlLineas.ItemsSource = LineasPool;
 
             CollectionView viewSibelit = (CollectionView)CollectionViewSource.GetDefaultView(SibelitPool);
-            viewSibelit.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
+            viewSibelit.SortDescriptions.Add(new SortDescription(nameof(LocomotiveModel.Number), ListSortDirection.Ascending));
             CollectionView viewLineas = (CollectionView)CollectionViewSource.GetDefaultView(LineasPool);
-            viewLineas.SortDescriptions.Add(new SortDescription("NumeroSerie", ListSortDirection.Ascending));
+            viewLineas.SortDescriptions.Add(new SortDescription(nameof(LocomotiveModel.Number), ListSortDirection.Ascending));
         }
 
         private void MenuItem_Swap_Click(object sender, RoutedEventArgs e)
