@@ -4,6 +4,16 @@
         Title="Tapis T13" Height="520" Width="680"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="12">
+        <Grid.Resources>
+            <Style x:Key="HsCellStyle" TargetType="DataGridCell">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsHs}" Value="True">
+                        <Setter Property="Background" Value="#FFD32F2F"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -39,9 +49,10 @@
                   CanUserSortColumns="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Locomotive" Binding="{Binding Locomotive}" Width="*"/>
+                <DataGridTextColumn Header="Date entretien" Binding="{Binding MaintenanceDate}" Width="*"/>
                 <DataGridTextColumn Header="Statut / Motif" Binding="{Binding Motif}" Width="*"/>
-                <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*"/>
-                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*"/>
+                <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*" CellStyle="{StaticResource HsCellStyle}"/>
+                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*" CellStyle="{StaticResource HsCellStyle}"/>
             </DataGrid.Columns>
         </DataGrid>
 

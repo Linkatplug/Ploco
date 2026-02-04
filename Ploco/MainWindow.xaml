@@ -32,6 +32,12 @@
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
+        <Style x:Key="RollingLineDropListStyle" TargetType="ListBox" BasedOn="{StaticResource DropListBoxStyle}">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+        </Style>
         <Style TargetType="ListBox">
             <Setter Property="Background" Value="{DynamicResource ListBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ListBorderBrush}"/>
@@ -689,10 +695,125 @@
                 </Grid>
             </Border>
         </DataTemplate>
+        <DataTemplate x:Key="RollingLineTileTemplate">
+            <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="200"
+                    AllowDrop="True"
+                    Drop="Tile_Drop"
+                    MouseLeftButtonDown="Tile_MouseLeftButtonDown"
+                    MouseMove="Tile_MouseMove"
+                    MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <Grid>
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
+                            <Menu Grid.Column="1" HorizontalAlignment="Right">
+                                <MenuItem Header="...">
+                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Configurer lignes" Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
+                                </MenuItem>
+                            </Menu>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding RollingLineTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="3" Margin="0,2,0,2"
+                                                AllowDrop="True"
+                                                Background="Transparent"
+                                                DragOver="RollingLineRow_DragOver"
+                                                DragLeave="RollingLineRow_DragLeave"
+                                                Drop="RollingLineRow_Drop">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="40"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <Grid Grid.Column="1">
+                                                    <ListBox x:Name="RollingLineTrackList"
+                                                             ItemsSource="{Binding Locomotives}"
+                                                             Style="{StaticResource RollingLineDropListStyle}"
+                                                             AllowDrop="False"
+                                                             HorizontalAlignment="Left"
+                                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
+                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove">
+                                                        <ListBox.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ListBox.ItemsPanel>
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                        ContextMenu="{StaticResource LocomotiveTileContextMenu}"
+                                                                        PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
+                                                                    <Grid>
+                                                                        <Grid.RowDefinitions>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                            <RowDefinition Height="Auto"/>
+                                                                        </Grid.RowDefinitions>
+                                                                        <TextBlock Grid.Row="0" Text="{Binding Number}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                                                                   HorizontalAlignment="Left"/>
+                                                                        <TextBlock Grid.Row="1" Text="{Binding TractionDisplay}" FontSize="10" Foreground="White"
+                                                                                   HorizontalAlignment="Right" Margin="0,2,0,0">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding TractionDisplay}" Value="">
+                                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                    <TextBlock Text="Déposez ici" Foreground="SlateGray" FontStyle="Italic"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ElementName=RollingLineTrackList, Path=HasItems}" Value="False">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <Button Content="Configurer lignes" Margin="0,6,0,0" HorizontalAlignment="Right"
+                                Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
+                    </StackPanel>
+                    <Thumb Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           Cursor="SizeNWSE" DragDelta="TileResizeThumb_DragDelta" DragCompleted="TileResizeThumb_DragCompleted"
+                           Background="#55000000" BorderBrush="#FF7A7A7A" BorderThickness="1"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
         <helpers:TileTemplateSelector x:Key="TileTemplateSelector"
                                     DepotTemplate="{StaticResource DepotTileTemplate}"
                                     GarageTemplate="{StaticResource GarageTileTemplate}"
-                                    LineTemplate="{StaticResource LineTileTemplate}"/>
+                                    LineTemplate="{StaticResource LineTileTemplate}"
+                                    RollingLineTemplate="{StaticResource RollingLineTileTemplate}"/>
     </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
@@ -707,6 +828,8 @@
             <MenuItem Header="Tapis">
                 <MenuItem Header="T13" Click="MenuItem_TapisT13_Click"/>
                 <MenuItem Header="37000" IsEnabled="False"/>
+                <Separator/>
+                <MenuItem Header="Planning PDF" Click="MenuItem_PlanningPdf_Click"/>
             </MenuItem>
             <MenuItem Header="Vue">
                 <MenuItem Header="Charger un preset" x:Name="ViewPresetsMenu"/>
@@ -788,7 +911,11 @@
                 </DockPanel>
             </Border>
             <Border Grid.Column="1" Margin="10" Background="{DynamicResource CanvasBackgroundBrush}" CornerRadius="6">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="TileScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              PanningMode="Both"
+                              SizeChanged="TileScrollViewer_SizeChanged">
                     <ItemsControl x:Name="TileCanvas">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
