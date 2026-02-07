@@ -104,6 +104,15 @@ namespace Ploco.Data
                     y_center REAL NOT NULL,
                     FOREIGN KEY(calibration_id) REFERENCES pdf_template_calibrations(id)
                 );",
+                @"CREATE TABLE IF NOT EXISTS pdf_calibration_lines (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    calibration_id INTEGER NOT NULL,
+                    type TEXT NOT NULL,
+                    position REAL NOT NULL,
+                    label TEXT NOT NULL,
+                    minute_of_day INTEGER,
+                    FOREIGN KEY(calibration_id) REFERENCES pdf_template_calibrations(id)
+                );",
                 @"CREATE TABLE IF NOT EXISTS pdf_placements (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     pdf_document_id INTEGER NOT NULL,
@@ -231,6 +240,7 @@ namespace Ploco.Data
             foreach (var calibration in calibrations)
             {
                 calibration.Rows = LoadTemplateRows(connection, calibration.Id);
+                calibration.VisualLines = LoadCalibrationLines(connection, calibration.Id);
             }
 
             return calibrations;
@@ -285,6 +295,27 @@ namespace Ploco.Data
                 insertRow.Parameters.AddWithValue("$roulementId", row.RoulementId);
                 insertRow.Parameters.AddWithValue("$yCenter", row.YCenter);
                 insertRow.ExecuteNonQuery();
+            }
+
+            // Sauvegarder les lignes visuelles
+            using (var deleteLines = connection.CreateCommand())
+            {
+                deleteLines.CommandText = "DELETE FROM pdf_calibration_lines WHERE calibration_id = $id;";
+                deleteLines.Parameters.AddWithValue("$id", calibration.Id);
+                deleteLines.ExecuteNonQuery();
+            }
+
+            foreach (var line in calibration.VisualLines)
+            {
+                using var insertLine = connection.CreateCommand();
+                insertLine.CommandText = @"INSERT INTO pdf_calibration_lines (calibration_id, type, position, label, minute_of_day)
+                                          VALUES ($calibrationId, $type, $position, $label, $minuteOfDay);";
+                insertLine.Parameters.AddWithValue("$calibrationId", calibration.Id);
+                insertLine.Parameters.AddWithValue("$type", line.Type.ToString());
+                insertLine.Parameters.AddWithValue("$position", line.Position);
+                insertLine.Parameters.AddWithValue("$label", line.Label);
+                insertLine.Parameters.AddWithValue("$minuteOfDay", line.MinuteOfDay.HasValue ? (object)line.MinuteOfDay.Value : DBNull.Value);
+                insertLine.ExecuteNonQuery();
             }
 
             transaction.Commit();
@@ -418,6 +449,30 @@ namespace Ploco.Data
                 });
             }
             return rows;
+        }
+
+        private static List<PdfCalibrationLine> LoadCalibrationLines(SqliteConnection connection, int calibrationId)
+        {
+            var lines = new List<PdfCalibrationLine>();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"SELECT id, calibration_id, type, position, label, minute_of_day
+                                    FROM pdf_calibration_lines
+                                    WHERE calibration_id = $id;";
+            command.Parameters.AddWithValue("$id", calibrationId);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                lines.Add(new PdfCalibrationLine
+                {
+                    Id = reader.GetInt32(0),
+                    CalibrationId = reader.GetInt32(1),
+                    Type = Enum.Parse<CalibrationLineType>(reader.GetString(2)),
+                    Position = reader.GetDouble(3),
+                    Label = reader.GetString(4),
+                    MinuteOfDay = reader.IsDBNull(5) ? null : reader.GetInt32(5)
+                });
+            }
+            return lines;
         }
 
         public AppState LoadState()
