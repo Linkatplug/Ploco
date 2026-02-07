@@ -12,6 +12,8 @@
             <Button Content="Mode Calibration" Margin="6,0,0,0" Click="ToggleCalibrationMode_Click" x:Name="CalibrationModeButton"/>
             <Button Content="+ Ligne horizontale" Margin="6,0,0,0" Click="AddHorizontalLine_Click" x:Name="AddHorizontalButton" IsEnabled="False"/>
             <Button Content="+ Ligne verticale" Margin="6,0,0,0" Click="AddVerticalLine_Click" x:Name="AddVerticalButton" IsEnabled="False"/>
+            <Button Content="Réinitialiser calibration" Margin="6,0,0,0" Click="ResetCalibration_Click" x:Name="ResetCalibrationButton" IsEnabled="False" Foreground="Red"/>
+            <Separator/>
             <Button Content="Sauvegarder calibration" Margin="6,0,0,0" Click="SaveCalibration_Click" x:Name="SaveCalibrationButton" IsEnabled="False"/>
             <Button Content="Charger calibration" Margin="6,0,0,0" Click="LoadCalibration_Click" x:Name="LoadCalibrationButton"/>
             <Separator/>
@@ -121,35 +123,58 @@
 
             <Border Grid.Column="1" BorderBrush="#FFDDDDDD" BorderThickness="1" Margin="8" Padding="8">
                 <StackPanel>
-                    <TextBlock Text="Calibration" FontWeight="Bold" Margin="0,0,0,8"/>
-                    <TextBlock Text="Page active" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding Calibration.PageLabel}" Margin="0,4,0,8"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <StackPanel Width="120">
-                            <TextBlock Text="X départ (00:00)" FontWeight="SemiBold"/>
-                            <TextBox Text="{Binding Calibration.XStartText, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,8,0"/>
+                    <TextBlock Text="📊 Calibration" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
+                    
+                    <!-- Instructions -->
+                    <Border Background="#FFF8F8F8" Padding="8" Margin="0,0,0,12" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Instructions rapides :" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock TextWrapping="Wrap" FontSize="11">
+                                1. Activez "Mode Calibration"<LineBreak/>
+                                2. Placez des lignes verticales (heures)<LineBreak/>
+                                3. Placez des lignes horizontales (roulements)<LineBreak/>
+                                4. Les locomotives suivront les lignes !
+                            </TextBlock>
                         </StackPanel>
-                        <StackPanel Width="120">
-                            <TextBlock Text="X fin (24:00)" FontWeight="SemiBold"/>
-                            <TextBox Text="{Binding Calibration.XEndText, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,0"/>
+                    </Border>
+                    
+                    <!-- Page info -->
+                    <TextBlock Text="📄 Page active" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding Calibration.PageLabel}" Margin="0,0,0,12" FontSize="13" FontWeight="Bold"/>
+                    
+                    <!-- Legacy calibration (kept for compatibility) -->
+                    <Expander Header="⚙️ Calibration manuelle (ancien système)" IsExpanded="False" Margin="0,0,0,8">
+                        <StackPanel Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <StackPanel Width="120">
+                                    <TextBlock Text="X départ (00:00)" FontWeight="SemiBold" FontSize="10"/>
+                                    <TextBox Text="{Binding Calibration.XStartText, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,8,0"/>
+                                </StackPanel>
+                                <StackPanel Width="120">
+                                    <TextBlock Text="X fin (24:00)" FontWeight="SemiBold" FontSize="10"/>
+                                    <TextBox Text="{Binding Calibration.XEndText, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button Content="Appliquer" Width="90" Click="ApplyCalibration_Click" FontSize="10"/>
+                                <Button Content="Ajouter ligne" Width="110" Margin="8,0,0,0" Click="AddCalibrationRow_Click" FontSize="10"/>
+                                <Button Content="Supprimer ligne" Width="110" Margin="8,0,0,0" Click="RemoveCalibrationRow_Click" FontSize="10"/>
+                            </StackPanel>
+                            <DataGrid ItemsSource="{Binding Calibration.Rows}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      HeadersVisibility="Column"
+                                      Height="200"
+                                      FontSize="10">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Roulement" Binding="{Binding RoulementId}" Width="*"/>
+                                    <DataGridTextColumn Header="Y (PDF)" Binding="{Binding YCenter}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
                         </StackPanel>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <Button Content="Appliquer" Width="90" Click="ApplyCalibration_Click"/>
-                        <Button Content="Ajouter ligne" Width="110" Margin="8,0,0,0" Click="AddCalibrationRow_Click"/>
-                        <Button Content="Supprimer ligne" Width="110" Margin="8,0,0,0" Click="RemoveCalibrationRow_Click"/>
-                    </StackPanel>
-                    <DataGrid ItemsSource="{Binding Calibration.Rows}"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              HeadersVisibility="Column"
-                              Height="420">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Roulement" Binding="{Binding RoulementId}" Width="*"/>
-                            <DataGridTextColumn Header="Y (PDF)" Binding="{Binding YCenter}" Width="*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    <TextBlock Text="{Binding Calibration.HelpText}" Foreground="SlateGray" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                    </Expander>
+                    
+                    <TextBlock Text="{Binding Calibration.HelpText}" Foreground="SlateGray" Margin="0,8,0,0" TextWrapping="Wrap" FontSize="11"/>
                 </StackPanel>
             </Border>
         </Grid>

@@ -240,8 +240,13 @@ namespace Ploco.Dialogs
 
             placement.MinuteOfDay = minute;
             placement.RoulementId = row.RoulementId;
-            placement.X = dropPoint.X - placement.Width / 2;
-            placement.Y = dropPoint.Y - placement.Height / 2;
+            
+            // Snap to the calibration line position
+            var snappedX = MapMinuteToX(calibration, page, minute);
+            var snappedY = MapPdfYToImage(page, row.YCenter);
+            
+            placement.X = snappedX - placement.Width / 2;
+            placement.Y = snappedY - placement.Height / 2;
 
             if (placement.Id == 0)
             {
@@ -801,11 +806,55 @@ namespace Ploco.Dialogs
             }
         }
 
+        private void ResetCalibration_Click(object sender, RoutedEventArgs e)
+        {
+            if (_document == null)
+            {
+                return;
+            }
+
+            var result = MessageBox.Show(
+                "Voulez-vous vraiment supprimer toutes les lignes de calibration de toutes les pages ?\n\nCette action est irréversible.",
+                "Réinitialiser calibration",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                // Supprimer toutes les calibrations
+                var pagesToReset = _calibrations.Keys.ToList();
+                foreach (var pageIndex in pagesToReset)
+                {
+                    var calibration = _calibrations[pageIndex];
+                    calibration.VisualLines.Clear();
+                    calibration.Rows.Clear();
+                    calibration.XStart = 0;
+                    calibration.XEnd = 0;
+                    _repository.SaveTemplateCalibration(calibration);
+                }
+
+                // Rafraîchir l'affichage
+                RefreshCalibrationLines();
+                
+                MessageBox.Show("Calibration réinitialisée avec succès.", "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erreur lors de la réinitialisation: {ex.Message}", "Calibration", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void UpdateCalibrationUI()
         {
             AddHorizontalButton.IsEnabled = _isCalibrationMode;
             AddVerticalButton.IsEnabled = _isCalibrationMode;
             SaveCalibrationButton.IsEnabled = _isCalibrationMode && _calibrations.Any();
+            ResetCalibrationButton.IsEnabled = _isCalibrationMode && _calibrations.Any();
             
             CalibrationModeButton.FontWeight = _isCalibrationMode ? FontWeights.Bold : FontWeights.Normal;
         }
