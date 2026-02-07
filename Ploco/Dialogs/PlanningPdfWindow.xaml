@@ -12,6 +12,7 @@
             <Button Content="Mode Calibration" Margin="6,0,0,0" Click="ToggleCalibrationMode_Click" x:Name="CalibrationModeButton"/>
             <Button Content="+ Ligne horizontale" Margin="6,0,0,0" Click="AddHorizontalLine_Click" x:Name="AddHorizontalButton" IsEnabled="False"/>
             <Button Content="+ Ligne verticale" Margin="6,0,0,0" Click="AddVerticalLine_Click" x:Name="AddVerticalButton" IsEnabled="False"/>
+            <Button Content="👁️ Lignes" Margin="6,0,0,0" Click="ToggleCalibrationLinesVisibility_Click" x:Name="ToggleLinesButton" ToolTip="Afficher/Masquer les lignes de calibration"/>
             <Button Content="Réinitialiser calibration" Margin="6,0,0,0" Click="ResetCalibration_Click" x:Name="ResetCalibrationButton" IsEnabled="False" Foreground="Red"/>
             <Separator/>
             <Button Content="Sauvegarder calibration" Margin="6,0,0,0" Click="SaveCalibration_Click" x:Name="SaveCalibrationButton" IsEnabled="False"/>
@@ -61,7 +62,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Canvas>
+                                                    <Canvas Visibility="{Binding LineVisibility}">
                                                         <Line X1="{Binding X1}" Y1="{Binding Y1}" 
                                                               X2="{Binding X2}" Y2="{Binding Y2}" 
                                                               Stroke="{Binding LineBrush}" 

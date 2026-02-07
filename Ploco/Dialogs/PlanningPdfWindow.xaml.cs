@@ -40,6 +40,7 @@ namespace Ploco.Dialogs
         private bool _isCalibrationMode;
         private CalibrationLineMode _calibrationLineMode = CalibrationLineMode.None;
         private CalibrationStep _calibrationStep = CalibrationStep.None;
+        private bool _showCalibrationLines = true;
 
         public PlanningPdfWindow(PlocoRepository repository)
         {
@@ -383,7 +384,7 @@ namespace Ploco.Dialogs
                     _repository.SaveTemplateCalibration(calibration);
                     _calibrationEditor.UpdateFromCalibration(calibration);
                 }
-                _calibrationLineMode = CalibrationLineMode.None;
+                // Mode reste actif - l'utilisateur peut placer plusieurs lignes
             }
             else if (_calibrationLineMode == CalibrationLineMode.AddingVertical)
             {
@@ -455,7 +456,7 @@ namespace Ploco.Dialogs
                     _repository.SaveTemplateCalibration(calibration);
                     _calibrationEditor.UpdateFromCalibration(calibration);
                 }
-                _calibrationLineMode = CalibrationLineMode.None;
+                // Mode reste actif - l'utilisateur peut placer plusieurs lignes
             }
             // Ancien système de calibration (fallback)
             else if (_calibrationStep == CalibrationStep.SelectStart)
@@ -718,16 +719,36 @@ namespace Ploco.Dialogs
 
         private void AddHorizontalLine_Click(object sender, RoutedEventArgs e)
         {
-            _calibrationLineMode = CalibrationLineMode.AddingHorizontal;
-            MessageBox.Show("Cliquez sur la page pour placer une ligne horizontale (ligne de roulement).", 
-                "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (_calibrationLineMode == CalibrationLineMode.AddingHorizontal)
+            {
+                // Désactiver le mode
+                _calibrationLineMode = CalibrationLineMode.None;
+            }
+            else
+            {
+                // Activer le mode ajout ligne horizontale
+                _calibrationLineMode = CalibrationLineMode.AddingHorizontal;
+                MessageBox.Show("Mode ajout ligne horizontale activé.\nCliquez sur le PDF pour ajouter des lignes.\nRecliquez sur le bouton pour désactiver.", 
+                    "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            UpdateCalibrationUI();
         }
 
         private void AddVerticalLine_Click(object sender, RoutedEventArgs e)
         {
-            _calibrationLineMode = CalibrationLineMode.AddingVertical;
-            MessageBox.Show("Cliquez sur la page pour placer une ligne verticale (marqueur d'heure).", 
-                "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (_calibrationLineMode == CalibrationLineMode.AddingVertical)
+            {
+                // Désactiver le mode
+                _calibrationLineMode = CalibrationLineMode.None;
+            }
+            else
+            {
+                // Activer le mode ajout ligne verticale
+                _calibrationLineMode = CalibrationLineMode.AddingVertical;
+                MessageBox.Show("Mode ajout ligne verticale activé.\nCliquez sur le PDF pour ajouter des lignes.\nRecliquez sur le bouton pour désactiver.", 
+                    "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            UpdateCalibrationUI();
         }
 
         private void SaveCalibration_Click(object sender, RoutedEventArgs e)
@@ -849,6 +870,24 @@ namespace Ploco.Dialogs
             }
         }
 
+        private void ToggleCalibrationLinesVisibility_Click(object sender, RoutedEventArgs e)
+        {
+            _showCalibrationLines = !_showCalibrationLines;
+            
+            // Mettre à jour la visibilité de toutes les lignes
+            foreach (var page in _pages)
+            {
+                foreach (var line in page.CalibrationLines)
+                {
+                    line.IsVisible = _showCalibrationLines;
+                }
+            }
+            
+            // Mettre à jour le bouton
+            ToggleLinesButton.Content = _showCalibrationLines ? "👁️ Lignes" : "🚫 Lignes";
+            ToggleLinesButton.FontWeight = _showCalibrationLines ? FontWeights.Normal : FontWeights.Bold;
+        }
+
         private void UpdateCalibrationUI()
         {
             AddHorizontalButton.IsEnabled = _isCalibrationMode;
@@ -857,6 +896,13 @@ namespace Ploco.Dialogs
             ResetCalibrationButton.IsEnabled = _isCalibrationMode && _calibrations.Any();
             
             CalibrationModeButton.FontWeight = _isCalibrationMode ? FontWeights.Bold : FontWeights.Normal;
+            
+            // Mise en évidence des boutons actifs
+            AddHorizontalButton.FontWeight = _calibrationLineMode == CalibrationLineMode.AddingHorizontal ? FontWeights.Bold : FontWeights.Normal;
+            AddHorizontalButton.Background = _calibrationLineMode == CalibrationLineMode.AddingHorizontal ? Brushes.LightBlue : null;
+            
+            AddVerticalButton.FontWeight = _calibrationLineMode == CalibrationLineMode.AddingVertical ? FontWeights.Bold : FontWeights.Normal;
+            AddVerticalButton.Background = _calibrationLineMode == CalibrationLineMode.AddingVertical ? Brushes.LightCoral : null;
         }
 
         private void RefreshCalibrationLines()
@@ -1261,6 +1307,7 @@ namespace Ploco.Dialogs
             private double _x2;
             private double _y2;
             private string _label = string.Empty;
+            private bool _isVisible = true;
 
             public CalibrationLineType Type { get; set; }
             public double PdfPosition { get; set; }  // Position en coordonnées PDF
@@ -1277,6 +1324,22 @@ namespace Ploco.Dialogs
                 }
             }
             public int? MinuteOfDay { get; set; }
+
+            public bool IsVisible
+            {
+                get => _isVisible;
+                set
+                {
+                    if (_isVisible != value)
+                    {
+                        _isVisible = value;
+                        OnPropertyChanged(nameof(IsVisible));
+                        OnPropertyChanged(nameof(LineVisibility));
+                    }
+                }
+            }
+
+            public Visibility LineVisibility => _isVisible ? Visibility.Visible : Visibility.Collapsed;
 
             public double X1
             {
