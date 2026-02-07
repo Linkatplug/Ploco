@@ -1,0 +1,46 @@
+<Window x:Class="Ploco.Dialogs.RollingLineRangeDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configurer lignes de roulement" Height="300" Width="500"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Spécifiez les plages de numéros de lignes" FontWeight="SemiBold" Margin="0,0,0,8"/>
+        
+        <TextBlock Grid.Row="1" TextWrapping="Wrap" Margin="0,0,0,12">
+            <Run Text="Exemples : "/>
+            <Run Text="1101-1112" FontWeight="Bold"/>
+            <Run Text=" ou "/>
+            <Run Text="1101-1112, 1113-1125" FontWeight="Bold"/>
+            <LineBreak/>
+            <Run Text="Vous pouvez également saisir un nombre unique comme "/>
+            <Run Text="23" FontWeight="Bold"/>
+            <Run Text=" pour créer les lignes 1101 à 1123"/>
+        </TextBlock>
+
+        <TextBlock Grid.Row="2" Text="Plages de lignes :" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="3" x:Name="RangesText" Margin="0,0,0,12" 
+                 VerticalAlignment="Top" Height="60" 
+                 TextWrapping="Wrap" AcceptsReturn="True"
+                 ToolTip="Entrez les plages (ex: 1101-1112, 1113-1125) ou un nombre simple (ex: 23)"/>
+
+        <TextBlock Grid.Row="4" x:Name="PreviewText" 
+                   TextWrapping="Wrap" 
+                   Foreground="Gray" 
+                   FontStyle="Italic"
+                   VerticalAlignment="Top"/>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Valider" Width="80" Margin="0,0,6,0" Click="Validate_Click"/>
+            <Button Content="Annuler" Width="80" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
