@@ -12,6 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using Docnet.Core;
 using Docnet.Core.Models;
 using Microsoft.Win32;
@@ -37,6 +38,7 @@ namespace Ploco.Dialogs
         private PdfPlacementViewModel? _draggedPlacement;
         private Point _dragStart;
         private bool _isCalibrationMode;
+        private CalibrationLineMode _calibrationLineMode = CalibrationLineMode.None;
         private CalibrationStep _calibrationStep = CalibrationStep.None;
 
         public PlanningPdfWindow(PlocoRepository repository)
@@ -111,7 +113,9 @@ namespace Ploco.Dialogs
 
             RenderPages(filePath);
             LoadPlacements();
+            RefreshCalibrationLines();
             SetActiveCalibration(0);
+            UpdateCalibrationUI();
         }
 
         private void RenderPages(string filePath)
@@ -337,7 +341,119 @@ namespace Ploco.Dialogs
             var pdfX = MapImageXToPdf(page, point.X);
             var pdfY = MapImageYToPdf(page, point.Y);
 
-            if (_calibrationStep == CalibrationStep.SelectStart)
+            // Nouveau système de calibration avec lignes visuelles
+            if (_calibrationLineMode == CalibrationLineMode.AddingHorizontal)
+            {
+                var input = new SimpleTextDialog("Ligne de roulement", "Identifiant (ex: @1101) :", string.Empty)
+                {
+                    Owner = this
+                };
+                if (input.ShowDialog() == true && !string.IsNullOrWhiteSpace(input.ResponseText))
+                {
+                    var line = new PdfCalibrationLine
+                    {
+                        Type = CalibrationLineType.Horizontal,
+                        Position = pdfY,
+                        Label = input.ResponseText.Trim()
+                    };
+                    calibration.VisualLines.Add(line);
+
+                    // Aussi ajouter dans Rows pour compatibilité
+                    calibration.Rows.Add(new PdfTemplateRowMapping
+                    {
+                        RoulementId = line.Label,
+                        YCenter = pdfY
+                    });
+
+                    // Créer et ajouter le ViewModel
+                    var viewModel = new CalibrationLineViewModel
+                    {
+                        Type = CalibrationLineType.Horizontal,
+                        PdfPosition = pdfY,
+                        Label = line.Label
+                    };
+                    viewModel.UpdatePosition(page, _zoom);
+                    page.CalibrationLines.Add(viewModel);
+
+                    _repository.SaveTemplateCalibration(calibration);
+                    _calibrationEditor.UpdateFromCalibration(calibration);
+                }
+                _calibrationLineMode = CalibrationLineMode.None;
+            }
+            else if (_calibrationLineMode == CalibrationLineMode.AddingVertical)
+            {
+                var input = new SimpleTextDialog("Marqueur d'heure", "Heure (ex: 06:00) ou minute (ex: 360) :", string.Empty)
+                {
+                    Owner = this
+                };
+                if (input.ShowDialog() == true && !string.IsNullOrWhiteSpace(input.ResponseText))
+                {
+                    var text = input.ResponseText.Trim();
+                    int minuteOfDay;
+                    string label;
+
+                    // Parse heure (HH:MM) ou minute directe
+                    if (text.Contains(":"))
+                    {
+                        var parts = text.Split(':');
+                        if (parts.Length == 2 && int.TryParse(parts[0], out var hour) && int.TryParse(parts[1], out var minute))
+                        {
+                            minuteOfDay = hour * 60 + minute;
+                            label = $"{hour:D2}:{minute:D2}";
+                        }
+                        else
+                        {
+                            MessageBox.Show("Format d'heure invalide. Utilisez HH:MM.", "Calibration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                    }
+                    else if (int.TryParse(text, out minuteOfDay))
+                    {
+                        var hour = minuteOfDay / 60;
+                        var minute = minuteOfDay % 60;
+                        label = $"{hour:D2}:{minute:D2}";
+                    }
+                    else
+                    {
+                        MessageBox.Show("Format invalide. Utilisez HH:MM ou minutes.", "Calibration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    var line = new PdfCalibrationLine
+                    {
+                        Type = CalibrationLineType.Vertical,
+                        Position = pdfX,
+                        Label = label,
+                        MinuteOfDay = minuteOfDay
+                    };
+                    calibration.VisualLines.Add(line);
+
+                    // Mettre à jour XStart/XEnd pour compatibilité
+                    var verticalLines = calibration.VisualLines.Where(l => l.Type == CalibrationLineType.Vertical && l.MinuteOfDay.HasValue).OrderBy(l => l.MinuteOfDay).ToList();
+                    if (verticalLines.Any())
+                    {
+                        calibration.XStart = verticalLines.First().Position;
+                        calibration.XEnd = verticalLines.Last().Position;
+                    }
+
+                    // Créer et ajouter le ViewModel
+                    var viewModel = new CalibrationLineViewModel
+                    {
+                        Type = CalibrationLineType.Vertical,
+                        PdfPosition = pdfX,
+                        Label = label,
+                        MinuteOfDay = minuteOfDay
+                    };
+                    viewModel.UpdatePosition(page, _zoom);
+                    page.CalibrationLines.Add(viewModel);
+
+                    _repository.SaveTemplateCalibration(calibration);
+                    _calibrationEditor.UpdateFromCalibration(calibration);
+                }
+                _calibrationLineMode = CalibrationLineMode.None;
+            }
+            // Ancien système de calibration (fallback)
+            else if (_calibrationStep == CalibrationStep.SelectStart)
             {
                 calibration.XStart = pdfX;
                 _calibrationStep = CalibrationStep.SelectEnd;
@@ -368,7 +484,67 @@ namespace Ploco.Dialogs
                 }
             }
 
-            _repository.SaveTemplateCalibration(calibration);
+            if (_calibrationStep != CalibrationStep.None || _calibrationLineMode != CalibrationLineMode.None)
+            {
+                _repository.SaveTemplateCalibration(calibration);
+            }
+        }
+
+        private void CalibrationLine_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isCalibrationMode)
+            {
+                return;
+            }
+
+            if (sender is Line line && line.DataContext is CalibrationLineViewModel lineViewModel)
+            {
+                // Ctrl+Click pour supprimer
+                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                {
+                    var result = MessageBox.Show($"Supprimer la ligne {lineViewModel.Label}?", "Calibration", 
+                        MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Trouver la page et la calibration
+                        foreach (var page in _pages)
+                        {
+                            if (page.CalibrationLines.Contains(lineViewModel))
+                            {
+                                page.CalibrationLines.Remove(lineViewModel);
+                                
+                                if (_calibrations.TryGetValue(page.PageIndex, out var calibration))
+                                {
+                                    // Supprimer de VisualLines
+                                    var toRemove = calibration.VisualLines.FirstOrDefault(l => 
+                                        l.Type == lineViewModel.Type && 
+                                        Math.Abs(l.Position - lineViewModel.PdfPosition) < 0.1);
+                                    if (toRemove != null)
+                                    {
+                                        calibration.VisualLines.Remove(toRemove);
+                                    }
+
+                                    // Supprimer de Rows si horizontal
+                                    if (lineViewModel.Type == CalibrationLineType.Horizontal)
+                                    {
+                                        var rowToRemove = calibration.Rows.FirstOrDefault(r => r.RoulementId == lineViewModel.Label);
+                                        if (rowToRemove != null)
+                                        {
+                                            calibration.Rows.Remove(rowToRemove);
+                                        }
+                                    }
+
+                                    _repository.SaveTemplateCalibration(calibration);
+                                    _calibrationEditor.UpdateFromCalibration(calibration);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                e.Handled = true;
+            }
         }
 
         private void Overlay_MouseMove(object sender, MouseEventArgs e)
@@ -514,6 +690,193 @@ namespace Ploco.Dialogs
 
             File.WriteAllText(dialog.FileName, builder.ToString(), Encoding.UTF8);
             MessageBox.Show("Export CSV terminé.", "Planning PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ToggleCalibrationMode_Click(object sender, RoutedEventArgs e)
+        {
+            if (_document == null)
+            {
+                MessageBox.Show("Chargez un PDF avant de calibrer.", "Planning PDF", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _isCalibrationMode = !_isCalibrationMode;
+            _calibrationLineMode = CalibrationLineMode.None;
+            
+            UpdateCalibrationUI();
+            
+            MessageBox.Show(_isCalibrationMode
+                    ? "Mode calibration activé. Utilisez les boutons pour ajouter des lignes horizontales (roulements) ou verticales (heures)."
+                    : "Mode calibration désactivé.",
+                "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void AddHorizontalLine_Click(object sender, RoutedEventArgs e)
+        {
+            _calibrationLineMode = CalibrationLineMode.AddingHorizontal;
+            MessageBox.Show("Cliquez sur la page pour placer une ligne horizontale (ligne de roulement).", 
+                "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void AddVerticalLine_Click(object sender, RoutedEventArgs e)
+        {
+            _calibrationLineMode = CalibrationLineMode.AddingVertical;
+            MessageBox.Show("Cliquez sur la page pour placer une ligne verticale (marqueur d'heure).", 
+                "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void SaveCalibration_Click(object sender, RoutedEventArgs e)
+        {
+            if (_document == null)
+            {
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "JSON (*.json)|*.json",
+                FileName = $"calibration_{_document.TemplateHash.Substring(0, 8)}.json"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var calibrations = _calibrations.Values.ToList();
+                var json = System.Text.Json.JsonSerializer.Serialize(calibrations, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(dialog.FileName, json);
+                MessageBox.Show("Calibration sauvegardée avec succès.", "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erreur lors de la sauvegarde: {ex.Message}", "Calibration", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void LoadCalibration_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "JSON (*.json)|*.json",
+                Title = "Charger une calibration"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(dialog.FileName);
+                var calibrations = System.Text.Json.JsonSerializer.Deserialize<List<PdfTemplateCalibrationModel>>(json);
+                
+                if (calibrations == null || !calibrations.Any())
+                {
+                    MessageBox.Show("Fichier de calibration invalide.", "Calibration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                foreach (var calibration in calibrations)
+                {
+                    if (_document != null)
+                    {
+                        calibration.TemplateHash = _document.TemplateHash;
+                    }
+                    _calibrations[calibration.PageIndex] = calibration;
+                    _repository.SaveTemplateCalibration(calibration);
+                }
+
+                // Recharger les lignes visuelles
+                RefreshCalibrationLines();
+                
+                MessageBox.Show("Calibration chargée avec succès.", "Calibration", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erreur lors du chargement: {ex.Message}", "Calibration", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void UpdateCalibrationUI()
+        {
+            AddHorizontalButton.IsEnabled = _isCalibrationMode;
+            AddVerticalButton.IsEnabled = _isCalibrationMode;
+            SaveCalibrationButton.IsEnabled = _isCalibrationMode && _calibrations.Any();
+            
+            CalibrationModeButton.FontWeight = _isCalibrationMode ? FontWeights.Bold : FontWeights.Normal;
+        }
+
+        private void RefreshCalibrationLines()
+        {
+            foreach (var page in _pages)
+            {
+                page.CalibrationLines.Clear();
+                
+                if (!_calibrations.TryGetValue(page.PageIndex, out var calibration))
+                {
+                    continue;
+                }
+
+                // Ajouter les lignes depuis VisualLines
+                foreach (var line in calibration.VisualLines)
+                {
+                    var viewModel = new CalibrationLineViewModel
+                    {
+                        Type = line.Type,
+                        PdfPosition = line.Position,
+                        Label = line.Label,
+                        MinuteOfDay = line.MinuteOfDay
+                    };
+                    viewModel.UpdatePosition(page, _zoom);
+                    page.CalibrationLines.Add(viewModel);
+                }
+
+                // Si pas de VisualLines, générer depuis l'ancien système (Rows)
+                if (!calibration.VisualLines.Any() && calibration.Rows.Any())
+                {
+                    foreach (var row in calibration.Rows)
+                    {
+                        var viewModel = new CalibrationLineViewModel
+                        {
+                            Type = CalibrationLineType.Horizontal,
+                            PdfPosition = row.YCenter,
+                            Label = row.RoulementId
+                        };
+                        viewModel.UpdatePosition(page, _zoom);
+                        page.CalibrationLines.Add(viewModel);
+                    }
+                }
+
+                // Ajouter lignes verticales si XStart/XEnd définis
+                if (calibration.XStart > 0 && calibration.XEnd > calibration.XStart && !calibration.VisualLines.Any(l => l.Type == CalibrationLineType.Vertical))
+                {
+                    // Ligne 00:00
+                    var startLine = new CalibrationLineViewModel
+                    {
+                        Type = CalibrationLineType.Vertical,
+                        PdfPosition = calibration.XStart,
+                        Label = "00:00",
+                        MinuteOfDay = 0
+                    };
+                    startLine.UpdatePosition(page, _zoom);
+                    page.CalibrationLines.Add(startLine);
+
+                    // Ligne 24:00
+                    var endLine = new CalibrationLineViewModel
+                    {
+                        Type = CalibrationLineType.Vertical,
+                        PdfPosition = calibration.XEnd,
+                        Label = "24:00",
+                        MinuteOfDay = 1440
+                    };
+                    endLine.UpdatePosition(page, _zoom);
+                    page.CalibrationLines.Add(endLine);
+                }
+            }
         }
 
         private void Recalibrate_Click(object sender, RoutedEventArgs e)
@@ -684,9 +1047,46 @@ namespace Ploco.Dialogs
         private static int MapXToMinute(PdfTemplateCalibrationModel calibration, PdfPageViewModel page, double xImage)
         {
             var pdfX = MapImageXToPdf(page, xImage);
-            var ratio = (pdfX - calibration.XStart) / (calibration.XEnd - calibration.XStart);
-            ratio = Math.Max(0, Math.Min(1, ratio));
-            return (int)Math.Round(ratio * 1440);
+            
+            // Utiliser les lignes verticales si disponibles
+            var verticalLines = calibration.VisualLines
+                .Where(l => l.Type == CalibrationLineType.Vertical && l.MinuteOfDay.HasValue)
+                .OrderBy(l => l.MinuteOfDay)
+                .ToList();
+
+            if (verticalLines.Count >= 2)
+            {
+                // Interpolation entre les lignes verticales
+                for (int i = 0; i < verticalLines.Count - 1; i++)
+                {
+                    var line1 = verticalLines[i];
+                    var line2 = verticalLines[i + 1];
+                    
+                    if (pdfX >= line1.Position && pdfX <= line2.Position)
+                    {
+                        var lineRatio = (pdfX - line1.Position) / (line2.Position - line1.Position);
+                        var minuteRange = line2.MinuteOfDay!.Value - line1.MinuteOfDay!.Value;
+                        return (int)Math.Round(line1.MinuteOfDay!.Value + lineRatio * minuteRange);
+                    }
+                }
+                
+                // Avant la première ligne
+                if (pdfX < verticalLines[0].Position)
+                {
+                    return 0;
+                }
+                
+                // Après la dernière ligne
+                if (pdfX > verticalLines[^1].Position)
+                {
+                    return 1440;
+                }
+            }
+            
+            // Fallback: ancien système avec XStart/XEnd
+            var fallbackRatio = (pdfX - calibration.XStart) / (calibration.XEnd - calibration.XStart);
+            fallbackRatio = Math.Max(0, Math.Min(1, fallbackRatio));
+            return (int)Math.Round(fallbackRatio * 1440);
         }
 
         private static double MapMinuteToX(PdfTemplateCalibrationModel calibration, PdfPageViewModel page, int minute)
@@ -697,8 +1097,44 @@ namespace Ploco.Dialogs
 
         private static double MapMinuteToPdfX(PdfTemplateCalibrationModel calibration, int minute)
         {
-            var ratio = minute / 1440.0;
-            return calibration.XStart + ratio * (calibration.XEnd - calibration.XStart);
+            // Utiliser les lignes verticales si disponibles
+            var verticalLines = calibration.VisualLines
+                .Where(l => l.Type == CalibrationLineType.Vertical && l.MinuteOfDay.HasValue)
+                .OrderBy(l => l.MinuteOfDay)
+                .ToList();
+
+            if (verticalLines.Count >= 2)
+            {
+                // Interpolation entre les lignes verticales
+                for (int i = 0; i < verticalLines.Count - 1; i++)
+                {
+                    var line1 = verticalLines[i];
+                    var line2 = verticalLines[i + 1];
+                    
+                    if (minute >= line1.MinuteOfDay && minute <= line2.MinuteOfDay)
+                    {
+                        var minuteRange = line2.MinuteOfDay!.Value - line1.MinuteOfDay!.Value;
+                        var lineRatio = (minute - line1.MinuteOfDay!.Value) / (double)minuteRange;
+                        return line1.Position + lineRatio * (line2.Position - line1.Position);
+                    }
+                }
+                
+                // Avant la première ligne
+                if (minute < verticalLines[0].MinuteOfDay)
+                {
+                    return verticalLines[0].Position;
+                }
+                
+                // Après la dernière ligne
+                if (minute > verticalLines[^1].MinuteOfDay)
+                {
+                    return verticalLines[^1].Position;
+                }
+            }
+            
+            // Fallback: ancien système avec XStart/XEnd
+            var fallbackRatio = minute / 1440.0;
+            return calibration.XStart + fallbackRatio * (calibration.XEnd - calibration.XStart);
         }
 
         private static PdfTemplateRowMapping? FindNearestRow(PdfTemplateCalibrationModel calibration, PdfPageViewModel page, double yImage)
@@ -732,7 +1168,7 @@ namespace Ploco.Dialogs
             return new Point(position.X / _zoom, position.Y / _zoom);
         }
 
-        private sealed class PdfPageViewModel
+        public sealed class PdfPageViewModel
         {
             public int PageIndex { get; }
             public BitmapSource PageImage { get; }
@@ -743,6 +1179,7 @@ namespace Ploco.Dialogs
             public double PageWidth { get; private set; }
             public double PageHeight { get; private set; }
             public ObservableCollection<PdfPlacementViewModel> Placements { get; } = new();
+            public ObservableCollection<CalibrationLineViewModel> CalibrationLines { get; } = new();
 
             public PdfPageViewModel(int pageIndex, byte[] imageBytes, int width, int height, double pdfWidth, double pdfHeight)
             {
@@ -759,6 +1196,127 @@ namespace Ploco.Dialogs
                 PageHeight = PageImage.PixelHeight * zoom;
                 ScaleX = PageWidth / PdfWidth;
                 ScaleY = PageHeight / PdfHeight;
+                
+                // Update calibration lines positions for zoom
+                foreach (var line in CalibrationLines)
+                {
+                    line.UpdatePosition(this, zoom);
+                }
+            }
+        }
+
+        public class CalibrationLineViewModel : System.ComponentModel.INotifyPropertyChanged
+        {
+            private double _x1;
+            private double _y1;
+            private double _x2;
+            private double _y2;
+            private string _label = string.Empty;
+
+            public CalibrationLineType Type { get; set; }
+            public double PdfPosition { get; set; }  // Position en coordonnées PDF
+            public string Label
+            {
+                get => _label;
+                set
+                {
+                    if (_label != value)
+                    {
+                        _label = value;
+                        OnPropertyChanged(nameof(Label));
+                    }
+                }
+            }
+            public int? MinuteOfDay { get; set; }
+
+            public double X1
+            {
+                get => _x1;
+                set
+                {
+                    if (Math.Abs(_x1 - value) > 0.1)
+                    {
+                        _x1 = value;
+                        OnPropertyChanged(nameof(X1));
+                    }
+                }
+            }
+
+            public double Y1
+            {
+                get => _y1;
+                set
+                {
+                    if (Math.Abs(_y1 - value) > 0.1)
+                    {
+                        _y1 = value;
+                        OnPropertyChanged(nameof(Y1));
+                    }
+                }
+            }
+
+            public double X2
+            {
+                get => _x2;
+                set
+                {
+                    if (Math.Abs(_x2 - value) > 0.1)
+                    {
+                        _x2 = value;
+                        OnPropertyChanged(nameof(X2));
+                    }
+                }
+            }
+
+            public double Y2
+            {
+                get => _y2;
+                set
+                {
+                    if (Math.Abs(_y2 - value) > 0.1)
+                    {
+                        _y2 = value;
+                        OnPropertyChanged(nameof(Y2));
+                    }
+                }
+            }
+
+            public Brush LineBrush => Type == CalibrationLineType.Horizontal 
+                ? Brushes.DodgerBlue 
+                : Brushes.OrangeRed;
+
+            public double LabelX => Type == CalibrationLineType.Vertical ? X1 - 30 : X1 + 5;
+            public double LabelY => Type == CalibrationLineType.Vertical ? Y1 + 5 : Y1 - 20;
+
+            public void UpdatePosition(PdfPageViewModel page, double zoom)
+            {
+                if (Type == CalibrationLineType.Horizontal)
+                {
+                    // Ligne horizontale pour roulement
+                    var y = MapPdfYToImage(page, PdfPosition);
+                    X1 = 0;
+                    Y1 = y;
+                    X2 = page.PageWidth;
+                    Y2 = y;
+                }
+                else
+                {
+                    // Ligne verticale pour heure
+                    var x = MapPdfXToImage(page, PdfPosition);
+                    X1 = x;
+                    Y1 = 0;
+                    X2 = x;
+                    Y2 = page.PageHeight;
+                }
+                OnPropertyChanged(nameof(LabelX));
+                OnPropertyChanged(nameof(LabelY));
+            }
+
+            public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+            private void OnPropertyChanged(string propertyName)
+            {
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
             }
         }
 
@@ -857,6 +1415,13 @@ namespace Ploco.Dialogs
             SelectStart,
             SelectEnd,
             SelectRows
+        }
+
+        private enum CalibrationLineMode
+        {
+            None,
+            AddingHorizontal,
+            AddingVertical
         }
 
         private sealed class CalibrationEditorViewModel : System.ComponentModel.INotifyPropertyChanged

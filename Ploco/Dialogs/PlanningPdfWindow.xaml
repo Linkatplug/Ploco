@@ -8,7 +8,12 @@
             <Button Content="Charger PDF" Click="LoadPdf_Click"/>
             <Button Content="Exporter PDF annoté" Margin="6,0,0,0" Click="ExportPdf_Click"/>
             <Button Content="Exporter CSV" Margin="6,0,0,0" Click="ExportCsv_Click"/>
-            <Button Content="Recalibrer" Margin="6,0,0,0" Click="Recalibrate_Click"/>
+            <Separator/>
+            <Button Content="Mode Calibration" Margin="6,0,0,0" Click="ToggleCalibrationMode_Click" x:Name="CalibrationModeButton"/>
+            <Button Content="+ Ligne horizontale" Margin="6,0,0,0" Click="AddHorizontalLine_Click" x:Name="AddHorizontalButton" IsEnabled="False"/>
+            <Button Content="+ Ligne verticale" Margin="6,0,0,0" Click="AddVerticalLine_Click" x:Name="AddVerticalButton" IsEnabled="False"/>
+            <Button Content="Sauvegarder calibration" Margin="6,0,0,0" Click="SaveCalibration_Click" x:Name="SaveCalibrationButton" IsEnabled="False"/>
+            <Button Content="Charger calibration" Margin="6,0,0,0" Click="LoadCalibration_Click" x:Name="LoadCalibrationButton"/>
             <Separator/>
             <TextBlock Text="Date :" VerticalAlignment="Center"/>
             <DatePicker x:Name="DocumentDatePicker" Width="140" Margin="6,0"/>
@@ -45,6 +50,35 @@
                                             MouseLeftButtonDown="Overlay_MouseLeftButtonDown"
                                             MouseMove="Overlay_MouseMove"
                                             MouseLeftButtonUp="Overlay_MouseLeftButtonUp">
+                                        <!-- Calibration lines -->
+                                        <ItemsControl ItemsSource="{Binding CalibrationLines}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Canvas>
+                                                        <Line X1="{Binding X1}" Y1="{Binding Y1}" 
+                                                              X2="{Binding X2}" Y2="{Binding Y2}" 
+                                                              Stroke="{Binding LineBrush}" 
+                                                              StrokeThickness="2" 
+                                                              StrokeDashArray="4 2"
+                                                              MouseLeftButtonDown="CalibrationLine_MouseLeftButtonDown"/>
+                                                        <TextBlock Text="{Binding Label}" 
+                                                                   Canvas.Left="{Binding LabelX}" 
+                                                                   Canvas.Top="{Binding LabelY}" 
+                                                                   Background="White" 
+                                                                   Padding="2" 
+                                                                   FontSize="10" 
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{Binding LineBrush}"/>
+                                                    </Canvas>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <!-- Placements -->
                                         <ItemsControl ItemsSource="{Binding Placements}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>

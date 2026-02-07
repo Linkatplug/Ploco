@@ -12,6 +12,12 @@ namespace Ploco.Models
         public int PageCount { get; set; }
     }
 
+    public enum CalibrationLineType
+    {
+        Horizontal,  // Ligne de roulement
+        Vertical     // Marqueur d'heure
+    }
+
     public class PdfTemplateCalibrationModel
     {
         public int Id { get; set; }
@@ -20,6 +26,17 @@ namespace Ploco.Models
         public double XStart { get; set; }
         public double XEnd { get; set; }
         public List<PdfTemplateRowMapping> Rows { get; set; } = new();
+        public List<PdfCalibrationLine> VisualLines { get; set; } = new();
+    }
+
+    public class PdfCalibrationLine
+    {
+        public int Id { get; set; }
+        public int CalibrationId { get; set; }
+        public CalibrationLineType Type { get; set; }
+        public double Position { get; set; }  // X pour vertical, Y pour horizontal (coordonnées PDF)
+        public string Label { get; set; } = string.Empty;  // Ex: "06:00" ou "@1101"
+        public int? MinuteOfDay { get; set; }  // Pour lignes verticales (heures)
     }
 
     public class PdfTemplateRowMapping
