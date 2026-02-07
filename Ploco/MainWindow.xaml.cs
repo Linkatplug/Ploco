@@ -1466,38 +1466,6 @@ namespace Ploco
             tile.RefreshTrackCollections();
         }
 
-        private static int EnsureRollingLineCountWithinAssignments(TileModel tile, List<int> requestedNumbers)
-        {
-            var assignedNumbers = tile.Tracks
-                .Where(t => t.Kind == TrackKind.RollingLine && t.Locomotives.Any())
-                .Select(t => int.TryParse(t.Name, out var value) ? value : 0)
-                .Where(value => value > 0)
-                .ToList();
-
-            if (!assignedNumbers.Any())
-            {
-                return requestedNumbers.Count;
-            }
-
-            var maxAssigned = assignedNumbers.Max();
-            var minAssigned = assignedNumbers.Min();
-            
-            // Check if all assigned numbers are included in the requested numbers
-            if (assignedNumbers.All(n => requestedNumbers.Contains(n)))
-            {
-                return requestedNumbers.Count;
-            }
-
-            // Need to expand to include all assigned numbers
-            var expandedNumbers = new HashSet<int>(requestedNumbers);
-            foreach (var assigned in assignedNumbers)
-            {
-                expandedNumbers.Add(assigned);
-            }
-
-            return expandedNumbers.Count;
-        }
-
         private static List<int> EnsureRollingLineNumbersWithinAssignments(TileModel tile, List<int> requestedNumbers)
         {
             var assignedNumbers = tile.Tracks
@@ -1523,7 +1491,7 @@ namespace Ploco
 
         private static string FormatRollingLineRange(List<int> numbers)
         {
-            if (numbers.Count == 0)
+            if (numbers == null || numbers.Count == 0)
             {
                 return "";
             }
