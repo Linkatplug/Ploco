@@ -2,9 +2,9 @@
 
 ## Description
 
-**Ploco** est une application Windows (WPF) destinée à la gestion visuelle d’un parc de locomotives.
+**Ploco** est une application Windows (WPF) destinée à la gestion visuelle d'un parc de locomotives.
 
-L’application repose sur un **canvas de tuiles** représentant des dépôts, des voies de garage et des arrêts de ligne.  
+L'application repose sur un **canvas de tuiles** représentant des dépôts, des voies de garage et des arrêts de ligne.  
 Les locomotives peuvent être déplacées par **glisser-déposer**, avec un suivi précis de leur état et de leur position, le tout sauvegardé localement.
 
 Ploco est actuellement en cours de développement actif.
@@ -13,26 +13,82 @@ Ploco est actuellement en cours de développement actif.
 
 ## Fonctionnalités
 
+### Gestion des locomotives
 - Gestion visuelle du parc de locomotives (OK / traction réduite / HS)
 - Pourcentage de traction et motif HS obligatoire
 - Glisser-déposer des locomotives entre les voies
-- Canvas de tuiles :
-  - Dépôts
-  - Voies de garage
-  - Arrêts de ligne
+- Retour des locomotives vers la liste par glisser-déposer
+- Gestion des pools avec fenêtre de transfert dédiée
+- Comptage automatique des locomotives par pool
+- Historique complet des actions (affectations, statuts, modifications de layout)
+- Intégration de l'historique des pools dans la nouvelle interface
+
+### Interface graphique
+- Canvas de tuiles interactif :
+  - Dépôts avec voies principales et voies de sortie
+  - Voies de garage avec zones configurables
+  - Arrêts de ligne avec informations train
+- Redimensionnement des tuiles par glisser-déposer
+- Menus contextuels pour actions rapides (reset, presets de garage)
+- Offsets de drop configurables sur les voies
+- Prévention du chevauchement des locomotives
+- Affichage optimisé avec séparation du numéro et du badge de traction
+
+### Voies et zones
 - Voies configurables :
   - Voies principales
   - Voies de sortie
   - Zones de garage
-  - Voies de ligne
+  - Voies de ligne avec nommage
 - Indicateurs de remplissage des zones (BLOCK / BIF)
-- Arrêts de ligne avec informations train (numéro, heure d’arrêt, motif)
-- Gestion des pools avec fenêtre de transfert dédiée
-- Historique des actions (affectations, statuts, modifications de layout)
+- Arrêts de ligne avec informations train (numéro, heure d'arrêt, motif)
+- Filtrage des layouts de tuiles par pool et lieu
+
+### Fonctionnalités avancées
 - Presets de layout (sauvegarde / chargement / suppression)
-- Mode sombre
+- Fenêtre de gestion de la base de données
+- Résumé T13 amélioré avec affichage du tapis
+- Génération de planning PDF
+- Fenêtres auxiliaires non bloquantes (modeless)
+- Mode sombre avec contraste amélioré
 - Sauvegarde locale automatique
 - Aucun serveur externe requis
+
+---
+
+## Améliorations récentes
+
+### Optimisations
+- Optimisation de la liste de sélection des tuiles pour de meilleures performances
+- Amélioration du contraste et des espacements en mode sombre
+- Séparation du numéro de locomotive et du badge de traction pour plus de clarté
+- Correction du wrapping de flotte et des aiguillages bloqués
+
+### Corrections
+- Protection contre les fichiers SQLite invalides
+- Correction de la récupération du dernier ID SQLite
+- Gestion des valeurs nulles de configuration des voies
+- Correction du chevauchement des locomotives sur les voies
+- Correction des avertissements nullable sur les statuts legacy
+
+---
+
+## À venir
+
+### Fonctionnalités planifiées
+- Export des données vers Excel/CSV
+- Synchronisation cloud optionnelle
+- Notifications et alertes pour les locomotives HS
+- Module de statistiques et rapports avancés
+- Support multi-utilisateurs avec gestion des permissions
+- Application mobile companion pour consultation
+
+### Améliorations prévues
+- Amélioration de l'interface utilisateur avec animations
+- Thèmes supplémentaires personnalisables
+- Raccourcis clavier configurables
+- Mode plein écran optimisé
+- Système de sauvegarde automatique avec versioning
 
 ---
 
@@ -69,7 +125,7 @@ Ploco est actuellement en cours de développement actif.
 - **Déplacer une locomotive**  
   Glisser la locomotive depuis la liste vers une voie
 
-- **Modifier le statut d’une locomotive**  
+- **Modifier le statut d'une locomotive**  
   Clic droit → modifier statut ou déclarer HS
 
 - **Changer de pool**  
@@ -100,4 +156,4 @@ Développé par **LinkAtPlug**
 ## Licence
 
 Ce projet est distribué sous licence MIT.  
-Voir le fichier `LICENSE` pour plus d’informations.
+Voir le fichier `LICENSE` pour plus d'informations.
