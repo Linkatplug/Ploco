@@ -17,7 +17,8 @@ namespace Ploco.Models
     {
         Depot,
         ArretLigne,
-        VoieGarage
+        VoieGarage,
+        RollingLine
     }
 
     public enum TrackKind
@@ -25,7 +26,8 @@ namespace Ploco.Models
         Main,
         Output,
         Zone,
-        Line
+        Line,
+        RollingLine
     }
 
     public class RollingStockSeries
@@ -42,6 +44,7 @@ namespace Ploco.Models
         private LocomotiveStatus _status;
         private int? _tractionPercent;
         private string? _hsReason;
+        private string? _maintenanceDate;
         private double? _assignedTrackOffsetX;
         private int? _assignedTrackId;
         private bool _isVisibleInActivePool = true;
@@ -87,6 +90,19 @@ namespace Ploco.Models
                 if (_hsReason != value)
                 {
                     _hsReason = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? MaintenanceDate
+        {
+            get => _maintenanceDate;
+            set
+            {
+                if (_maintenanceDate != value)
+                {
+                    _maintenanceDate = value;
                     OnPropertyChanged();
                 }
             }
@@ -368,6 +384,7 @@ namespace Ploco.Models
         private readonly ObservableCollection<TrackModel> _outputTracks = new();
         private readonly ObservableCollection<TrackModel> _zoneTracks = new();
         private readonly ObservableCollection<TrackModel> _lineTracks = new();
+        private readonly ObservableCollection<TrackModel> _rollingLineTracks = new();
 
         public int Id { get; set; }
         private TileType _type;
@@ -402,6 +419,20 @@ namespace Ploco.Models
 
         public string? LocationPreset { get; set; }
         public int? GarageTrackNumber { get; set; }
+        private int? _rollingLineCount;
+
+        public int? RollingLineCount
+        {
+            get => _rollingLineCount;
+            set
+            {
+                if (_rollingLineCount != value)
+                {
+                    _rollingLineCount = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public double X
         {
@@ -459,6 +490,7 @@ namespace Ploco.Models
         public ObservableCollection<TrackModel> OutputTracks => _outputTracks;
         public ObservableCollection<TrackModel> ZoneTracks => _zoneTracks;
         public ObservableCollection<TrackModel> LineTracks => _lineTracks;
+        public ObservableCollection<TrackModel> RollingLineTracks => _rollingLineTracks;
 
         public string DisplayTitle
         {
@@ -479,6 +511,7 @@ namespace Ploco.Models
             _outputTracks.Clear();
             _zoneTracks.Clear();
             _lineTracks.Clear();
+            _rollingLineTracks.Clear();
 
             foreach (var track in Tracks)
             {
@@ -492,6 +525,9 @@ namespace Ploco.Models
                         break;
                     case TrackKind.Line:
                         _lineTracks.Add(track);
+                        break;
+                    case TrackKind.RollingLine:
+                        _rollingLineTracks.Add(track);
                         break;
                 }
             }

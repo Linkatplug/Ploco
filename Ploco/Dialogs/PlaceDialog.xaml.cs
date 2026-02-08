@@ -64,6 +64,8 @@ namespace Ploco.Dialogs
                     break;
                 case TileType.ArretLigne:
                     break;
+                case TileType.RollingLine:
+                    break;
             }
         }
 
@@ -82,10 +84,11 @@ namespace Ploco.Dialogs
                 TileType.Depot => DepotNameCombo.SelectedItem as string ?? string.Empty,
                 TileType.VoieGarage => ResolveGarageName(),
                 TileType.ArretLigne => string.Empty,
+                TileType.RollingLine => "Ligne de roulement",
                 _ => string.Empty
             };
 
-            if (SelectedType != TileType.ArretLigne && string.IsNullOrWhiteSpace(SelectedName))
+            if (SelectedType != TileType.ArretLigne && SelectedType != TileType.RollingLine && string.IsNullOrWhiteSpace(SelectedName))
             {
                 MessageBox.Show("Veuillez saisir un nom valide.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;

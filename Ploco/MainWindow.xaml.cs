@@ -29,6 +29,9 @@ namespace Ploco
         private const string LayoutPresetFileName = "layout_presets.json";
         private const double MinTileWidth = 260;
         private const double MinTileHeight = 180;
+        private const double CanvasPadding = 80;
+        private const int RollingLineStartNumber = 1101;
+        private const int DefaultRollingLineCount = 23;
         private bool _isDarkMode;
         private Point _dragStartPoint;
         private TileModel? _draggedTile;
@@ -55,6 +58,12 @@ namespace Ploco
             LocomotiveList.ItemsSource = _locomotives;
             TileCanvas.ItemsSource = _tiles;
             InitializeLocomotiveView();
+            UpdateTileCanvasExtent();
+        }
+
+        private void TileScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateTileCanvasExtent();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -91,6 +100,7 @@ namespace Ploco
             }
 
             UpdatePoolVisibility();
+            UpdateTileCanvasExtent();
         }
 
         private void PersistState()
@@ -159,6 +169,12 @@ namespace Ploco
                     return;
                 }
 
+                if (dialog.SelectedType == TileType.RollingLine)
+                {
+                    AddRollingLineTile(dialog.SelectedName);
+                    return;
+                }
+
                 AddTile(dialog.SelectedType, dialog.SelectedName);
             }
         }
@@ -177,6 +193,7 @@ namespace Ploco
             _tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void AddLineTile(LinePlaceDialog dialog)
@@ -278,6 +295,31 @@ namespace Ploco
 
             UpdatePoolVisibility();
             PersistState();
+            UpdateTileCanvasExtent();
+        }
+
+        private void AddRollingLineTile(string name)
+        {
+            var tile = new TileModel
+            {
+                Name = name,
+                Type = TileType.RollingLine,
+                X = 20 + _tiles.Count * 30,
+                Y = 20 + _tiles.Count * 30
+            };
+            var numbers = PromptRollingLineNumbers(DefaultRollingLineCount);
+            if (numbers == null)
+            {
+                return;
+            }
+
+            tile.RollingLineCount = numbers.Count;
+            NormalizeRollingLineTracks(tile, numbers);
+            _tiles.Add(tile);
+            _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
+            _repository.AddHistory("RollingLineAdded", $"Lignes {FormatRollingLineRange(numbers)} ajoutées dans {tile.DisplayTitle}.");
+            PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void DeleteTile_Click(object sender, RoutedEventArgs e)
@@ -300,6 +342,7 @@ namespace Ploco
             _repository.AddHistory("TileDeleted", $"Suppression du lieu {tile.DisplayTitle}.");
             UpdatePoolVisibility();
             PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void RenameTile_Click(object sender, RoutedEventArgs e)
@@ -425,6 +468,36 @@ namespace Ploco
                 _repository.AddHistory("LineTrackAdded", $"Ajout de la voie {track.Name} dans {tile.DisplayTitle}.");
                 PersistState();
             }
+        }
+
+        private void AddRollingLineTrack_Click(object sender, RoutedEventArgs e)
+        {
+            var tile = GetTileFromSender(sender);
+            if (tile == null || tile.Type != TileType.RollingLine)
+            {
+                return;
+            }
+
+            var currentNumbers = ResolveRollingLineNumbers(tile);
+            var defaultCount = currentNumbers.Count;
+            var numbers = PromptRollingLineNumbers(defaultCount);
+            if (numbers == null)
+            {
+                return;
+            }
+
+            var adjustedNumbers = EnsureRollingLineNumbersWithinAssignments(tile, numbers);
+            if (adjustedNumbers.Count != numbers.Count)
+            {
+                MessageBox.Show($"La configuration a été ajustée pour conserver les locomotives déjà affectées.",
+                    "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
+            tile.RollingLineCount = adjustedNumbers.Count;
+            NormalizeRollingLineTracks(tile, adjustedNumbers);
+            _repository.AddHistory("RollingLineAdded", $"Configuration des lignes ({FormatRollingLineRange(adjustedNumbers)}) dans {tile.DisplayTitle}.");
+            PersistState();
+            UpdateTileCanvasExtent();
         }
 
         private void RemoveLineTrack_Click(object sender, RoutedEventArgs e)
@@ -573,6 +646,12 @@ namespace Ploco
             if (e.Data.GetDataPresent(typeof(LocomotiveModel)))
             {
                 var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+                if (track.Kind == TrackKind.RollingLine && track.Locomotives.Any() && !track.Locomotives.Contains(loco))
+                {
+                    MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
                 var insertIndex = GetInsertIndex(listBox, e.GetPosition(listBox));
                 MoveLocomotiveToTrack(loco, track, insertIndex);
                 UpdateLocomotiveDropOffset(loco, track, listBox, e.GetPosition(listBox));
@@ -591,6 +670,10 @@ namespace Ploco
             if (e.Data.GetDataPresent(typeof(LocomotiveModel)))
             {
                 var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+                if (tile.Type == TileType.RollingLine)
+                {
+                    return;
+                }
                 var targetTrack = GetDefaultDropTrack(tile);
                 if (targetTrack != null)
                 {
@@ -606,6 +689,13 @@ namespace Ploco
 
         private void MoveLocomotiveToTrack(LocomotiveModel loco, TrackModel targetTrack, int insertIndex)
         {
+            if (targetTrack.Kind == TrackKind.RollingLine && targetTrack.Locomotives.Any() && !targetTrack.Locomotives.Contains(loco))
+            {
+                MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             var currentTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
             if (currentTrack != null)
             {
@@ -633,6 +723,28 @@ namespace Ploco
             loco.AssignedTrackOffsetX = null;
             EnsureTrackOffsets(targetTrack);
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
+            UpdatePoolVisibility();
+            RefreshTapisT13();
+        }
+
+        private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
+        {
+            // Retirer les deux locomotives de leurs tracks actuels
+            track1.Locomotives.Remove(loco1);
+            track2.Locomotives.Remove(loco2);
+            
+            // Les échanger
+            track1.Locomotives.Add(loco2);
+            track2.Locomotives.Add(loco1);
+            
+            // Mettre à jour les assignations
+            loco1.AssignedTrackId = track2.Id;
+            loco1.AssignedTrackOffsetX = null;
+            loco2.AssignedTrackId = track1.Id;
+            loco2.AssignedTrackOffsetX = null;
+            
+            EnsureTrackOffsets(track1);
+            EnsureTrackOffsets(track2);
             UpdatePoolVisibility();
             RefreshTapisT13();
         }
@@ -948,7 +1060,7 @@ namespace Ploco
             if (sender is Border border && border.DataContext is TileModel tile)
             {
                 _draggedTile = tile;
-                _tileDragStart = e.GetPosition(TileCanvas);
+                _tileDragStart = GetDropPositionInWorkspace(e);
                 border.CaptureMouse();
             }
         }
@@ -960,11 +1072,12 @@ namespace Ploco
                 return;
             }
 
-            var currentPosition = e.GetPosition(TileCanvas);
+            var currentPosition = GetDropPositionInWorkspace(e);
             var offset = currentPosition - _tileDragStart;
             _draggedTile.X = Math.Max(0, _draggedTile.X + offset.X);
             _draggedTile.Y = Math.Max(0, _draggedTile.Y + offset.Y);
             _tileDragStart = currentPosition;
+            UpdateTileCanvasExtent();
         }
 
         private void Tile_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -974,6 +1087,7 @@ namespace Ploco
                 ResolveTileOverlap(_draggedTile);
                 _repository.AddHistory("TileMoved", $"Tuile {_draggedTile.Name} déplacée.");
                 PersistState();
+                UpdateTileCanvasExtent();
             }
             if (sender is Border border)
             {
@@ -989,6 +1103,7 @@ namespace Ploco
                 _isResizingTile = true;
                 tile.Width = Math.Max(MinTileWidth, tile.Width + e.HorizontalChange);
                 tile.Height = Math.Max(MinTileHeight, tile.Height + e.VerticalChange);
+                UpdateTileCanvasExtent();
             }
         }
 
@@ -1000,6 +1115,7 @@ namespace Ploco
                 ResolveTileOverlap(tile);
                 _repository.AddHistory("TileResized", $"Tuile {tile.Name} redimensionnée.");
                 PersistState();
+                UpdateTileCanvasExtent();
             }
         }
 
@@ -1082,6 +1198,11 @@ namespace Ploco
         private void MenuItem_TapisT13_Click(object sender, RoutedEventArgs e)
         {
             OpenModelessWindow(() => new TapisT13Window(_locomotives, _tiles));
+        }
+
+        private void MenuItem_PlanningPdf_Click(object sender, RoutedEventArgs e)
+        {
+            OpenModelessWindow(() => new PlanningPdfWindow(_repository));
         }
 
         private void MenuItem_DatabaseManagement_Click(object sender, RoutedEventArgs e)
@@ -1284,16 +1405,242 @@ namespace Ploco
                 return tile.LineTracks.FirstOrDefault();
             }
 
+            if (tile.Type == TileType.RollingLine)
+            {
+                return tile.RollingLineTracks.FirstOrDefault(t => !t.Locomotives.Any())
+                       ?? tile.RollingLineTracks.FirstOrDefault();
+            }
+
             return tile.MainTrack;
         }
 
         private void EnsureDefaultTracks(TileModel tile)
         {
+            if (tile.Type == TileType.RollingLine)
+            {
+                var numbers = ResolveRollingLineNumbers(tile);
+                NormalizeRollingLineTracks(tile, numbers);
+                return;
+            }
+
             if (!tile.Tracks.Any() && tile.Type != TileType.ArretLigne)
             {
                 tile.Tracks.Add(CreateDefaultTrack(tile));
             }
             tile.RefreshTrackCollections();
+        }
+
+        private static List<int> ResolveRollingLineNumbers(TileModel tile)
+        {
+            var existingNumbers = tile.Tracks
+                .Where(t => t.Kind == TrackKind.RollingLine)
+                .Select(t => int.TryParse(t.Name, out var value) ? value : 0)
+                .Where(value => value > 0)
+                .OrderBy(n => n)
+                .ToList();
+
+            if (existingNumbers.Any())
+            {
+                return existingNumbers;
+            }
+
+            // If no existing tracks, use the stored count or default
+            var count = tile.RollingLineCount ?? DefaultRollingLineCount;
+            return Enumerable.Range(RollingLineStartNumber, count).ToList();
+        }
+
+        private static void NormalizeRollingLineTracks(TileModel tile, List<int> desiredNumbers)
+        {
+            var desiredNumbersSet = desiredNumbers.Select(n => n.ToString()).ToHashSet();
+            var existing = tile.Tracks
+                .Where(t => t.Kind == TrackKind.RollingLine)
+                .ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+
+            var rollingTracks = new List<TrackModel>();
+            foreach (var number in desiredNumbers.OrderBy(n => n))
+            {
+                var key = number.ToString();
+                if (existing.TryGetValue(key, out var track))
+                {
+                    rollingTracks.Add(track);
+                }
+                else
+                {
+                    rollingTracks.Add(new TrackModel
+                    {
+                        Name = key,
+                        Kind = TrackKind.RollingLine
+                    });
+                }
+            }
+
+            var nonRollingTracks = tile.Tracks.Where(t => t.Kind != TrackKind.RollingLine).ToList();
+            tile.Tracks.Clear();
+            foreach (var track in nonRollingTracks)
+            {
+                tile.Tracks.Add(track);
+            }
+            foreach (var track in rollingTracks)
+            {
+                tile.Tracks.Add(track);
+            }
+
+            tile.RefreshTrackCollections();
+        }
+
+        private static List<int> EnsureRollingLineNumbersWithinAssignments(TileModel tile, List<int> requestedNumbers)
+        {
+            var assignedNumbers = tile.Tracks
+                .Where(t => t.Kind == TrackKind.RollingLine && t.Locomotives.Any())
+                .Select(t => int.TryParse(t.Name, out var value) ? value : 0)
+                .Where(value => value > 0)
+                .ToList();
+
+            if (!assignedNumbers.Any())
+            {
+                return requestedNumbers;
+            }
+
+            // Include all assigned numbers in the result
+            var result = new HashSet<int>(requestedNumbers);
+            foreach (var assigned in assignedNumbers)
+            {
+                result.Add(assigned);
+            }
+
+            return result.OrderBy(n => n).ToList();
+        }
+
+        private static string FormatRollingLineRange(List<int> numbers)
+        {
+            if (numbers == null || numbers.Count == 0)
+            {
+                return "";
+            }
+
+            if (numbers.Count == 1)
+            {
+                return numbers[0].ToString();
+            }
+
+            var sorted = numbers.OrderBy(n => n).ToList();
+            var ranges = new List<string>();
+            int rangeStart = sorted[0];
+            int rangeEnd = sorted[0];
+
+            for (int i = 1; i < sorted.Count; i++)
+            {
+                if (sorted[i] == rangeEnd + 1)
+                {
+                    rangeEnd = sorted[i];
+                }
+                else
+                {
+                    ranges.Add(rangeStart == rangeEnd ? rangeStart.ToString() : $"{rangeStart}-{rangeEnd}");
+                    rangeStart = sorted[i];
+                    rangeEnd = sorted[i];
+                }
+            }
+
+            ranges.Add(rangeStart == rangeEnd ? rangeStart.ToString() : $"{rangeStart}-{rangeEnd}");
+
+            return string.Join(", ", ranges);
+        }
+
+        private List<int>? PromptRollingLineNumbers(int defaultCount)
+        {
+            var dialog = new RollingLineRangeDialog(defaultCount.ToString())
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return null;
+            }
+
+            return dialog.SelectedNumbers;
+        }
+
+        private void RollingLineRow_DragOver(object sender, DragEventArgs e)
+        {
+            if (sender is not Border border || border.DataContext is not TrackModel track)
+            {
+                return;
+            }
+
+            if (!e.Data.GetDataPresent(typeof(LocomotiveModel)))
+            {
+                e.Effects = DragDropEffects.None;
+                return;
+            }
+
+            var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+            
+            // Pour les lignes de roulement, on permet toujours le drop
+            // Si la ligne est occupée par une autre loco, on fera un swap
+            var canDrop = !track.Locomotives.Any() || track.Locomotives.Contains(loco) || 
+                          (track.Locomotives.Count == 1 && !track.Locomotives.Contains(loco));
+            
+            e.Effects = canDrop ? DragDropEffects.Move : DragDropEffects.None;
+            
+            // Feedback visuel: bleu si drop possible (même pour swap)
+            border.Background = canDrop ? new SolidColorBrush(Color.FromArgb(50, 0, 120, 215)) : Brushes.MistyRose;
+            e.Handled = true;
+        }
+
+        private void RollingLineRow_DragLeave(object sender, DragEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                border.Background = Brushes.Transparent;
+            }
+        }
+
+        private void RollingLineRow_Drop(object sender, DragEventArgs e)
+        {
+            if (sender is not Border border || border.DataContext is not TrackModel track)
+            {
+                return;
+            }
+
+            border.Background = Brushes.Transparent;
+
+            if (!e.Data.GetDataPresent(typeof(LocomotiveModel)))
+            {
+                return;
+            }
+
+            var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+            
+            // Si la ligne cible contient déjà une locomotive différente, on fait un swap
+            if (track.Locomotives.Any() && !track.Locomotives.Contains(loco))
+            {
+                var existingLoco = track.Locomotives.First();
+                var sourceTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+                
+                if (sourceTrack != null && sourceTrack.Kind == TrackKind.RollingLine)
+                {
+                    // Swap: échanger les locomotives entre les deux lignes
+                    SwapLocomotivesBetweenTracks(loco, sourceTrack, existingLoco, track);
+                    _repository.AddHistory("LocomotiveMoved", $"Croisement: {loco.Number} ↔ {existingLoco.Number} entre {sourceTrack.Name} et {track.Name}.");
+                    PersistState();
+                    e.Handled = true;
+                    return;
+                }
+                else
+                {
+                    // Si la source n'est pas une ligne de roulement, on bloque
+                    MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+            }
+
+            // Cas normal: déplacement simple (ligne vide ou même loco)
+            MoveLocomotiveToTrack(loco, track, 0);
+            PersistState();
+            e.Handled = true;
         }
 
         private void ApplyGaragePresets(TileModel tile)
@@ -1673,6 +2020,42 @@ namespace Ploco
                 tile.RefreshTrackCollections();
                 _tiles.Add(tile);
             }
+            UpdateTileCanvasExtent();
+        }
+
+        private void UpdateTileCanvasExtent()
+        {
+            if (TileCanvas == null)
+            {
+                return;
+            }
+
+            if (!_tiles.Any())
+            {
+                TileCanvas.Width = Math.Max(0, TileScrollViewer?.ViewportWidth ?? 0);
+                TileCanvas.Height = Math.Max(0, TileScrollViewer?.ViewportHeight ?? 0);
+                return;
+            }
+
+            var maxX = _tiles.Max(tile => tile.X + tile.Width);
+            var maxY = _tiles.Max(tile => tile.Y + tile.Height);
+            var viewportWidth = TileScrollViewer?.ViewportWidth ?? 0;
+            var viewportHeight = TileScrollViewer?.ViewportHeight ?? 0;
+            TileCanvas.Width = Math.Max(viewportWidth, maxX + CanvasPadding);
+            TileCanvas.Height = Math.Max(viewportHeight, maxY + CanvasPadding);
+        }
+
+        private Point GetDropPositionInWorkspace(MouseEventArgs e)
+        {
+            if (TileScrollViewer == null || TileCanvas == null)
+            {
+                return e.GetPosition(null);
+            }
+
+            var viewportPosition = e.GetPosition(TileScrollViewer);
+            return new Point(
+                viewportPosition.X + TileScrollViewer.HorizontalOffset,
+                viewportPosition.Y + TileScrollViewer.VerticalOffset);
         }
 
         private static JsonSerializerOptions GetPresetSerializerOptions()
