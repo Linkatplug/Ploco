@@ -307,17 +307,17 @@ namespace Ploco
                 X = 20 + _tiles.Count * 30,
                 Y = 20 + _tiles.Count * 30
             };
-            var count = PromptRollingLineCount(DefaultRollingLineCount);
-            if (count == null)
+            var numbers = PromptRollingLineNumbers(DefaultRollingLineCount);
+            if (numbers == null)
             {
                 return;
             }
 
-            tile.RollingLineCount = count;
-            NormalizeRollingLineTracks(tile, count.Value);
+            tile.RollingLineCount = numbers.Count;
+            NormalizeRollingLineTracks(tile, numbers);
             _tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
-            _repository.AddHistory("RollingLineAdded", $"Lignes {RollingLineStartNumber} à {RollingLineStartNumber + count.Value - 1} ajoutées dans {tile.DisplayTitle}.");
+            _repository.AddHistory("RollingLineAdded", $"Lignes {FormatRollingLineRange(numbers)} ajoutées dans {tile.DisplayTitle}.");
             PersistState();
             UpdateTileCanvasExtent();
         }
@@ -478,23 +478,24 @@ namespace Ploco
                 return;
             }
 
-            var currentCount = ResolveRollingLineCount(tile);
-            var count = PromptRollingLineCount(currentCount);
-            if (count == null)
+            var currentNumbers = ResolveRollingLineNumbers(tile);
+            var defaultCount = currentNumbers.Count;
+            var numbers = PromptRollingLineNumbers(defaultCount);
+            if (numbers == null)
             {
                 return;
             }
 
-            var adjustedCount = EnsureRollingLineCountWithinAssignments(tile, count.Value);
-            if (adjustedCount != count.Value)
+            var adjustedNumbers = EnsureRollingLineNumbersWithinAssignments(tile, numbers);
+            if (adjustedNumbers.Count != numbers.Count)
             {
-                MessageBox.Show($"La valeur a été ajustée à {adjustedCount} pour conserver les locomotives déjà affectées.",
+                MessageBox.Show($"La configuration a été ajustée pour conserver les locomotives déjà affectées.",
                     "Information", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
-            tile.RollingLineCount = adjustedCount;
-            NormalizeRollingLineTracks(tile, adjustedCount);
-            _repository.AddHistory("RollingLineAdded", $"Configuration des lignes ({adjustedCount}) dans {tile.DisplayTitle}.");
+            tile.RollingLineCount = adjustedNumbers.Count;
+            NormalizeRollingLineTracks(tile, adjustedNumbers);
+            _repository.AddHistory("RollingLineAdded", $"Configuration des lignes ({FormatRollingLineRange(adjustedNumbers)}) dans {tile.DisplayTitle}.");
             PersistState();
             UpdateTileCanvasExtent();
         }
@@ -722,6 +723,28 @@ namespace Ploco
             loco.AssignedTrackOffsetX = null;
             EnsureTrackOffsets(targetTrack);
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
+            UpdatePoolVisibility();
+            RefreshTapisT13();
+        }
+
+        private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
+        {
+            // Retirer les deux locomotives de leurs tracks actuels
+            track1.Locomotives.Remove(loco1);
+            track2.Locomotives.Remove(loco2);
+            
+            // Les échanger
+            track1.Locomotives.Add(loco2);
+            track2.Locomotives.Add(loco1);
+            
+            // Mettre à jour les assignations
+            loco1.AssignedTrackId = track2.Id;
+            loco1.AssignedTrackOffsetX = null;
+            loco2.AssignedTrackId = track1.Id;
+            loco2.AssignedTrackOffsetX = null;
+            
+            EnsureTrackOffsets(track1);
+            EnsureTrackOffsets(track2);
             UpdatePoolVisibility();
             RefreshTapisT13();
         }
@@ -1395,8 +1418,8 @@ namespace Ploco
         {
             if (tile.Type == TileType.RollingLine)
             {
-                var count = ResolveRollingLineCount(tile);
-                NormalizeRollingLineTracks(tile, count);
+                var numbers = ResolveRollingLineNumbers(tile);
+                NormalizeRollingLineTracks(tile, numbers);
                 return;
             }
 
@@ -1407,26 +1430,34 @@ namespace Ploco
             tile.RefreshTrackCollections();
         }
 
-        private static int ResolveRollingLineCount(TileModel tile)
+        private static List<int> ResolveRollingLineNumbers(TileModel tile)
         {
-            if (tile.RollingLineCount.HasValue && tile.RollingLineCount.Value > 0)
+            var existingNumbers = tile.Tracks
+                .Where(t => t.Kind == TrackKind.RollingLine)
+                .Select(t => int.TryParse(t.Name, out var value) ? value : 0)
+                .Where(value => value > 0)
+                .OrderBy(n => n)
+                .ToList();
+
+            if (existingNumbers.Any())
             {
-                return tile.RollingLineCount.Value;
+                return existingNumbers;
             }
 
-            var existingCount = tile.Tracks.Count(t => t.Kind == TrackKind.RollingLine);
-            return existingCount > 0 ? existingCount : DefaultRollingLineCount;
+            // If no existing tracks, use the stored count or default
+            var count = tile.RollingLineCount ?? DefaultRollingLineCount;
+            return Enumerable.Range(RollingLineStartNumber, count).ToList();
         }
 
-        private static void NormalizeRollingLineTracks(TileModel tile, int count)
+        private static void NormalizeRollingLineTracks(TileModel tile, List<int> desiredNumbers)
         {
-            var desiredNumbers = Enumerable.Range(RollingLineStartNumber, count).Select(value => value.ToString()).ToHashSet();
+            var desiredNumbersSet = desiredNumbers.Select(n => n.ToString()).ToHashSet();
             var existing = tile.Tracks
                 .Where(t => t.Kind == TrackKind.RollingLine)
                 .ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
 
             var rollingTracks = new List<TrackModel>();
-            foreach (var number in Enumerable.Range(RollingLineStartNumber, count))
+            foreach (var number in desiredNumbers.OrderBy(n => n))
             {
                 var key = number.ToString();
                 if (existing.TryGetValue(key, out var track))
@@ -1457,7 +1488,7 @@ namespace Ploco
             tile.RefreshTrackCollections();
         }
 
-        private static int EnsureRollingLineCountWithinAssignments(TileModel tile, int requestedCount)
+        private static List<int> EnsureRollingLineNumbersWithinAssignments(TileModel tile, List<int> requestedNumbers)
         {
             var assignedNumbers = tile.Tracks
                 .Where(t => t.Kind == TrackKind.RollingLine && t.Locomotives.Any())
@@ -1465,14 +1496,60 @@ namespace Ploco
                 .Where(value => value > 0)
                 .ToList();
 
-            var maxAssigned = assignedNumbers.Any() ? assignedNumbers.Max() : RollingLineStartNumber + requestedCount - 1;
-            var minRequired = Math.Max(requestedCount, maxAssigned - RollingLineStartNumber + 1);
-            return Math.Max(minRequired, 1);
+            if (!assignedNumbers.Any())
+            {
+                return requestedNumbers;
+            }
+
+            // Include all assigned numbers in the result
+            var result = new HashSet<int>(requestedNumbers);
+            foreach (var assigned in assignedNumbers)
+            {
+                result.Add(assigned);
+            }
+
+            return result.OrderBy(n => n).ToList();
         }
 
-        private int? PromptRollingLineCount(int defaultCount)
+        private static string FormatRollingLineRange(List<int> numbers)
         {
-            var dialog = new SimpleTextDialog("Configurer lignes de roulement", "Nombre de lignes :", defaultCount.ToString())
+            if (numbers == null || numbers.Count == 0)
+            {
+                return "";
+            }
+
+            if (numbers.Count == 1)
+            {
+                return numbers[0].ToString();
+            }
+
+            var sorted = numbers.OrderBy(n => n).ToList();
+            var ranges = new List<string>();
+            int rangeStart = sorted[0];
+            int rangeEnd = sorted[0];
+
+            for (int i = 1; i < sorted.Count; i++)
+            {
+                if (sorted[i] == rangeEnd + 1)
+                {
+                    rangeEnd = sorted[i];
+                }
+                else
+                {
+                    ranges.Add(rangeStart == rangeEnd ? rangeStart.ToString() : $"{rangeStart}-{rangeEnd}");
+                    rangeStart = sorted[i];
+                    rangeEnd = sorted[i];
+                }
+            }
+
+            ranges.Add(rangeStart == rangeEnd ? rangeStart.ToString() : $"{rangeStart}-{rangeEnd}");
+
+            return string.Join(", ", ranges);
+        }
+
+        private List<int>? PromptRollingLineNumbers(int defaultCount)
+        {
+            var dialog = new RollingLineRangeDialog(defaultCount.ToString())
             {
                 Owner = this
             };
@@ -1482,13 +1559,7 @@ namespace Ploco
                 return null;
             }
 
-            if (!int.TryParse(dialog.ResponseText, out var count) || count <= 0)
-            {
-                MessageBox.Show("Veuillez saisir un nombre valide supérieur à 0.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return null;
-            }
-
-            return count;
+            return dialog.SelectedNumbers;
         }
 
         private void RollingLineRow_DragOver(object sender, DragEventArgs e)
@@ -1505,8 +1576,15 @@ namespace Ploco
             }
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
-            var canDrop = !track.Locomotives.Any() || track.Locomotives.Contains(loco);
+            
+            // Pour les lignes de roulement, on permet toujours le drop
+            // Si la ligne est occupée par une autre loco, on fera un swap
+            var canDrop = !track.Locomotives.Any() || track.Locomotives.Contains(loco) || 
+                          (track.Locomotives.Count == 1 && !track.Locomotives.Contains(loco));
+            
             e.Effects = canDrop ? DragDropEffects.Move : DragDropEffects.None;
+            
+            // Feedback visuel: bleu si drop possible (même pour swap)
             border.Background = canDrop ? new SolidColorBrush(Color.FromArgb(50, 0, 120, 215)) : Brushes.MistyRose;
             e.Handled = true;
         }
@@ -1534,13 +1612,32 @@ namespace Ploco
             }
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+            
+            // Si la ligne cible contient déjà une locomotive différente, on fait un swap
             if (track.Locomotives.Any() && !track.Locomotives.Contains(loco))
             {
-                MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                var existingLoco = track.Locomotives.First();
+                var sourceTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+                
+                if (sourceTrack != null && sourceTrack.Kind == TrackKind.RollingLine)
+                {
+                    // Swap: échanger les locomotives entre les deux lignes
+                    SwapLocomotivesBetweenTracks(loco, sourceTrack, existingLoco, track);
+                    _repository.AddHistory("LocomotiveMoved", $"Croisement: {loco.Number} ↔ {existingLoco.Number} entre {sourceTrack.Name} et {track.Name}.");
+                    PersistState();
+                    e.Handled = true;
+                    return;
+                }
+                else
+                {
+                    // Si la source n'est pas une ligne de roulement, on bloque
+                    MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
             }
 
+            // Cas normal: déplacement simple (ligne vide ou même loco)
             MoveLocomotiveToTrack(loco, track, 0);
             PersistState();
             e.Handled = true;
