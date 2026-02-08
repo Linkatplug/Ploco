@@ -727,6 +727,28 @@ namespace Ploco
             RefreshTapisT13();
         }
 
+        private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
+        {
+            // Retirer les deux locomotives de leurs tracks actuels
+            track1.Locomotives.Remove(loco1);
+            track2.Locomotives.Remove(loco2);
+            
+            // Les échanger
+            track1.Locomotives.Add(loco2);
+            track2.Locomotives.Add(loco1);
+            
+            // Mettre à jour les assignations
+            loco1.AssignedTrackId = track2.Id;
+            loco1.AssignedTrackOffsetX = null;
+            loco2.AssignedTrackId = track1.Id;
+            loco2.AssignedTrackOffsetX = null;
+            
+            EnsureTrackOffsets(track1);
+            EnsureTrackOffsets(track2);
+            UpdatePoolVisibility();
+            RefreshTapisT13();
+        }
+
         private void UpdateLocomotiveDropOffset(LocomotiveModel loco, TrackModel track, ListBox listBox, Point dropPosition)
         {
             if (track.Kind != TrackKind.Line && track.Kind != TrackKind.Zone && track.Kind != TrackKind.Output)
@@ -1554,8 +1576,15 @@ namespace Ploco
             }
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
-            var canDrop = !track.Locomotives.Any() || track.Locomotives.Contains(loco);
+            
+            // Pour les lignes de roulement, on permet toujours le drop
+            // Si la ligne est occupée par une autre loco, on fera un swap
+            var canDrop = !track.Locomotives.Any() || track.Locomotives.Contains(loco) || 
+                          (track.Locomotives.Count == 1 && !track.Locomotives.Contains(loco));
+            
             e.Effects = canDrop ? DragDropEffects.Move : DragDropEffects.None;
+            
+            // Feedback visuel: bleu si drop possible (même pour swap)
             border.Background = canDrop ? new SolidColorBrush(Color.FromArgb(50, 0, 120, 215)) : Brushes.MistyRose;
             e.Handled = true;
         }
@@ -1583,13 +1612,32 @@ namespace Ploco
             }
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
+            
+            // Si la ligne cible contient déjà une locomotive différente, on fait un swap
             if (track.Locomotives.Any() && !track.Locomotives.Contains(loco))
             {
-                MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                var existingLoco = track.Locomotives.First();
+                var sourceTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+                
+                if (sourceTrack != null && sourceTrack.Kind == TrackKind.RollingLine)
+                {
+                    // Swap: échanger les locomotives entre les deux lignes
+                    SwapLocomotivesBetweenTracks(loco, sourceTrack, existingLoco, track);
+                    _repository.AddHistory("LocomotiveMoved", $"Croisement: {loco.Number} ↔ {existingLoco.Number} entre {sourceTrack.Name} et {track.Name}.");
+                    PersistState();
+                    e.Handled = true;
+                    return;
+                }
+                else
+                {
+                    // Si la source n'est pas une ligne de roulement, on bloque
+                    MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
             }
 
+            // Cas normal: déplacement simple (ligne vide ou même loco)
             MoveLocomotiveToTrack(loco, track, 0);
             PersistState();
             e.Handled = true;
