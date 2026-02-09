@@ -866,6 +866,8 @@
                     <MenuItem Header="Réinitialiser locomotives" Click="MenuItem_ResetLocomotives_Click"/>
                     <MenuItem Header="Réinitialiser tuiles" Click="MenuItem_ResetTiles_Click"/>
                 </MenuItem>
+                <Separator/>
+                <MenuItem Header="Logs" Click="MenuItem_Logs_Click"/>
             </MenuItem>
         </Menu>
         <ToolBar DockPanel.Dock="Top">

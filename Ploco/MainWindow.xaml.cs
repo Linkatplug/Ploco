@@ -44,10 +44,16 @@ namespace Ploco
             _repository = new PlocoRepository("ploco.db");
             InputBindings.Add(new KeyBinding(LocomotiveHsCommand, new KeyGesture(Key.H, ModifierKeys.Control)));
             CommandBindings.Add(new CommandBinding(LocomotiveHsCommand, LocomotiveHsCommand_Executed, LocomotiveHsCommand_CanExecute));
+            
+            // Initialize logging system
+            Logger.Initialize();
+            Logger.Info("Application starting", "Application");
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            Logger.Info("Main window loaded", "Application");
+            
             _repository.Initialize();
             _repository.SeedDefaultDataIfNeeded();
 
@@ -59,6 +65,8 @@ namespace Ploco
             TileCanvas.ItemsSource = _tiles;
             InitializeLocomotiveView();
             UpdateTileCanvasExtent();
+            
+            Logger.Info($"Loaded {_locomotives.Count} locomotives and {_tiles.Count} tiles", "Application");
         }
 
         private void TileScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -72,10 +80,13 @@ namespace Ploco
             if (result != MessageBoxResult.Yes)
             {
                 e.Cancel = true;
+                Logger.Info("Application close cancelled by user", "Application");
                 return;
             }
 
+            Logger.Info("Saving state before closing", "Application");
             PersistState();
+            Logger.Shutdown();
         }
 
         private void LoadState()
@@ -755,8 +766,11 @@ namespace Ploco
 
         private void MoveLocomotiveToTrack(LocomotiveModel loco, TrackModel targetTrack, int insertIndex)
         {
+            Logger.Debug($"Moving locomotive {loco.Number} to track {targetTrack.Name} at index {insertIndex}", "Movement");
+            
             if (targetTrack.Kind == TrackKind.RollingLine && targetTrack.Locomotives.Any() && !targetTrack.Locomotives.Contains(loco))
             {
+                Logger.Warning($"Cannot move loco {loco.Number} to occupied rolling line {targetTrack.Name}", "Movement");
                 MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -767,6 +781,8 @@ namespace Ploco
             {
                 var currentIndex = currentTrack.Locomotives.IndexOf(loco);
                 currentTrack.Locomotives.Remove(loco);
+                Logger.Info($"Removed loco {loco.Number} from {currentTrack.Name} (index {currentIndex})", "Movement");
+                
                 if (currentTrack == targetTrack && insertIndex > currentIndex)
                 {
                     insertIndex--;
@@ -778,10 +794,12 @@ namespace Ploco
                 if (insertIndex < 0 || insertIndex > targetTrack.Locomotives.Count)
                 {
                     targetTrack.Locomotives.Add(loco);
+                    Logger.Info($"Added loco {loco.Number} to {targetTrack.Name} (end)", "Movement");
                 }
                 else
                 {
                     targetTrack.Locomotives.Insert(insertIndex, loco);
+                    Logger.Info($"Inserted loco {loco.Number} to {targetTrack.Name} at index {insertIndex}", "Movement");
                 }
             }
 
@@ -791,6 +809,8 @@ namespace Ploco
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
             UpdatePoolVisibility();
             RefreshTapisT13();
+            
+            Logger.Info($"Successfully moved loco {loco.Number} to {targetTrack.Name}", "Movement");
         }
 
         private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
@@ -904,12 +924,20 @@ namespace Ploco
                 return;
             }
 
+            var oldStatus = loco.Status;
+            Logger.Debug($"Opening status dialog for loco {loco.Number} (current status: {oldStatus})", "Status");
+            
             var dialog = new StatusDialog(loco) { Owner = this };
             if (dialog.ShowDialog() == true)
             {
+                Logger.Info($"Status changed for loco {loco.Number}: {oldStatus} -> {loco.Status}", "Status");
                 _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
                 PersistState();
                 RefreshTapisT13();
+            }
+            else
+            {
+                Logger.Debug($"Status change cancelled for loco {loco.Number}", "Status");
             }
         }
 
@@ -1014,9 +1042,12 @@ namespace Ploco
                 return;
             }
 
+            Logger.Debug($"Forecast placement requested for loco {loco.Number}", "Forecast");
+
             // Check if already in forecast mode
             if (loco.IsForecastOrigin)
             {
+                Logger.Warning($"Loco {loco.Number} already in forecast mode", "Forecast");
                 MessageBox.Show("Cette locomotive est déjà en mode prévisionnel.", "Placement prévisionnel",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -1025,6 +1056,7 @@ namespace Ploco
             // Check if locomotive is assigned to a track
             if (loco.AssignedTrackId == null)
             {
+                Logger.Warning($"Loco {loco.Number} not assigned to any track, cannot forecast", "Forecast");
                 MessageBox.Show("La locomotive doit être placée dans une tuile pour activer le mode prévisionnel.", 
                     "Placement prévisionnel", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -1034,10 +1066,12 @@ namespace Ploco
             var dialog = new RollingLineSelectionDialog(_tiles) { Owner = this };
             if (dialog.ShowDialog() != true || dialog.SelectedTrack == null)
             {
+                Logger.Debug($"Forecast placement cancelled for loco {loco.Number}", "Forecast");
                 return;
             }
 
             var targetTrack = dialog.SelectedTrack;
+            Logger.Info($"Forecast placement: loco {loco.Number} -> {targetTrack.Name}", "Forecast");
 
             // Set the original locomotive to forecast origin (will turn blue via DataTrigger)
             loco.IsForecastOrigin = true;
@@ -1078,6 +1112,8 @@ namespace Ploco
                 return;
             }
 
+            Logger.Info($"Cancelling forecast placement for loco {loco.Number}", "Forecast");
+
             // Find and remove the ghost locomotive
             var targetTrack = _tiles.SelectMany(t => t.Tracks)
                 .FirstOrDefault(t => t.Id == loco.ForecastTargetRollingLineTrackId);
@@ -1092,6 +1128,11 @@ namespace Ploco
                 if (ghost != null)
                 {
                     targetTrack.Locomotives.Remove(ghost);
+                    Logger.Debug($"Removed ghost for loco {loco.Number} from {targetTrack.Name}", "Forecast");
+                }
+                else
+                {
+                    Logger.Warning($"Ghost not found for loco {loco.Number} in track {targetTrack.Name}", "Forecast");
                 }
             }
 
@@ -1103,6 +1144,8 @@ namespace Ploco
                 $"Annulation du placement prévisionnel de la loco {loco.Number}.");
             PersistState();
             RefreshTapisT13();
+            
+            Logger.Info($"Forecast cancelled for loco {loco.Number}", "Forecast");
         }
 
         private void MenuItem_ValiderPrevisionnel_Click(object sender, RoutedEventArgs e)
@@ -1139,39 +1182,48 @@ namespace Ploco
                     "Ligne occupée",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
-                
-                if (result != MessageBoxResult.Yes)
-                {
-                    return;
-                }
+            
+            if (result != MessageBoxResult.Yes)
+            {
+                Logger.Info($"User declined to replace existing loco on {targetTrack.Name}", "Forecast");
+                return;
             }
             
-            // Remove ghost from target track
-            if (ghost != null)
-            {
-                targetTrack.Locomotives.Remove(ghost);
-            }
-            
-            // Remove any real locomotives that might be in the target (user confirmed)
-            foreach (var realLoco in realLocosInTarget.ToList())
-            {
-                targetTrack.Locomotives.Remove(realLoco);
-                realLoco.AssignedTrackId = null;
-                realLoco.AssignedTrackOffsetX = null;
-            }
-
-            // Reset forecast flags BEFORE moving (important!)
-            loco.IsForecastOrigin = false;
-            loco.ForecastTargetRollingLineTrackId = null;
-
-            // Use existing MoveLocomotiveToTrack method to properly move the locomotive
-            MoveLocomotiveToTrack(loco, targetTrack, 0);
-
-            _repository.AddHistory("ForecastValidated", 
-                $"Validation du placement prévisionnel de la loco {loco.Number} vers {targetTrack.Name}.");
-            PersistState();
-            RefreshTapisT13();
+            Logger.Warning($"Replacing existing loco on {targetTrack.Name} for forecast validation", "Forecast");
         }
+        
+        // Remove ghost from target track
+        if (ghost != null)
+        {
+            targetTrack.Locomotives.Remove(ghost);
+            Logger.Debug($"Removed ghost for loco {loco.Number} from {targetTrack.Name}", "Forecast");
+        }
+        
+        // Remove any real locomotives that might be in the target (user confirmed)
+        foreach (var realLoco in realLocosInTarget.ToList())
+        {
+            targetTrack.Locomotives.Remove(realLoco);
+            realLoco.AssignedTrackId = null;
+            realLoco.AssignedTrackOffsetX = null;
+            Logger.Info($"Removed loco {realLoco.Number} from {targetTrack.Name} (replaced by forecast)", "Forecast");
+        }
+
+        // Reset forecast flags BEFORE moving (important!)
+        loco.IsForecastOrigin = false;
+        loco.ForecastTargetRollingLineTrackId = null;
+
+        Logger.Info($"Validating forecast placement: moving loco {loco.Number} to {targetTrack.Name}", "Forecast");
+        
+        // Use existing MoveLocomotiveToTrack method to properly move the locomotive
+        MoveLocomotiveToTrack(loco, targetTrack, 0);
+
+        _repository.AddHistory("ForecastValidated", 
+            $"Validation du placement prévisionnel de la loco {loco.Number} vers {targetTrack.Name}.");
+        PersistState();
+        RefreshTapisT13();
+        
+        Logger.Info($"Forecast validated for loco {loco.Number}", "Forecast");
+    }
 
         private void OpenSwapDialog(LocomotiveModel loco)
         {
@@ -1505,6 +1557,8 @@ namespace Ploco
                 return;
             }
 
+            Logger.Warning("User initiated locomotive reset", "Reset");
+
             foreach (var track in _tiles.SelectMany(tile => tile.Tracks))
             {
                 track.Locomotives.Clear();
@@ -1524,6 +1578,8 @@ namespace Ploco
             UpdatePoolVisibility();
             PersistState();
             RefreshTapisT13();
+            
+            Logger.Info($"All locomotives reset successfully ({_locomotives.Count} locomotives)", "Reset");
         }
 
         private void MenuItem_ResetTiles_Click(object sender, RoutedEventArgs e)
@@ -1534,6 +1590,8 @@ namespace Ploco
                 return;
             }
 
+            Logger.Warning("User initiated tile reset", "Reset");
+            
             foreach (var tile in _tiles.ToList())
             {
                 foreach (var track in tile.Tracks)
@@ -1552,6 +1610,26 @@ namespace Ploco
             UpdatePoolVisibility();
             PersistState();
             RefreshTapisT13();
+            
+            Logger.Info("All tiles reset successfully", "Reset");
+        }
+
+        private void MenuItem_Logs_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var logsDirectory = Logger.LogsDirectory;
+                Logger.Info($"Opening logs folder: {logsDirectory}", "Menu");
+                
+                // Open the logs folder in Windows Explorer
+                System.Diagnostics.Process.Start("explorer.exe", logsDirectory);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to open logs folder", ex, "Menu");
+                MessageBox.Show($"Impossible d'ouvrir le dossier de logs.\n\nChemin: {Logger.LogsDirectory}\n\nErreur: {ex.Message}", 
+                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void ToggleDarkMode_Click(object sender, RoutedEventArgs e)
