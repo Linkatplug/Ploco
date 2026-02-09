@@ -766,14 +766,22 @@ namespace Ploco
 
         private void MoveLocomotiveToTrack(LocomotiveModel loco, TrackModel targetTrack, int insertIndex)
         {
-            Logger.Debug($"Moving locomotive {loco.Number} to track {targetTrack.Name} at index {insertIndex}", "Movement");
+            Logger.Debug($"Moving locomotive Id={loco.Id} Number={loco.Number} to track {targetTrack.Name} at index {insertIndex}", "Movement");
             
-            if (targetTrack.Kind == TrackKind.RollingLine && targetTrack.Locomotives.Any() && !targetTrack.Locomotives.Contains(loco))
+            // For rolling lines, check if occupied by REAL locomotives (ignore ghosts)
+            if (targetTrack.Kind == TrackKind.RollingLine)
             {
-                Logger.Warning($"Cannot move loco {loco.Number} to occupied rolling line {targetTrack.Name}", "Movement");
-                MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                var realLocosInTarget = targetTrack.Locomotives
+                    .Where(l => !l.IsForecastGhost)
+                    .ToList();
+                
+                if (realLocosInTarget.Any() && !targetTrack.Locomotives.Contains(loco))
+                {
+                    Logger.Warning($"Cannot move loco Id={loco.Id} Number={loco.Number} to occupied rolling line {targetTrack.Name} (occupied by {realLocosInTarget.Count} real loco(s))", "Movement");
+                    MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
             }
 
             var currentTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
@@ -781,7 +789,7 @@ namespace Ploco
             {
                 var currentIndex = currentTrack.Locomotives.IndexOf(loco);
                 currentTrack.Locomotives.Remove(loco);
-                Logger.Info($"Removed loco {loco.Number} from {currentTrack.Name} (index {currentIndex})", "Movement");
+                Logger.Info($"Removed loco Id={loco.Id} Number={loco.Number} from {currentTrack.Name} (index {currentIndex})", "Movement");
                 
                 if (currentTrack == targetTrack && insertIndex > currentIndex)
                 {
@@ -794,12 +802,12 @@ namespace Ploco
                 if (insertIndex < 0 || insertIndex > targetTrack.Locomotives.Count)
                 {
                     targetTrack.Locomotives.Add(loco);
-                    Logger.Info($"Added loco {loco.Number} to {targetTrack.Name} (end)", "Movement");
+                    Logger.Info($"Added loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name} (end)", "Movement");
                 }
                 else
                 {
                     targetTrack.Locomotives.Insert(insertIndex, loco);
-                    Logger.Info($"Inserted loco {loco.Number} to {targetTrack.Name} at index {insertIndex}", "Movement");
+                    Logger.Info($"Inserted loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name} at index {insertIndex}", "Movement");
                 }
             }
 
@@ -810,7 +818,7 @@ namespace Ploco
             UpdatePoolVisibility();
             RefreshTapisT13();
             
-            Logger.Info($"Successfully moved loco {loco.Number} to {targetTrack.Name}", "Movement");
+            Logger.Info($"Successfully moved loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name}", "Movement");
         }
 
         private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
@@ -993,11 +1001,18 @@ namespace Ploco
             {
                 loco = l;
             }
+            else if (contextMenu.DataContext is LocomotiveModel l2)
+            {
+                loco = l2;
+            }
 
             if (loco == null)
             {
                 return;
             }
+
+            // Log context menu opened on this locomotive
+            Logger.Debug($"Opened context menu on loco Id={loco.Id} Number={loco.Number} IsForecastOrigin={loco.IsForecastOrigin} IsForecastGhost={loco.IsForecastGhost}", "ContextMenu");
 
             // Find menu items by name - we need to search through the Items collection
             MenuItem? placementItem = null;
@@ -1036,30 +1051,53 @@ namespace Ploco
 
         /// <summary>
         /// Removes all forecast ghosts linked to the specified locomotive from ALL tracks.
-        /// This ensures complete ghost cleanup regardless of which track they're in.
+        /// Uses robust matching: first by ForecastSourceLocomotiveId, then by Number+SeriesId fallback.
+        /// This handles cases where WPF provides a different instance of the same logical locomotive.
         /// </summary>
         private int RemoveForecastGhostsFor(LocomotiveModel loco)
         {
             int ghostsRemoved = 0;
             var tracksWithGhosts = new List<string>();
 
-            // Scan ALL tracks in ALL tiles
-            foreach (var tile in _tiles)
+            // Prioritize target track if known
+            var targetTrackId = loco.ForecastTargetRollingLineTrackId;
+            var allTracks = _tiles.SelectMany(t => t.Tracks).ToList();
+            
+            // Order tracks: target track first, then all others
+            IEnumerable<TrackModel> orderedTracks;
+            if (targetTrackId != null)
             {
-                foreach (var track in tile.Tracks)
-                {
-                    // Find all ghosts for this locomotive
-                    var ghostsToRemove = track.Locomotives
-                        .Where(l => l.IsForecastGhost && l.ForecastSourceLocomotiveId == loco.Id)
-                        .ToList();
+                var targetTracks = allTracks.Where(t => t.Id == targetTrackId);
+                var otherTracks = allTracks.Where(t => t.Id != targetTrackId);
+                orderedTracks = targetTracks.Concat(otherTracks);
+            }
+            else
+            {
+                orderedTracks = allTracks;
+            }
 
-                    foreach (var ghost in ghostsToRemove)
-                    {
-                        track.Locomotives.Remove(ghost);
-                        ghostsRemoved++;
-                        tracksWithGhosts.Add(track.Name);
-                        Logger.Debug($"Removed ghost (Id={ghost.Id}, Number={ghost.Number}) for source loco (Id={loco.Id}, Number={loco.Number}) from track {track.Name}", "Forecast");
-                    }
+            // Scan tracks for ghosts
+            foreach (var track in orderedTracks)
+            {
+                // Find all ghosts for this locomotive using robust matching
+                var ghostsToRemove = track.Locomotives
+                    .Where(l => l.IsForecastGhost && 
+                        (l.ForecastSourceLocomotiveId == loco.Id || // Primary match by Id
+                         (l.Number == loco.Number && l.SeriesId == loco.SeriesId))) // Fallback match by Number+SeriesId
+                    .ToList();
+
+                foreach (var ghost in ghostsToRemove)
+                {
+                    track.Locomotives.Remove(ghost);
+                    ghostsRemoved++;
+                    tracksWithGhosts.Add(track.Name);
+                    
+                    // Log the match reason for debugging
+                    var matchReason = ghost.ForecastSourceLocomotiveId == loco.Id 
+                        ? "SourceIdMatch" 
+                        : "NumberSeriesFallback";
+                    
+                    Logger.Debug($"Removed ghost (Id={ghost.Id}, Number={ghost.Number}) for source loco (Id={loco.Id}, Number={loco.Number}) from track {track.Name}, reason={matchReason}", "Forecast");
                 }
             }
 
@@ -1368,21 +1406,36 @@ namespace Ploco
                 return null;
             }
 
+            // PRIORITY 1: Get from ContextMenu's DataContext or PlacementTarget
+            // LocomotiveItem_PreviewMouseRightButtonDown sets these correctly
+            var contextMenu = menuItem.Parent as ContextMenu
+                ?? ItemsControl.ItemsControlFromItemContainer(menuItem) as ContextMenu;
+            
+            if (contextMenu != null)
+            {
+                // First try ContextMenu's DataContext (set by PreviewMouseRightButtonDown)
+                if (contextMenu.DataContext is LocomotiveModel contextLoco)
+                {
+                    return contextLoco;
+                }
+                
+                // Then try PlacementTarget's DataContext
+                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel placementLoco)
+                {
+                    return placementLoco;
+                }
+            }
+
+            // PRIORITY 2: CommandParameter (if explicitly set)
             if (menuItem.CommandParameter is LocomotiveModel parameter)
             {
                 return parameter;
             }
 
+            // PRIORITY 3: MenuItem's own DataContext (can be ambiguous, use as last resort)
             if (menuItem.DataContext is LocomotiveModel dataContext)
             {
                 return dataContext;
-            }
-
-            var contextMenu = menuItem.Parent as ContextMenu
-                ?? ItemsControl.ItemsControlFromItemContainer(menuItem) as ContextMenu;
-            if (contextMenu?.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
-            {
-                return loco;
             }
 
             return null;
