@@ -42,10 +42,21 @@ namespace Ploco.Dialogs
                     : location;
 
                 var isHs = loco.Status == LocomotiveStatus.HS;
+                var isOnRollingLine = track?.Kind == TrackKind.RollingLine;
+                var isNonHsOnRollingLine = isOnRollingLine && !isHs;
+
                 var locHs = isHs ? trainInfo : string.Empty;
+                
+                // Report logic:
+                // 1. If rolling line number exists (old behavior), show it
+                // 2. If HS, show train info (existing behavior)
+                // 3. If non-HS on rolling line, show train info (NEW: green display)
                 var report = !string.IsNullOrWhiteSpace(rollingLineNumber)
                     ? rollingLineNumber
-                    : isHs ? trainInfo : string.Empty;
+                    : isHs ? trainInfo 
+                    : isNonHsOnRollingLine ? trainInfo 
+                    : string.Empty;
+                
                 var motif = isHs ? (loco.HsReason ?? string.Empty) : string.Empty;
 
                 _rows.Add(new T13Row
@@ -55,7 +66,9 @@ namespace Ploco.Dialogs
                     Motif = motif,
                     LocHs = locHs,
                     Report = report,
-                    IsHs = isHs
+                    IsHs = isHs,
+                    IsOnRollingLine = isOnRollingLine,
+                    IsNonHsOnRollingLine = isNonHsOnRollingLine
                 });
             }
 
@@ -185,6 +198,8 @@ namespace Ploco.Dialogs
             public string LocHs { get; set; } = string.Empty;
             public string Report { get; set; } = string.Empty;
             public bool IsHs { get; set; }
+            public bool IsOnRollingLine { get; set; }
+            public bool IsNonHsOnRollingLine { get; set; }
         }
     }
 }

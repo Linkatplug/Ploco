@@ -13,6 +13,18 @@
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
+            <Style x:Key="ReportCellStyle" TargetType="DataGridCell">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsHs}" Value="True">
+                        <Setter Property="Background" Value="#FFD32F2F"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsNonHsOnRollingLine}" Value="True">
+                        <Setter Property="Background" Value="#FF4CAF50"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -52,7 +64,7 @@
                 <DataGridTextColumn Header="Date entretien" Binding="{Binding MaintenanceDate}" Width="*"/>
                 <DataGridTextColumn Header="Statut / Motif" Binding="{Binding Motif}" Width="*"/>
                 <DataGridTextColumn Header="Loc HS" Binding="{Binding LocHs}" Width="*" CellStyle="{StaticResource HsCellStyle}"/>
-                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*" CellStyle="{StaticResource HsCellStyle}"/>
+                <DataGridTextColumn Header="Infos / Rapport" Binding="{Binding Report}" Width="*" CellStyle="{StaticResource ReportCellStyle}"/>
             </DataGrid.Columns>
         </DataGrid>
 
