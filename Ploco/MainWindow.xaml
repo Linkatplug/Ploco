@@ -788,7 +788,7 @@
                                                         </ListBox.ItemsPanel>
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
+                                                                <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}, ConverterParameter=rollingline}"
                                                                         Padding="4" Margin="2" CornerRadius="4"
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                         PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">

@@ -20,17 +20,15 @@ namespace Ploco.Converters
             }
 
             // Gestion du placement prévisionnel
-            // Si la locomotive est dans la tuile d'origine (placement prévisionnel actif), elle est bleue
             if (loco.IsProvisionalPlacement)
             {
+                // Si on est dans une rolling line (paramètre = "rollingline"), c'est la copie verte
+                if (parameter is string param && param == "rollingline")
+                {
+                    return Brushes.Green;
+                }
+                // Sinon, c'est la locomotive bleue dans la tuile d'origine
                 return Brushes.Blue;
-            }
-
-            // Si parameter est "provisional", c'est la copie provisionnelle sur la ligne de roulement
-            // Elle doit être verte
-            if (parameter is string param && param == "provisional")
-            {
-                return Brushes.Green;
             }
 
             // Sinon, utiliser la couleur basée sur le statut
