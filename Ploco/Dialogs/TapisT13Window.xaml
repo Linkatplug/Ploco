@@ -19,7 +19,7 @@
                         <Setter Property="Background" Value="#FFD32F2F"/>
                         <Setter Property="Foreground" Value="White"/>
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding HasTrainInfo}" Value="True">
+                    <DataTrigger Binding="{Binding IsNonHsOnLine}" Value="True">
                         <Setter Property="Background" Value="#FF4CAF50"/>
                         <Setter Property="Foreground" Value="White"/>
                     </DataTrigger>
