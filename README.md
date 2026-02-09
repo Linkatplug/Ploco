@@ -18,6 +18,10 @@ Ploco est actuellement en cours de développement actif.
 - Pourcentage de traction et motif HS obligatoire
 - Glisser-déposer des locomotives entre les voies
 - Retour des locomotives vers la liste par glisser-déposer
+- **Placement prévisionnel** : affichage d'une locomotive à deux endroits simultanément
+  - Locomotive bleue dans la tuile d'origine (départ incertain)
+  - Locomotive verte dans la ligne de roulement cible (placement prévu)
+  - Annulation ou validation depuis le menu contextuel
 - Gestion des pools avec fenêtre de transfert dédiée
 - Comptage automatique des locomotives par pool
 - Historique complet des actions (affectations, statuts, modifications de layout)
@@ -127,6 +131,11 @@ Ploco est actuellement en cours de développement actif.
 
 - **Modifier le statut d'une locomotive**  
   Clic droit → modifier statut ou déclarer HS
+
+- **Placement prévisionnel**  
+  Clic droit sur une locomotive → *Placement prévisionnel*  
+  Sélectionner une ligne de roulement → la locomotive devient bleue dans sa tuile actuelle et verte dans la ligne choisie  
+  Clic droit sur la locomotive bleue → *Annuler* (revient à l'état normal) ou *Valider* (déplace définitivement)
 
 - **Changer de pool**  
   Clic droit → swap de pool
