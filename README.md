@@ -19,66 +19,6 @@ Ploco est actuellement en cours de développement actif.
 
 ---
 
-## Fonctionnalités
-
-### Gestion des locomotives
-- Gestion visuelle du parc de locomotives avec 4 statuts :
-  - ✅ **OK** (Vert) : Locomotive opérationnelle
-  - 🟠 **Manque de Traction** (Orange) : Traction réduite avec pourcentage
-  - 🟡 **Défaut Mineur** (Jaune) : À vérifier avec description obligatoire
-  - 🔴 **HS** (Rouge) : Hors service avec motif obligatoire
-- Pourcentage de traction et commentaires pour traction réduite
-- Glisser-déposer des locomotives entre les voies
-- Double-clic rapide pour transférer entre pools (Sibelit ↔ Lineas)
-- Retour des locomotives vers la liste par glisser-déposer
-- Gestion des pools avec fenêtre de transfert dédiée
-- **Import par lot** : Synchronisation automatique des pools depuis le presse-papier
-- Comptage automatique des locomotives par pool
-- Historique complet des actions (affectations, statuts, modifications de layout)
-- Intégration de l'historique des pools dans la nouvelle interface
-
-### Interface graphique
-- Canvas de tuiles interactif :
-  - Dépôts avec voies principales et voies de sortie
-  - Voies de garage avec zones configurables
-  - Arrêts de ligne avec informations train
-- Redimensionnement des tuiles par glisser-déposer
-- Menus contextuels pour actions rapides (reset, presets de garage)
-- Offsets de drop configurables sur les voies
-- Prévention du chevauchement des locomotives
-- Affichage optimisé avec séparation du numéro et du badge de traction
-
-### Voies et zones
-- Voies configurables :
-  - Voies principales
-  - Voies de sortie
-  - Zones de garage
-  - Voies de ligne avec nommage
-- Indicateurs de remplissage des zones (BLOCK / BIF)
-- Arrêts de ligne avec informations train (numéro, heure d'arrêt, motif)
-- Filtrage des layouts de tuiles par pool et lieu
-
-### Fonctionnalités avancées
-- **🔵 Placement Prévisionnel** : Planification visuelle des affectations
-  - Locomotive bleue dans tuile d'origine + copie verte sur ligne cible
-  - Validation ou annulation du placement planifié
-  - Gestion des conflits si ligne occupée entre-temps
-- Presets de layout (sauvegarde / chargement / suppression)
-- Fenêtre de gestion de la base de données
-- **Résumé T13 complet** : Affichage intelligent selon type de voie et statut
-  - Support du mode prévisionnel (utilise position future)
-  - Affichage différencié : HS (rouge), en ligne avec train (vert), disponible, etc.
-  - Pourcentages de traction inclus dans le rapport
-- Génération de planning PDF
-- Fenêtres auxiliaires non bloquantes (modeless)
-- **Sauvegarde automatique** de la taille et position des fenêtres
-- **Système de logs complet** avec rotation automatique (30 jours)
-- Mode sombre avec contraste amélioré
-- Sauvegarde locale automatique
-- Aucun serveur externe requis
-
----
-
 ## 🎯 Fonctionnalités Principales
 
 ### Gestion des Locomotives
@@ -104,6 +44,8 @@ Ploco est actuellement en cours de développement actif.
 - Sauvegarde automatique de la taille et position des fenêtres
 
 📖 **[Voir toutes les fonctionnalités](docs/FEATURES.md)**
+
+---
 
 ## 🚀 Démarrage Rapide
 
