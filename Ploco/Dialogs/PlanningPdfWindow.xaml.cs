@@ -20,6 +20,7 @@ using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf.IO;
 using Ploco.Data;
 using Ploco.Models;
+using Ploco.Pdf;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
@@ -617,55 +618,86 @@ namespace Ploco.Dialogs
                 return;
             }
 
-            using var input = PdfReader.Open(_document.FilePath, PdfDocumentOpenMode.Modify);
-            foreach (var page in _pages)
+            try
             {
-                if (!_calibrations.TryGetValue(page.PageIndex, out var calibration))
+                // Create PDF export service
+                var exportService = new PdfExportService();
+
+                // Convert all placements to models
+                var allPlacements = _pages
+                    .SelectMany(p => p.Placements)
+                    .Select(p => 
+                    {
+                        var model = p.ToModel();
+                        model.PdfDocumentId = _document.Id;
+                        return model;
+                    })
+                    .ToList();
+
+                // Validate calibrations
+                var missingCalibrations = exportService.ValidateCalibrations(allPlacements, _calibrations);
+                
+                if (missingCalibrations.Any())
                 {
-                    continue;
-                }
-
-                var pdfPage = input.Pages[page.PageIndex];
-                using var gfx = XGraphics.FromPdfPage(pdfPage);
-                foreach (var placement in page.Placements)
-                {
-                    var xPdf = MapMinuteToPdfX(calibration, placement.MinuteOfDay);
-                    var row = calibration.Rows.FirstOrDefault(r => string.Equals(r.RoulementId, placement.RoulementId, StringComparison.OrdinalIgnoreCase));
-                    if (row == null)
+                    var pagesList = string.Join(", ", missingCalibrations.Select(p => p + 1));
+                    var result = MessageBox.Show(
+                        $"Les pages suivantes n'ont pas de calibration : {pagesList}\n\nContinuer quand même ?",
+                        "Planning PDF - Avertissement",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning
+                    );
+                    
+                    if (result != MessageBoxResult.Yes)
                     {
-                        continue;
-                    }
-
-                    var yPdf = row.YCenter;
-                    var rectWidth = 46;
-                    var rectHeight = 18;
-                    var x = xPdf - rectWidth / 2;
-                    var y = pdfPage.Height - yPdf - rectHeight / 2;
-
-                    var brush = placement.Status switch
-                    {
-                        LocomotiveStatus.HS => XBrushes.IndianRed,
-                        LocomotiveStatus.ManqueTraction => XBrushes.Orange,
-                        _ => XBrushes.SeaGreen
-                    };
-                    gfx.DrawRectangle(brush, x, y, rectWidth, rectHeight);
-                    var font = new XFont("Arial", 8, XFontStyle.Bold);
-                    gfx.DrawString(placement.LocNumber.ToString(), font, XBrushes.White,
-                        new XRect(x, y, rectWidth, rectHeight), XStringFormats.CenterLeft);
-
-                    var badge = placement.Status == LocomotiveStatus.ManqueTraction && placement.TractionPercent.HasValue
-                        ? $"{placement.TractionPercent}%"
-                        : placement.Status == LocomotiveStatus.HS ? "HS" : string.Empty;
-                    if (!string.IsNullOrWhiteSpace(badge))
-                    {
-                        gfx.DrawString(badge, new XFont("Arial", 7, XFontStyle.Regular), XBrushes.White,
-                            new XRect(x, y, rectWidth, rectHeight), XStringFormats.CenterRight);
+                        return;
                     }
                 }
+
+                // Validate roulements
+                var missingRoulements = exportService.ValidateRoulements(allPlacements, _calibrations);
+                if (missingRoulements.Any())
+                {
+                    var details = string.Join("\n", missingRoulements.Select(kvp => 
+                        $"  Page {kvp.Key + 1}: {string.Join(", ", kvp.Value)}"
+                    ));
+                    var result = MessageBox.Show(
+                        $"Les roulements suivants ne sont pas calibrés :\n{details}\n\nContinuer quand même ?",
+                        "Planning PDF - Avertissement",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning
+                    );
+                    
+                    if (result != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+                }
+
+                // Export PDF using the new architecture
+                exportService.ExportPdfWithPlacements(
+                    _document.FilePath,
+                    outputPath,
+                    allPlacements,
+                    _calibrations,
+                    _pdfPageSizes
+                );
+
+                MessageBox.Show(
+                    "Export terminé avec succès.\n\nLe PDF source n'a pas été modifié.\nLes annotations sont entièrement modifiables dans le PDF exporté.",
+                    "Planning PDF",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information
+                );
             }
-
-            input.Save(outputPath);
-            MessageBox.Show("Export terminé.", "Planning PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Erreur lors de l'export PDF :\n\n{ex.Message}",
+                    "Planning PDF - Erreur",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
         }
 
         private void ExportCsv_Click(object sender, RoutedEventArgs e)
