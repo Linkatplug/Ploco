@@ -1786,6 +1786,30 @@ namespace Ploco
             Logger.Info("All tiles reset successfully", "Reset");
         }
 
+        private void MenuItem_Import_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Logger.Info("Opening Import window", "Menu");
+                
+                var importWindow = new ImportWindow(_locomotives, () =>
+                {
+                    // Callback when import is complete
+                    // Refresh the UI to show updated pools
+                    PersistState();
+                });
+                
+                importWindow.Owner = this;
+                importWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to open Import window", ex, "Menu");
+                MessageBox.Show($"Impossible d'ouvrir la fenêtre d'import.\n\nErreur: {ex.Message}", 
+                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void MenuItem_Logs_Click(object sender, RoutedEventArgs e)
         {
             try

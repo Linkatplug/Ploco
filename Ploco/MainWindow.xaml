@@ -861,6 +861,8 @@
                 <MenuItem Header="Supprimer un preset" x:Name="ViewPresetsDeleteMenu"/>
             </MenuItem>
             <MenuItem Header="Option">
+                <MenuItem Header="Import" Click="MenuItem_Import_Click"/>
+                <Separator/>
                 <MenuItem Header="Mode sombre" IsCheckable="True" Click="ToggleDarkMode_Click"/>
                 <MenuItem Header="Gestion base de données" Click="MenuItem_DatabaseManagement_Click"/>
                 <MenuItem Header="Réinitialiser">
