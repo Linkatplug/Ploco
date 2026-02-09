@@ -240,9 +240,18 @@ namespace Ploco.Pdf.Engine
 
         /// <summary>
         /// Creates a default appearance string for FreeText annotations.
+        /// This uses the PDF standard format for text appearance:
+        /// - /Helv: Helvetica font (standard PDF font)
+        /// - Tf: Set font and size operator
+        /// - rg: Set RGB color operator (0 0 0 = black)
+        /// Format: "/FontName fontSize Tf r g b rg"
         /// </summary>
+        /// <param name="fontSize">The font size in points.</param>
+        /// <returns>A PdfString containing the appearance definition.</returns>
         private PdfString CreateDefaultAppearance(double fontSize)
         {
+            // PostScript-like format for PDF text appearance
+            // Tf = set font and size, rg = RGB color (0 0 0 = black)
             return new PdfString($"/Helv {fontSize} Tf 0 0 0 rg");
         }
 

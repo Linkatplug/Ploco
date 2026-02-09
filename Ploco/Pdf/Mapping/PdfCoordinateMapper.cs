@@ -11,6 +11,12 @@ namespace Ploco.Pdf.Mapping
     /// </summary>
     public class PdfCoordinateMapper
     {
+        // Constants for default dimensions
+        private const int MinutesPerDay = 1440; // 24 hours * 60 minutes
+        private const double DefaultLocomotiveRectWidth = 46.0;
+        private const double DefaultLocomotiveRectHeight = 18.0;
+        private const double DefaultXPosition = 50.0;
+
         private readonly PdfTemplateCalibrationModel _calibration;
         private readonly double _pdfPageHeight;
 
@@ -78,13 +84,12 @@ namespace Ploco.Pdf.Mapping
             // Fallback: use legacy XStart/XEnd proportional mapping
             if (_calibration.XStart > 0 && _calibration.XEnd > _calibration.XStart)
             {
-                var totalMinutes = 1440.0; // 24 hours
-                var t = minuteOfDay / totalMinutes;
+                var t = minuteOfDay / (double)MinutesPerDay;
                 return _calibration.XStart + t * (_calibration.XEnd - _calibration.XStart);
             }
 
             // No calibration available - return a default position
-            return 50.0;
+            return DefaultXPosition;
         }
 
         /// <summary>
@@ -134,8 +139,8 @@ namespace Ploco.Pdf.Mapping
         public (double X, double Y, double Width, double Height)? GetLocoRectangle(
             int minuteOfDay, 
             string roulementId, 
-            double rectWidth = 46.0, 
-            double rectHeight = 18.0)
+            double rectWidth = DefaultLocomotiveRectWidth, 
+            double rectHeight = DefaultLocomotiveRectHeight)
         {
             var x = MapMinuteToX(minuteOfDay);
             var y = MapRoulementToY(roulementId);
