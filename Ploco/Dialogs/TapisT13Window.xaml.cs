@@ -33,6 +33,18 @@ namespace Ploco.Dialogs
                          .OrderBy(l => l.Number))
             {
                 var track = tracks.FirstOrDefault(t => t.Locomotives.Contains(loco));
+                
+                // Debug logging
+                Logger.Info($"Processing loco {loco.Number}: Status={loco.Status}, Pool={loco.Pool}", "TapisT13");
+                if (track != null)
+                {
+                    Logger.Info($"  Track: Name={track.Name}, Kind={track.Kind}, IsOnTrain={track.IsOnTrain}, TrainNumber={track.TrainNumber ?? "null"}", "TapisT13");
+                }
+                else
+                {
+                    Logger.Info($"  Track: NOT FOUND", "TapisT13");
+                }
+                
                 var location = ResolveLocation(track, tiles);
                 var rollingLineNumber = ResolveRollingLineNumber(track);
                 var trainInfo = track?.IsOnTrain == true
@@ -41,9 +53,14 @@ namespace Ploco.Dialogs
                         : $"{location} {track.TrainNumber}"
                     : location;
 
+                Logger.Info($"  Location: {location}, RollingLineNumber: {rollingLineNumber}", "TapisT13");
+                Logger.Info($"  TrainInfo: {trainInfo}", "TapisT13");
+
                 var isHs = loco.Status == LocomotiveStatus.HS;
                 var isOnRollingLine = track?.Kind == TrackKind.RollingLine;
                 var isNonHsOnRollingLine = isOnRollingLine && !isHs && track?.IsOnTrain == true;
+
+                Logger.Info($"  Flags: isHs={isHs}, isOnRollingLine={isOnRollingLine}, isNonHsOnRollingLine={isNonHsOnRollingLine}", "TapisT13");
 
                 var locHs = isHs ? trainInfo : string.Empty;
                 
@@ -56,6 +73,8 @@ namespace Ploco.Dialogs
                     : isNonHsOnRollingLine ? trainInfo
                     : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
                     : string.Empty;
+                
+                Logger.Info($"  Results: LocHs='{locHs}', Report='{report}'", "TapisT13");
                 
                 var motif = isHs ? (loco.HsReason ?? string.Empty) : string.Empty;
 
