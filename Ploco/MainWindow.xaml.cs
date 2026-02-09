@@ -638,6 +638,12 @@ namespace Ploco
 
             if (LocomotiveList.SelectedItem is LocomotiveModel loco)
             {
+                // Prevent dragging ghost locomotives (safety check - they shouldn't be in the list)
+                if (loco.IsForecastGhost)
+                {
+                    return;
+                }
+                
                 DragDrop.DoDragDrop(LocomotiveList, loco, DragDropEffects.Move);
             }
         }
@@ -686,6 +692,12 @@ namespace Ploco
 
             if (sender is ListBox listBox && listBox.SelectedItem is LocomotiveModel loco)
             {
+                // Prevent dragging ghost locomotives
+                if (loco.IsForecastGhost)
+                {
+                    return;
+                }
+                
                 DragDrop.DoDragDrop(listBox, loco, DragDropEffects.Move);
             }
         }
@@ -1838,6 +1850,15 @@ namespace Ploco
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
             
+            // Prevent dragging ghost locomotives
+            if (loco.IsForecastGhost)
+            {
+                e.Effects = DragDropEffects.None;
+                border.Background = Brushes.MistyRose;
+                e.Handled = true;
+                return;
+            }
+            
             // Pour les lignes de roulement, on permet toujours le drop
             // Si la ligne est occupée par une autre loco, on fera un swap
             var canDrop = !track.Locomotives.Any() || track.Locomotives.Contains(loco) || 
@@ -1874,10 +1895,27 @@ namespace Ploco
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
             
+            // Prevent dropping ghost locomotives
+            if (loco.IsForecastGhost)
+            {
+                MessageBox.Show("Les locomotives fantômes (prévision) ne peuvent pas être déplacées.", "Action impossible",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            
             // Si la ligne cible contient déjà une locomotive différente, on fait un swap
             if (track.Locomotives.Any() && !track.Locomotives.Contains(loco))
             {
                 var existingLoco = track.Locomotives.First();
+                
+                // Check if existing is a ghost - don't allow swap with ghosts
+                if (existingLoco.IsForecastGhost)
+                {
+                    MessageBox.Show("Impossible d'échanger avec une locomotive fantôme (prévision).", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                
                 var sourceTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
                 
                 if (sourceTrack != null && sourceTrack.Kind == TrackKind.RollingLine)
