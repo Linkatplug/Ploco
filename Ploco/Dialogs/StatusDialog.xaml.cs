@@ -18,6 +18,7 @@ namespace Ploco.Dialogs
             TractionMotorsText.Text = locomotive.TractionPercent.HasValue
                 ? TractionPercentToMotors(locomotive.TractionPercent.Value).ToString()
                 : string.Empty;
+            TractionInfoText.Text = locomotive.TractionInfo ?? string.Empty;
             HsReasonText.Text = locomotive.HsReason ?? string.Empty;
             DefautInfoText.Text = locomotive.DefautInfo ?? string.Empty;
             if (forcedStatus.HasValue)
@@ -52,12 +53,14 @@ namespace Ploco.Dialogs
                     }
 
                     _locomotive.TractionPercent = MotorsToTractionPercent(motorsHs);
+                    _locomotive.TractionInfo = TractionInfoText.Text.Trim();
                     _locomotive.HsReason = null;
                     _locomotive.DefautInfo = null;
                 }
                 else
                 {
                     _locomotive.TractionPercent = null;
+                    _locomotive.TractionInfo = null;
                 }
 
                 if (status == LocomotiveStatus.HS)

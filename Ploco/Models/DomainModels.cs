@@ -46,6 +46,7 @@ namespace Ploco.Models
         private int? _tractionPercent;
         private string? _hsReason;
         private string? _defautInfo;
+        private string? _tractionInfo;
         private string? _maintenanceDate;
         private double? _assignedTrackOffsetX;
         private int? _assignedTrackId;
@@ -109,6 +110,19 @@ namespace Ploco.Models
                 if (_defautInfo != value)
                 {
                     _defautInfo = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? TractionInfo
+        {
+            get => _tractionInfo;
+            set
+            {
+                if (_tractionInfo != value)
+                {
+                    _tractionInfo = value;
                     OnPropertyChanged();
                 }
             }

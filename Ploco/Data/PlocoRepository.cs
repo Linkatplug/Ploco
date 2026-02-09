@@ -145,6 +145,7 @@ namespace Ploco.Data
             EnsureColumn(connection, "locomotives", "traction_percent", "INTEGER");
             EnsureColumn(connection, "locomotives", "hs_reason", "TEXT");
             EnsureColumn(connection, "locomotives", "defaut_info", "TEXT");
+            EnsureColumn(connection, "locomotives", "traction_info", "TEXT");
             EnsureColumn(connection, "locomotives", "maintenance_date", "TEXT");
             EnsureColumn(connection, "tracks", "type", "TEXT NOT NULL DEFAULT 'Main'");
             EnsureColumn(connection, "tracks", "config_json", "TEXT");
@@ -503,7 +504,7 @@ namespace Ploco.Data
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, series_id, number, status, pool, traction_percent, hs_reason, defaut_info, maintenance_date FROM locomotives;";
+                command.CommandText = "SELECT id, series_id, number, status, pool, traction_percent, hs_reason, defaut_info, traction_info, maintenance_date FROM locomotives;";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
@@ -522,7 +523,8 @@ namespace Ploco.Data
                         TractionPercent = reader.IsDBNull(5) ? null : reader.GetInt32(5),
                         HsReason = reader.IsDBNull(6) ? null : reader.GetString(6),
                         DefautInfo = reader.IsDBNull(7) ? null : reader.GetString(7),
-                        MaintenanceDate = reader.IsDBNull(8) ? null : reader.GetString(8)
+                        TractionInfo = reader.IsDBNull(8) ? null : reader.GetString(8),
+                        MaintenanceDate = reader.IsDBNull(9) ? null : reader.GetString(9)
                     });
                 }
             }
@@ -711,7 +713,7 @@ namespace Ploco.Data
                     loco.SeriesId = newSeriesId;
                 }
                 using var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool, traction_percent, hs_reason, defaut_info, maintenance_date) VALUES ($seriesId, $number, $status, $pool, $traction, $reason, $defaut, $maintenance);";
+                command.CommandText = "INSERT INTO locomotives (series_id, number, status, pool, traction_percent, hs_reason, defaut_info, traction_info, maintenance_date) VALUES ($seriesId, $number, $status, $pool, $traction, $reason, $defaut, $tractionInfo, $maintenance);";
                 command.Parameters.AddWithValue("$seriesId", loco.SeriesId);
                 command.Parameters.AddWithValue("$number", loco.Number);
                 command.Parameters.AddWithValue("$status", loco.Status.ToString());
@@ -719,6 +721,7 @@ namespace Ploco.Data
                 command.Parameters.AddWithValue("$traction", (object?)loco.TractionPercent ?? DBNull.Value);
                 command.Parameters.AddWithValue("$reason", string.IsNullOrWhiteSpace(loco.HsReason) ? DBNull.Value : loco.HsReason);
                 command.Parameters.AddWithValue("$defaut", string.IsNullOrWhiteSpace(loco.DefautInfo) ? DBNull.Value : loco.DefautInfo);
+                command.Parameters.AddWithValue("$tractionInfo", string.IsNullOrWhiteSpace(loco.TractionInfo) ? DBNull.Value : loco.TractionInfo);
                 command.Parameters.AddWithValue("$maintenance", string.IsNullOrWhiteSpace(loco.MaintenanceDate) ? DBNull.Value : loco.MaintenanceDate);
                 command.ExecuteNonQuery();
                 loco.Id = GetLastInsertRowId(connection);

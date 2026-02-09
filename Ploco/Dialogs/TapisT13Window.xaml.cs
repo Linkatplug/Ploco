@@ -65,7 +65,7 @@ namespace Ploco.Dialogs
                 {
                     LocomotiveStatus.HS => loco.HsReason ?? string.Empty,
                     LocomotiveStatus.DefautMineur => loco.DefautInfo ?? string.Empty,
-                    LocomotiveStatus.ManqueTraction => "Manque traction",
+                    LocomotiveStatus.ManqueTraction => FormatTractionMotif(loco),
                     _ => string.Empty
                 };
 
@@ -259,6 +259,21 @@ namespace Ploco.Dialogs
                     T13Grid.SelectedItem = row;
                 }
             }
+        }
+
+        private static string FormatTractionMotif(LocomotiveModel loco)
+        {
+            if (!loco.TractionPercent.HasValue)
+                return string.Empty;
+            
+            var percent = $"{loco.TractionPercent}%";
+            
+            if (!string.IsNullOrWhiteSpace(loco.TractionInfo))
+            {
+                return $"{percent} {loco.TractionInfo}";
+            }
+            
+            return percent;
         }
 
         private sealed class T13Row
