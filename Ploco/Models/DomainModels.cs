@@ -10,7 +10,8 @@ namespace Ploco.Models
     {
         Ok,
         ManqueTraction,
-        HS
+        HS,
+        DefautMineur
     }
 
     public enum TileType
@@ -44,10 +45,16 @@ namespace Ploco.Models
         private LocomotiveStatus _status;
         private int? _tractionPercent;
         private string? _hsReason;
+        private string? _defautInfo;
+        private string? _tractionInfo;
         private string? _maintenanceDate;
         private double? _assignedTrackOffsetX;
         private int? _assignedTrackId;
         private bool _isVisibleInActivePool = true;
+        private bool _isForecastOrigin;
+        private int? _forecastTargetRollingLineTrackId;
+        private bool _isForecastGhost;
+        private int? _forecastSourceLocomotiveId;
 
         public int Id { get; set; }
         public int SeriesId { get; set; }
@@ -90,6 +97,32 @@ namespace Ploco.Models
                 if (_hsReason != value)
                 {
                     _hsReason = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? DefautInfo
+        {
+            get => _defautInfo;
+            set
+            {
+                if (_defautInfo != value)
+                {
+                    _defautInfo = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? TractionInfo
+        {
+            get => _tractionInfo;
+            set
+            {
+                if (_tractionInfo != value)
+                {
+                    _tractionInfo = value;
                     OnPropertyChanged();
                 }
             }
@@ -155,6 +188,58 @@ namespace Ploco.Models
                 if (_isVisibleInActivePool != value)
                 {
                     _isVisibleInActivePool = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsForecastOrigin
+        {
+            get => _isForecastOrigin;
+            set
+            {
+                if (_isForecastOrigin != value)
+                {
+                    _isForecastOrigin = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int? ForecastTargetRollingLineTrackId
+        {
+            get => _forecastTargetRollingLineTrackId;
+            set
+            {
+                if (_forecastTargetRollingLineTrackId != value)
+                {
+                    _forecastTargetRollingLineTrackId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsForecastGhost
+        {
+            get => _isForecastGhost;
+            set
+            {
+                if (_isForecastGhost != value)
+                {
+                    _isForecastGhost = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int? ForecastSourceLocomotiveId
+        {
+            get => _forecastSourceLocomotiveId;
+            set
+            {
+                if (_forecastSourceLocomotiveId != value)
+                {
+                    _forecastSourceLocomotiveId = value;
                     OnPropertyChanged();
                 }
             }

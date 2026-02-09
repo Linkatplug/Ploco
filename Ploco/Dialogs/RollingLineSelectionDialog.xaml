@@ -1,0 +1,46 @@
+<Window x:Class="Ploco.Dialogs.RollingLineSelectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sélectionner une ligne de roulement" Height="400" Width="450"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Sélectionnez une ligne de roulement disponible :" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+        <ListBox Grid.Row="1" x:Name="RollingLineListBox" Margin="0,0,0,12" 
+                 SelectionMode="Single" MouseDoubleClick="ListBox_MouseDoubleClick">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                        <TextBlock Text="(" Foreground="Gray"/>
+                        <TextBlock Text="{Binding TileName}" Foreground="Gray"/>
+                        <TextBlock Text=")" Foreground="Gray"/>
+                        <TextBlock Text=" - Occupée" Foreground="Red" FontWeight="Bold" Margin="8,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOccupied}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Valider" Width="80" Margin="0,0,6,0" Click="Validate_Click" IsDefault="True"/>
+            <Button Content="Annuler" Width="80" Click="Cancel_Click" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

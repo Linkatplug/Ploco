@@ -18,7 +18,9 @@ namespace Ploco.Dialogs
             TractionMotorsText.Text = locomotive.TractionPercent.HasValue
                 ? TractionPercentToMotors(locomotive.TractionPercent.Value).ToString()
                 : string.Empty;
+            TractionInfoText.Text = locomotive.TractionInfo ?? string.Empty;
             HsReasonText.Text = locomotive.HsReason ?? string.Empty;
+            DefautInfoText.Text = locomotive.DefautInfo ?? string.Empty;
             if (forcedStatus.HasValue)
             {
                 StatusCombo.IsEnabled = false;
@@ -51,11 +53,14 @@ namespace Ploco.Dialogs
                     }
 
                     _locomotive.TractionPercent = MotorsToTractionPercent(motorsHs);
+                    _locomotive.TractionInfo = TractionInfoText.Text.Trim();
                     _locomotive.HsReason = null;
+                    _locomotive.DefautInfo = null;
                 }
                 else
                 {
                     _locomotive.TractionPercent = null;
+                    _locomotive.TractionInfo = null;
                 }
 
                 if (status == LocomotiveStatus.HS)
@@ -67,10 +72,26 @@ namespace Ploco.Dialogs
                     }
 
                     _locomotive.HsReason = HsReasonText.Text.Trim();
+                    _locomotive.DefautInfo = null;
                 }
                 else
                 {
                     _locomotive.HsReason = null;
+                }
+
+                if (status == LocomotiveStatus.DefautMineur)
+                {
+                    if (string.IsNullOrWhiteSpace(DefautInfoText.Text))
+                    {
+                        MessageBox.Show("Veuillez renseigner la description du problème.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    _locomotive.DefautInfo = DefautInfoText.Text.Trim();
+                }
+                else
+                {
+                    _locomotive.DefautInfo = null;
                 }
 
                 _locomotive.Status = status;
@@ -91,6 +112,7 @@ namespace Ploco.Dialogs
             var status = GetSelectedStatus();
             TractionPanel.Visibility = status == LocomotiveStatus.ManqueTraction ? Visibility.Visible : Visibility.Collapsed;
             HsPanel.Visibility = status == LocomotiveStatus.HS ? Visibility.Visible : Visibility.Collapsed;
+            DefautPanel.Visibility = status == LocomotiveStatus.DefautMineur ? Visibility.Visible : Visibility.Collapsed;
             TractionHint.Text = status == LocomotiveStatus.ManqueTraction
                 ? "1 moteur HS = 75% · 2 moteurs HS = 50% · 3 moteurs HS = 25%"
                 : string.Empty;

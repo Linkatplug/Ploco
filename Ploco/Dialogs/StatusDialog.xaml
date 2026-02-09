@@ -9,17 +9,25 @@
             <ComboBoxItem Content="OK" Tag="Ok"/>
             <ComboBoxItem Content="Manque de traction" Tag="ManqueTraction"/>
             <ComboBoxItem Content="HS" Tag="HS"/>
+            <ComboBoxItem Content="A verifier / Defaut mineur" Tag="DefautMineur"/>
         </ComboBox>
 
         <StackPanel x:Name="TractionPanel" Visibility="Collapsed" Margin="0,0,0,12">
             <TextBlock Text="Nombre de moteurs HS sur 4" FontWeight="SemiBold"/>
-            <TextBox x:Name="TractionMotorsText" Margin="0,6,0,4"/>
+            <TextBox x:Name="TractionMotorsText" Margin="0,6,0,12"/>
+            <TextBlock Text="Commentaire (optionnel)" FontWeight="SemiBold"/>
+            <TextBox x:Name="TractionInfoText" Margin="0,6,0,4" Height="60" AcceptsReturn="True" TextWrapping="Wrap"/>
             <TextBlock x:Name="TractionHint" Foreground="SlateGray"/>
         </StackPanel>
 
         <StackPanel x:Name="HsPanel" Visibility="Collapsed" Margin="0,0,0,12">
             <TextBlock Text="Raison HS" FontWeight="SemiBold"/>
             <TextBox x:Name="HsReasonText" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <StackPanel x:Name="DefautPanel" Visibility="Collapsed" Margin="0,0,0,12">
+            <TextBlock Text="Description du problème *" FontWeight="SemiBold"/>
+            <TextBox x:Name="DefautInfoText" Margin="0,6,0,0" Height="60" AcceptsReturn="True" TextWrapping="Wrap"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

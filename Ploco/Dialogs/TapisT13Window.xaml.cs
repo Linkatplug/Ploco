@@ -27,26 +27,52 @@ namespace Ploco.Dialogs
         {
             _rows.Clear();
             var tracks = tiles.SelectMany(tile => tile.Tracks).ToList();
+            var allLocomotives = locomotives.ToList();
 
-            foreach (var loco in locomotives
+            foreach (var loco in allLocomotives
                          .Where(l => IsT13(l) && string.Equals(l.Pool, "Sibelit", StringComparison.OrdinalIgnoreCase))
                          .OrderBy(l => l.Number))
             {
-                var track = tracks.FirstOrDefault(t => t.Locomotives.Contains(loco));
-                var location = ResolveLocation(track, tiles);
-                var rollingLineNumber = ResolveRollingLineNumber(track);
-                var trainInfo = track?.IsOnTrain == true
-                    ? string.IsNullOrWhiteSpace(track.TrainNumber)
-                        ? location
-                        : $"{location} {track.TrainNumber}"
-                    : location;
+                // Get the EFFECTIVE track (considers forecast/ghost mode)
+                var effectiveTrack = GetEffectiveTrack(loco, tracks, allLocomotives);
+                
+                // Get text based on effective track
+                var trainLocationText = GetTrainLocationText(loco, effectiveTrack, tiles);
+                var rollingLineNumber = ResolveRollingLineNumber(effectiveTrack);
 
                 var isHs = loco.Status == LocomotiveStatus.HS;
-                var locHs = isHs ? trainInfo : string.Empty;
-                var report = !string.IsNullOrWhiteSpace(rollingLineNumber)
-                    ? rollingLineNumber
-                    : isHs ? trainInfo : string.Empty;
-                var motif = isHs ? (loco.HsReason ?? string.Empty) : string.Empty;
+                
+                // Green condition: Non-HS + on Line track + with train
+                var isNonHsOnLine = !isHs 
+                    && effectiveTrack?.Kind == TrackKind.Line 
+                    && effectiveTrack.IsOnTrain == true;
+
+                // For HS on rolling line: different display for LocHs vs Report
+                string locHs, report;
+                if (isHs && !string.IsNullOrWhiteSpace(rollingLineNumber))
+                {
+                    // HS on rolling line: show origin tile in LocHs, "HS CV {number}" in Report
+                    locHs = GetOriginTileLocation(loco, tiles);
+                    report = $"HS CV {rollingLineNumber}";
+                }
+                else
+                {
+                    // Normal logic for other cases
+                    locHs = isHs ? trainLocationText : string.Empty;
+                    report = isHs ? trainLocationText 
+                        : isNonHsOnLine ? trainLocationText
+                        : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
+                        : trainLocationText;
+                }
+                
+                // Motif/Status info for HS, DefautMineur, and ManqueTraction
+                var motif = loco.Status switch
+                {
+                    LocomotiveStatus.HS => loco.HsReason ?? string.Empty,
+                    LocomotiveStatus.DefautMineur => loco.DefautInfo ?? string.Empty,
+                    LocomotiveStatus.ManqueTraction => FormatTractionMotif(loco),
+                    _ => string.Empty
+                };
 
                 _rows.Add(new T13Row
                 {
@@ -55,11 +81,95 @@ namespace Ploco.Dialogs
                     Motif = motif,
                     LocHs = locHs,
                     Report = report,
-                    IsHs = isHs
+                    IsHs = isHs,
+                    IsNonHsOnLine = isNonHsOnLine,
+                    Status = loco.Status
                 });
             }
 
             UpdateSummary();
+        }
+        
+        /// <summary>
+        /// Gets the effective track for a locomotive.
+        /// If locomotive is in forecast mode (IsForecastOrigin), returns the ghost's track.
+        /// Otherwise returns the real track.
+        /// </summary>
+        private static TrackModel? GetEffectiveTrack(LocomotiveModel loco, List<TrackModel> tracks, List<LocomotiveModel> allLocomotives)
+        {
+            // Check if locomotive is in forecast origin mode (blue locomotive)
+            if (loco.IsForecastOrigin && loco.ForecastTargetRollingLineTrackId.HasValue)
+            {
+                // Find the ghost locomotive
+                var ghost = allLocomotives.FirstOrDefault(l => 
+                    l.IsForecastGhost && 
+                    l.ForecastSourceLocomotiveId == loco.Id);
+                
+                if (ghost != null)
+                {
+                    // Return the ghost's track
+                    var ghostTrack = tracks.FirstOrDefault(t => t.Locomotives.Contains(ghost));
+                    if (ghostTrack != null)
+                    {
+                        return ghostTrack;
+                    }
+                }
+            }
+            
+            // Return real track
+            return tracks.FirstOrDefault(t => t.Locomotives.Contains(loco));
+        }
+
+        /// <summary>
+        /// Gets the origin tile location for a locomotive.
+        /// Searches for the tile where the locomotive originates (Depot/Garage/Line tracks, not RollingLine).
+        /// </summary>
+        private static string GetOriginTileLocation(LocomotiveModel loco, IEnumerable<TileModel> tiles)
+        {
+            // Find the tile where loco originates (in Depot/Garage/Line tracks, not RollingLine)
+            foreach (var tile in tiles)
+            {
+                foreach (var track in tile.Tracks.Where(t => t.Kind != TrackKind.RollingLine))
+                {
+                    // Match by Id or Number (to handle WPF instance mismatches)
+                    if (track.Locomotives.Any(l => l.Id == loco.Id || l.Number == loco.Number))
+                    {
+                        return ResolveLocation(track, tiles);
+                    }
+                }
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Gets the train location text for a locomotive.
+        /// Handles different track kinds and locomotive statuses.
+        /// </summary>
+        private static string GetTrainLocationText(LocomotiveModel loco, TrackModel? track, IEnumerable<TileModel> tiles)
+        {
+            if (track == null)
+            {
+                return string.Empty;
+            }
+
+            var location = ResolveLocation(track, tiles);
+            
+            // For Line track with train: "TileName TrainNumber"
+            if (track.Kind == TrackKind.Line && track.IsOnTrain && !string.IsNullOrWhiteSpace(track.TrainNumber))
+            {
+                return $"{location} {track.TrainNumber}";
+            }
+            
+            // For OK locomotives in depot/garage (not Line, not RollingLine): "DISPO TileName"
+            if (loco.Status == LocomotiveStatus.Ok && 
+                track.Kind != TrackKind.Line && 
+                track.Kind != TrackKind.RollingLine)
+            {
+                return $"DISPO {location}";
+            }
+
+            // Otherwise just the location
+            return location;
         }
 
         private static bool IsT13(LocomotiveModel loco)
@@ -177,6 +287,33 @@ namespace Ploco.Dialogs
             }
         }
 
+        private static string FormatTractionMotif(LocomotiveModel loco)
+        {
+            if (!loco.TractionPercent.HasValue)
+                return string.Empty;
+            
+            var percent = $"{loco.TractionPercent}%";
+            
+            if (!string.IsNullOrWhiteSpace(loco.TractionInfo))
+            {
+                return $"{percent} {loco.TractionInfo}";
+            }
+            
+            return percent;
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Restore window settings
+            WindowSettingsHelper.RestoreWindowSettings(this, "TapisT13Window");
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Save window settings
+            WindowSettingsHelper.SaveWindowSettings(this, "TapisT13Window");
+        }
+
         private sealed class T13Row
         {
             public string Locomotive { get; set; } = string.Empty;
@@ -185,6 +322,8 @@ namespace Ploco.Dialogs
             public string LocHs { get; set; } = string.Empty;
             public string Report { get; set; } = string.Empty;
             public bool IsHs { get; set; }
+            public bool IsNonHsOnLine { get; set; }
+            public LocomotiveStatus Status { get; set; }
         }
     }
 }

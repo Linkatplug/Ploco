@@ -10,6 +10,26 @@
     <Window.Resources>
         <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        
+        <!-- Style for locomotive Border with forecast color overlay -->
+        <Style x:Key="LocomotiveBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Opacity" Value="1.0"/>
+            <Style.Triggers>
+                <!-- Forecast origin: Blue (highest priority) -->
+                <DataTrigger Binding="{Binding IsForecastOrigin}" Value="True">
+                    <Setter Property="Background" Value="Blue"/>
+                </DataTrigger>
+                <!-- Forecast ghost: Show status color with slight transparency to distinguish from real locomotives -->
+                <DataTrigger Binding="{Binding IsForecastGhost}" Value="True">
+                    <Setter Property="Opacity" Value="0.8"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        
         <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFF2F2F2"/>
         <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#FFEFF4FF"/>
         <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FFF7F7F7"/>
@@ -112,11 +132,15 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <ContextMenu x:Key="LocomotiveTileContextMenu">
+        <ContextMenu x:Key="LocomotiveTileContextMenu" Opened="LocomotiveTileContextMenu_Opened">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
             <MenuItem Header="Loc HS" Click="MenuItem_LocHs_Click" InputGestureText="Ctrl+H"/>
             <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
             <MenuItem Header="Retirer de la tuile" Click="MenuItem_RemoveFromTile_Click"/>
+            <Separator/>
+            <MenuItem Header="Placement prévisionnel" Click="MenuItem_PlacementPrevisionnel_Click" x:Name="MenuItemPlacementPrevisionnel"/>
+            <MenuItem Header="Annuler le placement prévisionnel" Click="MenuItem_AnnulerPrevisionnel_Click" x:Name="MenuItemAnnulerPrevisionnel"/>
+            <MenuItem Header="Valider le placement prévisionnel" Click="MenuItem_ValiderPrevisionnel_Click" x:Name="MenuItemValiderPrevisionnel"/>
         </ContextMenu>
         <ContextMenu x:Key="LocomotiveListContextMenu">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
@@ -167,8 +191,8 @@
                                         </ListBox.ItemsPanel>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                            <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                    Padding="4" Margin="2" CornerRadius="4"
+                                            <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                    
                                                     ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                     PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                     <Grid>
@@ -240,8 +264,8 @@
                                                             </ListBox.ItemContainerStyle>
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                                    <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                            
                                                                             ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                             PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                         <Grid>
@@ -352,8 +376,8 @@
                                             </ListBox.ItemsPanel>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                    <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                            
                                                             ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                             PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                         <Grid>
@@ -516,8 +540,8 @@
                                                             </ListBox.ItemContainerStyle>
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                                    <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                            
                                                                             ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                             PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                         <Grid>
@@ -639,8 +663,8 @@
                                                         </ListBox.ItemContainerStyle>
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                        
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                         PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                     <Grid>
@@ -751,8 +775,8 @@
                                                         </ListBox.ItemsPanel>
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
-                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                        
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                         PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                     <Grid>
@@ -837,12 +861,16 @@
                 <MenuItem Header="Supprimer un preset" x:Name="ViewPresetsDeleteMenu"/>
             </MenuItem>
             <MenuItem Header="Option">
+                <MenuItem Header="Import" Click="MenuItem_Import_Click"/>
+                <Separator/>
                 <MenuItem Header="Mode sombre" IsCheckable="True" Click="ToggleDarkMode_Click"/>
                 <MenuItem Header="Gestion base de données" Click="MenuItem_DatabaseManagement_Click"/>
                 <MenuItem Header="Réinitialiser">
                     <MenuItem Header="Réinitialiser locomotives" Click="MenuItem_ResetLocomotives_Click"/>
                     <MenuItem Header="Réinitialiser tuiles" Click="MenuItem_ResetTiles_Click"/>
                 </MenuItem>
+                <Separator/>
+                <MenuItem Header="Logs" Click="MenuItem_Logs_Click"/>
             </MenuItem>
         </Menu>
         <ToolBar DockPanel.Dock="Top">
@@ -878,7 +906,7 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"
+                                <Border Style="{StaticResource LocomotiveBorderStyle}"
                                         Padding="6" Margin="4" CornerRadius="4"
                                         ContextMenu="{StaticResource LocomotiveListContextMenu}"
                                         PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">

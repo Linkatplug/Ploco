@@ -44,10 +44,19 @@ namespace Ploco
             _repository = new PlocoRepository("ploco.db");
             InputBindings.Add(new KeyBinding(LocomotiveHsCommand, new KeyGesture(Key.H, ModifierKeys.Control)));
             CommandBindings.Add(new CommandBinding(LocomotiveHsCommand, LocomotiveHsCommand_Executed, LocomotiveHsCommand_CanExecute));
+            
+            // Initialize logging system
+            Logger.Initialize();
+            Logger.Info("Application starting", "Application");
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            Logger.Info("Main window loaded", "Application");
+            
+            // Restore window settings
+            WindowSettingsHelper.RestoreWindowSettings(this, "MainWindow");
+            
             _repository.Initialize();
             _repository.SeedDefaultDataIfNeeded();
 
@@ -59,6 +68,8 @@ namespace Ploco
             TileCanvas.ItemsSource = _tiles;
             InitializeLocomotiveView();
             UpdateTileCanvasExtent();
+            
+            Logger.Info($"Loaded {_locomotives.Count} locomotives and {_tiles.Count} tiles", "Application");
         }
 
         private void TileScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -72,10 +83,17 @@ namespace Ploco
             if (result != MessageBoxResult.Yes)
             {
                 e.Cancel = true;
+                Logger.Info("Application close cancelled by user", "Application");
                 return;
             }
 
+            Logger.Info("Saving state before closing", "Application");
             PersistState();
+            
+            // Save window settings
+            WindowSettingsHelper.SaveWindowSettings(this, "MainWindow");
+            
+            Logger.Shutdown();
         }
 
         private void LoadState()
@@ -105,11 +123,65 @@ namespace Ploco
 
         private void PersistState()
         {
+            // Filter out ghost locomotives from tracks before saving
+            var locomotivesToSave = _locomotives.Where(l => !l.IsForecastGhost).ToList();
+            
+            // Create a clean copy of tiles without ghosts
+            var tilesToSave = new List<TileModel>();
+            foreach (var tile in _tiles)
+            {
+                var tileCopy = new TileModel
+                {
+                    Id = tile.Id,
+                    Type = tile.Type,
+                    Name = tile.Name,
+                    X = tile.X,
+                    Y = tile.Y,
+                    Width = tile.Width,
+                    Height = tile.Height,
+                    LocationPreset = tile.LocationPreset,
+                    GarageTrackNumber = tile.GarageTrackNumber,
+                    RollingLineCount = tile.RollingLineCount
+                };
+
+                foreach (var track in tile.Tracks)
+                {
+                    var trackCopy = new TrackModel
+                    {
+                        Id = track.Id,
+                        TileId = track.TileId,
+                        Position = track.Position,
+                        Kind = track.Kind,
+                        Name = track.Name,
+                        IsOnTrain = track.IsOnTrain,
+                        StopTime = track.StopTime,
+                        IssueReason = track.IssueReason,
+                        IsLocomotiveHs = track.IsLocomotiveHs,
+                        LeftLabel = track.LeftLabel,
+                        RightLabel = track.RightLabel,
+                        IsLeftBlocked = track.IsLeftBlocked,
+                        IsRightBlocked = track.IsRightBlocked,
+                        TrainNumber = track.TrainNumber
+                    };
+
+                    // Only add non-ghost locomotives to the track
+                    foreach (var loco in track.Locomotives.Where(l => !l.IsForecastGhost))
+                    {
+                        trackCopy.Locomotives.Add(loco);
+                    }
+
+                    tileCopy.Tracks.Add(trackCopy);
+                }
+
+                tileCopy.RefreshTrackCollections();
+                tilesToSave.Add(tileCopy);
+            }
+
             var state = new AppState
             {
                 Series = BuildSeriesState(),
-                Locomotives = _locomotives.ToList(),
-                Tiles = _tiles.ToList()
+                Locomotives = locomotivesToSave,
+                Tiles = tilesToSave
             };
             _repository.SaveState(state);
         }
@@ -584,6 +656,12 @@ namespace Ploco
 
             if (LocomotiveList.SelectedItem is LocomotiveModel loco)
             {
+                // Prevent dragging ghost locomotives (safety check - they shouldn't be in the list)
+                if (loco.IsForecastGhost)
+                {
+                    return;
+                }
+                
                 DragDrop.DoDragDrop(LocomotiveList, loco, DragDropEffects.Move);
             }
         }
@@ -632,6 +710,12 @@ namespace Ploco
 
             if (sender is ListBox listBox && listBox.SelectedItem is LocomotiveModel loco)
             {
+                // Prevent dragging ghost locomotives
+                if (loco.IsForecastGhost)
+                {
+                    return;
+                }
+                
                 DragDrop.DoDragDrop(listBox, loco, DragDropEffects.Move);
             }
         }
@@ -689,11 +773,22 @@ namespace Ploco
 
         private void MoveLocomotiveToTrack(LocomotiveModel loco, TrackModel targetTrack, int insertIndex)
         {
-            if (targetTrack.Kind == TrackKind.RollingLine && targetTrack.Locomotives.Any() && !targetTrack.Locomotives.Contains(loco))
+            Logger.Debug($"Moving locomotive Id={loco.Id} Number={loco.Number} to track {targetTrack.Name} at index {insertIndex}", "Movement");
+            
+            // For rolling lines, check if occupied by REAL locomotives (ignore ghosts)
+            if (targetTrack.Kind == TrackKind.RollingLine)
             {
-                MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                var realLocosInTarget = targetTrack.Locomotives
+                    .Where(l => !l.IsForecastGhost)
+                    .ToList();
+                
+                if (realLocosInTarget.Any() && !targetTrack.Locomotives.Contains(loco))
+                {
+                    Logger.Warning($"Cannot move loco Id={loco.Id} Number={loco.Number} to occupied rolling line {targetTrack.Name} (occupied by {realLocosInTarget.Count} real loco(s))", "Movement");
+                    MessageBox.Show("Une seule locomotive est autorisée par ligne de roulement.", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
             }
 
             var currentTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
@@ -701,6 +796,8 @@ namespace Ploco
             {
                 var currentIndex = currentTrack.Locomotives.IndexOf(loco);
                 currentTrack.Locomotives.Remove(loco);
+                Logger.Info($"Removed loco Id={loco.Id} Number={loco.Number} from {currentTrack.Name} (index {currentIndex})", "Movement");
+                
                 if (currentTrack == targetTrack && insertIndex > currentIndex)
                 {
                     insertIndex--;
@@ -712,10 +809,12 @@ namespace Ploco
                 if (insertIndex < 0 || insertIndex > targetTrack.Locomotives.Count)
                 {
                     targetTrack.Locomotives.Add(loco);
+                    Logger.Info($"Added loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name} (end)", "Movement");
                 }
                 else
                 {
                     targetTrack.Locomotives.Insert(insertIndex, loco);
+                    Logger.Info($"Inserted loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name} at index {insertIndex}", "Movement");
                 }
             }
 
@@ -725,6 +824,8 @@ namespace Ploco
             _repository.AddHistory("LocomotiveMoved", $"Loco {loco.Number} déplacée vers {targetTrack.Name}.");
             UpdatePoolVisibility();
             RefreshTapisT13();
+            
+            Logger.Info($"Successfully moved loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name}", "Movement");
         }
 
         private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
@@ -838,12 +939,20 @@ namespace Ploco
                 return;
             }
 
+            var oldStatus = loco.Status;
+            Logger.Debug($"Opening status dialog for loco {loco.Number} (current status: {oldStatus})", "Status");
+            
             var dialog = new StatusDialog(loco) { Owner = this };
             if (dialog.ShowDialog() == true)
             {
+                Logger.Info($"Status changed for loco {loco.Number}: {oldStatus} -> {loco.Status}", "Status");
                 _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
                 PersistState();
                 RefreshTapisT13();
+            }
+            else
+            {
+                Logger.Debug($"Status change cancelled for loco {loco.Number}", "Status");
             }
         }
 
@@ -883,6 +992,393 @@ namespace Ploco
                 UpdatePoolVisibility();
                 PersistState();
                 RefreshTapisT13();
+            }
+        }
+
+        private void LocomotiveTileContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (sender is not ContextMenu contextMenu)
+            {
+                return;
+            }
+
+            // Get the locomotive from the context menu's placement target
+            LocomotiveModel? loco = null;
+            if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel l)
+            {
+                loco = l;
+            }
+            else if (contextMenu.DataContext is LocomotiveModel l2)
+            {
+                loco = l2;
+            }
+
+            if (loco == null)
+            {
+                return;
+            }
+
+            // Log context menu opened on this locomotive
+            Logger.Debug($"Opened context menu on loco Id={loco.Id} Number={loco.Number} IsForecastOrigin={loco.IsForecastOrigin} IsForecastGhost={loco.IsForecastGhost}", "ContextMenu");
+
+            // Find menu items by name - we need to search through the Items collection
+            MenuItem? placementItem = null;
+            MenuItem? annulerItem = null;
+            MenuItem? validerItem = null;
+
+            foreach (var item in contextMenu.Items)
+            {
+                if (item is MenuItem menuItem)
+                {
+                    if (menuItem.Header?.ToString() == "Placement prévisionnel")
+                        placementItem = menuItem;
+                    else if (menuItem.Header?.ToString() == "Annuler le placement prévisionnel")
+                        annulerItem = menuItem;
+                    else if (menuItem.Header?.ToString() == "Valider le placement prévisionnel")
+                        validerItem = menuItem;
+                }
+            }
+
+            // Show/hide based on forecast state
+            if (placementItem != null)
+            {
+                placementItem.Visibility = loco.IsForecastOrigin ? Visibility.Collapsed : Visibility.Visible;
+            }
+
+            if (annulerItem != null)
+            {
+                annulerItem.Visibility = loco.IsForecastOrigin ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            if (validerItem != null)
+            {
+                validerItem.Visibility = loco.IsForecastOrigin ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// Removes all forecast ghosts linked to the specified locomotive from ALL tracks.
+        /// Uses robust matching to handle cases where WPF provides different instances.
+        /// Strategy: Search by Number first (most reliable), then verify it's a ghost.
+        /// </summary>
+        private int RemoveForecastGhostsFor(LocomotiveModel loco)
+        {
+            int ghostsRemoved = 0;
+            var tracksWithGhosts = new List<string>();
+
+            // Log what we're searching for
+            Logger.Debug($"RemoveForecastGhostsFor: searching for ghosts of loco Id={loco.Id} Number={loco.Number} SeriesId={loco.SeriesId} ForecastTargetRollingLineTrackId={loco.ForecastTargetRollingLineTrackId}", "Forecast");
+
+            // Try to find the real source locomotive if the passed instance doesn't have forecast info
+            int? targetTrackId = loco.ForecastTargetRollingLineTrackId;
+            
+            if (targetTrackId == null && loco.IsForecastOrigin)
+            {
+                // This is the origin but ForecastTargetRollingLineTrackId is null, shouldn't happen
+                Logger.Warning($"IsForecastOrigin=true but ForecastTargetRollingLineTrackId=null for loco Id={loco.Id} Number={loco.Number}", "Forecast");
+            }
+            
+            // If we don't have target track info, try to find it from any origin loco with same number
+            if (targetTrackId == null)
+            {
+                var originLocoWithSameNumber = _locomotives.FirstOrDefault(l => 
+                    l.IsForecastOrigin && 
+                    l.Number == loco.Number && 
+                    l.ForecastTargetRollingLineTrackId != null);
+                
+                if (originLocoWithSameNumber != null)
+                {
+                    targetTrackId = originLocoWithSameNumber.ForecastTargetRollingLineTrackId;
+                    Logger.Debug($"Found origin loco with same number: Id={originLocoWithSameNumber.Id} Number={originLocoWithSameNumber.Number}, using its ForecastTargetRollingLineTrackId={targetTrackId}", "Forecast");
+                }
+            }
+
+            // Get all tracks, prioritizing target track if known
+            var allTracks = _tiles.SelectMany(t => t.Tracks).ToList();
+            IEnumerable<TrackModel> orderedTracks;
+            
+            if (targetTrackId != null)
+            {
+                var targetTracks = allTracks.Where(t => t.Id == targetTrackId);
+                var otherTracks = allTracks.Where(t => t.Id != targetTrackId);
+                orderedTracks = targetTracks.Concat(otherTracks);
+                Logger.Debug($"Prioritizing target track Id={targetTrackId}", "Forecast");
+            }
+            else
+            {
+                orderedTracks = allTracks;
+                Logger.Debug($"No target track known, searching all tracks", "Forecast");
+            }
+
+            // Scan tracks for ghosts - use multiple matching strategies
+            foreach (var track in orderedTracks)
+            {
+                // Strategy: Find ghosts by Number (most reliable) and verify they're ghosts
+                var ghostsToRemove = track.Locomotives
+                    .Where(l => l.IsForecastGhost && l.Number == loco.Number)
+                    .ToList();
+
+                if (ghostsToRemove.Any())
+                {
+                    Logger.Debug($"Found {ghostsToRemove.Count} ghost(s) in track {track.Name} with Number={loco.Number}", "Forecast");
+                }
+
+                foreach (var ghost in ghostsToRemove)
+                {
+                    // Verify this is really a match
+                    bool isMatch = false;
+                    string matchReason = "";
+                    
+                    // Check 1: Exact Id match
+                    if (ghost.ForecastSourceLocomotiveId == loco.Id)
+                    {
+                        isMatch = true;
+                        matchReason = "SourceIdMatch";
+                    }
+                    // Check 2: Number match (already verified above, so this is our fallback)
+                    else if (ghost.Number == loco.Number)
+                    {
+                        isMatch = true;
+                        matchReason = "NumberFallback";
+                    }
+                    
+                    if (isMatch)
+                    {
+                        track.Locomotives.Remove(ghost);
+                        ghostsRemoved++;
+                        tracksWithGhosts.Add(track.Name);
+                        
+                        Logger.Debug($"Removed ghost (Id={ghost.Id}, Number={ghost.Number}, ForecastSourceLocomotiveId={ghost.ForecastSourceLocomotiveId}) for loco (Id={loco.Id}, Number={loco.Number}) from track {track.Name}, reason={matchReason}", "Forecast");
+                    }
+                }
+            }
+
+            if (ghostsRemoved > 0)
+            {
+                Logger.Info($"Removed {ghostsRemoved} ghost(s) for loco Id={loco.Id} Number={loco.Number} from tracks: {string.Join(", ", tracksWithGhosts)}", "Forecast");
+            }
+            else
+            {
+                // Log all ghosts we can see to help debug
+                var allGhosts = allTracks.SelectMany(t => t.Locomotives.Where(l => l.IsForecastGhost))
+                    .Select(g => $"Ghost Id={g.Id} Number={g.Number} SeriesId={g.SeriesId} ForecastSourceLocomotiveId={g.ForecastSourceLocomotiveId}")
+                    .ToList();
+                
+                Logger.Warning($"No ghosts found for loco Id={loco.Id} Number={loco.Number} SeriesId={loco.SeriesId}. All ghosts in system: [{string.Join("; ", allGhosts)}]", "Forecast");
+            }
+
+            return ghostsRemoved;
+        }
+
+        private void MenuItem_PlacementPrevisionnel_Click(object sender, RoutedEventArgs e)
+        {
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null)
+            {
+                return;
+            }
+
+            Logger.Debug($"Forecast placement requested: loco Id={loco.Id} Number={loco.Number}", "Forecast");
+
+            // Check if already in forecast mode
+            if (loco.IsForecastOrigin)
+            {
+                Logger.Warning($"Loco Id={loco.Id} Number={loco.Number} already in forecast mode", "Forecast");
+                MessageBox.Show("Cette locomotive est déjà en mode prévisionnel.", "Placement prévisionnel",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Check if locomotive is assigned to a track
+            if (loco.AssignedTrackId == null)
+            {
+                Logger.Warning($"Loco Id={loco.Id} Number={loco.Number} not assigned to any track, cannot forecast", "Forecast");
+                MessageBox.Show("La locomotive doit être placée dans une tuile pour activer le mode prévisionnel.", 
+                    "Placement prévisionnel", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Show rolling line selection dialog
+            var dialog = new RollingLineSelectionDialog(_tiles) { Owner = this };
+            if (dialog.ShowDialog() != true || dialog.SelectedTrack == null)
+            {
+                Logger.Debug($"Forecast placement cancelled by user for loco Id={loco.Id} Number={loco.Number}", "Forecast");
+                return;
+            }
+
+            var targetTrack = dialog.SelectedTrack;
+            Logger.Info($"Forecast placement: loco Id={loco.Id} Number={loco.Number} -> track {targetTrack.Name}", "Forecast");
+
+            // Set the original locomotive to forecast origin (will turn blue via DataTrigger)
+            loco.IsForecastOrigin = true;
+            loco.ForecastTargetRollingLineTrackId = targetTrack.Id;
+
+            // Create a ghost locomotive for the rolling line
+            // Ghost shows REAL status color (red/orange/yellow/green) via StatutToBrushConverter
+            var ghost = new LocomotiveModel
+            {
+                Id = -100000 - loco.Id, // Unique negative ID
+                SeriesId = loco.SeriesId,
+                SeriesName = loco.SeriesName,
+                Number = loco.Number,
+                Status = loco.Status, // Ghost reflects real status
+                Pool = loco.Pool,
+                TractionPercent = loco.TractionPercent,
+                HsReason = loco.HsReason,
+                MaintenanceDate = loco.MaintenanceDate,
+                IsForecastGhost = true,
+                ForecastSourceLocomotiveId = loco.Id, // Link back to original using Id
+                AssignedTrackId = targetTrack.Id
+            };
+
+            Logger.Debug($"Created ghost Id={ghost.Id} Number={ghost.Number} for source loco Id={loco.Id} Number={loco.Number}, Status={loco.Status}", "Forecast");
+
+            // Add ghost ONLY to the target track, NOT to _locomotives
+            targetTrack.Locomotives.Add(ghost);
+
+            _repository.AddHistory("ForecastPlacement", 
+                $"Placement prévisionnel de la loco {loco.Number} vers {targetTrack.Name}.");
+            PersistState();
+            RefreshTapisT13();
+        }
+
+        private void MenuItem_AnnulerPrevisionnel_Click(object sender, RoutedEventArgs e)
+        {
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null || !loco.IsForecastOrigin)
+            {
+                return;
+            }
+
+            Logger.Info($"Cancelling forecast placement for loco Id={loco.Id} Number={loco.Number}", "Forecast");
+
+            // Remove all forecast ghosts for this locomotive
+            int ghostsRemoved = RemoveForecastGhostsFor(loco);
+
+            // Restore original locomotive state (DO NOT touch Status)
+            loco.IsForecastOrigin = false;
+            loco.ForecastTargetRollingLineTrackId = null;
+
+            _repository.AddHistory("ForecastCancelled", 
+                $"Annulation du placement prévisionnel de la loco {loco.Number}.");
+            PersistState();
+            RefreshTapisT13();
+            
+            if (ghostsRemoved > 0)
+            {
+                Logger.Info($"Forecast cancelled successfully for loco Id={loco.Id} Number={loco.Number}", "Forecast");
+            }
+        }
+
+        private void MenuItem_ValiderPrevisionnel_Click(object sender, RoutedEventArgs e)
+        {
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null || !loco.IsForecastOrigin)
+            {
+                return;
+            }
+
+            Logger.Info($"Validating forecast placement for loco Id={loco.Id} Number={loco.Number}", "Forecast");
+
+            // Save target track ID BEFORE resetting flags
+            var targetTrackId = loco.ForecastTargetRollingLineTrackId;
+            if (targetTrackId == null)
+            {
+                Logger.Error($"ForecastTargetRollingLineTrackId is null for loco Id={loco.Id} Number={loco.Number}", null, "Forecast");
+                MessageBox.Show("Erreur: ligne de roulement cible non définie.", "Erreur",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Find the target track
+            var targetTrack = _tiles.SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Id == targetTrackId);
+
+            if (targetTrack == null)
+            {
+                Logger.Error($"Target track Id={targetTrackId} not found for loco Id={loco.Id} Number={loco.Number}", null, "Forecast");
+                MessageBox.Show("La ligne de roulement cible n'a pas été trouvée.", "Erreur",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // CRITICAL: Remove ghost FIRST, before checking for real locomotives
+            Logger.Debug($"Removing ghosts before validation for loco Id={loco.Id} Number={loco.Number}", "Forecast");
+            int ghostsRemoved = RemoveForecastGhostsFor(loco);
+            
+            // Now check if target line has real locomotives (after ghost removal)
+            var realLocosInTarget = targetTrack.Locomotives.Where(l => !l.IsForecastGhost).ToList();
+            if (realLocosInTarget.Any())
+            {
+                Logger.Warning($"Target track {targetTrack.Name} occupied by {realLocosInTarget.Count} real loco(s)", "Forecast");
+                var result = MessageBox.Show(
+                    $"La ligne {targetTrack.Name} est maintenant occupée par la locomotive {realLocosInTarget.First().Number}.\n" +
+                    "Voulez-vous quand même valider le placement prévisionnel ? Cela remplacera la locomotive existante.",
+                    "Ligne occupée",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+            
+                if (result != MessageBoxResult.Yes)
+                {
+                    Logger.Info($"User declined to replace existing loco on {targetTrack.Name}", "Forecast");
+                    // Re-create ghost since validation was cancelled
+                    var ghost = new LocomotiveModel
+                    {
+                        Id = -100000 - loco.Id,
+                        SeriesId = loco.SeriesId,
+                        SeriesName = loco.SeriesName,
+                        Number = loco.Number,
+                        Status = loco.Status,
+                        Pool = loco.Pool,
+                        TractionPercent = loco.TractionPercent,
+                        HsReason = loco.HsReason,
+                        MaintenanceDate = loco.MaintenanceDate,
+                        IsForecastGhost = true,
+                        ForecastSourceLocomotiveId = loco.Id,
+                        AssignedTrackId = targetTrack.Id
+                    };
+                    targetTrack.Locomotives.Add(ghost);
+                    return;
+                }
+                
+                Logger.Warning($"User confirmed: replacing existing loco on {targetTrack.Name}", "Forecast");
+                
+                // Remove existing real locomotives (user confirmed)
+                foreach (var realLoco in realLocosInTarget.ToList())
+                {
+                    targetTrack.Locomotives.Remove(realLoco);
+                    realLoco.AssignedTrackId = null;
+                    realLoco.AssignedTrackOffsetX = null;
+                    Logger.Info($"Removed loco Id={realLoco.Id} Number={realLoco.Number} from {targetTrack.Name} (replaced by forecast)", "Forecast");
+                }
+            }
+
+            // Reset forecast flags BEFORE moving
+            loco.IsForecastOrigin = false;
+            loco.ForecastTargetRollingLineTrackId = null;
+
+            Logger.Info($"Moving loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name}", "Forecast");
+            
+            // Use existing MoveLocomotiveToTrack method to properly move the locomotive
+            MoveLocomotiveToTrack(loco, targetTrack, 0);
+
+            // CRITICAL: Check if move was successful
+            if (loco.AssignedTrackId == targetTrack.Id)
+            {
+                // Move succeeded
+                _repository.AddHistory("ForecastValidated", 
+                    $"Validation du placement prévisionnel de la loco {loco.Number} vers {targetTrack.Name}.");
+                PersistState();
+                RefreshTapisT13();
+                
+                Logger.Info($"Forecast validated successfully: loco Id={loco.Id} Number={loco.Number} moved to {targetTrack.Name}", "Forecast");
+            }
+            else
+            {
+                // Move failed
+                Logger.Warning($"Forecast validation FAILED: loco Id={loco.Id} Number={loco.Number} NOT moved to {targetTrack.Name} (AssignedTrackId={loco.AssignedTrackId})", "Forecast");
+                MessageBox.Show($"Le déplacement a échoué. La locomotive n'a pas pu être placée sur {targetTrack.Name}.", 
+                    "Erreur de validation", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -967,21 +1463,36 @@ namespace Ploco
                 return null;
             }
 
+            // PRIORITY 1: Get from ContextMenu's DataContext or PlacementTarget
+            // LocomotiveItem_PreviewMouseRightButtonDown sets these correctly
+            var contextMenu = menuItem.Parent as ContextMenu
+                ?? ItemsControl.ItemsControlFromItemContainer(menuItem) as ContextMenu;
+            
+            if (contextMenu != null)
+            {
+                // First try ContextMenu's DataContext (set by PreviewMouseRightButtonDown)
+                if (contextMenu.DataContext is LocomotiveModel contextLoco)
+                {
+                    return contextLoco;
+                }
+                
+                // Then try PlacementTarget's DataContext
+                if (contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel placementLoco)
+                {
+                    return placementLoco;
+                }
+            }
+
+            // PRIORITY 2: CommandParameter (if explicitly set)
             if (menuItem.CommandParameter is LocomotiveModel parameter)
             {
                 return parameter;
             }
 
+            // PRIORITY 3: MenuItem's own DataContext (can be ambiguous, use as last resort)
             if (menuItem.DataContext is LocomotiveModel dataContext)
             {
                 return dataContext;
-            }
-
-            var contextMenu = menuItem.Parent as ContextMenu
-                ?? ItemsControl.ItemsControlFromItemContainer(menuItem) as ContextMenu;
-            if (contextMenu?.PlacementTarget is FrameworkElement element && element.DataContext is LocomotiveModel loco)
-            {
-                return loco;
             }
 
             return null;
@@ -1218,6 +1729,8 @@ namespace Ploco
                 return;
             }
 
+            Logger.Warning("User initiated locomotive reset", "Reset");
+
             foreach (var track in _tiles.SelectMany(tile => tile.Tracks))
             {
                 track.Locomotives.Clear();
@@ -1237,6 +1750,8 @@ namespace Ploco
             UpdatePoolVisibility();
             PersistState();
             RefreshTapisT13();
+            
+            Logger.Info($"All locomotives reset successfully ({_locomotives.Count} locomotives)", "Reset");
         }
 
         private void MenuItem_ResetTiles_Click(object sender, RoutedEventArgs e)
@@ -1247,6 +1762,8 @@ namespace Ploco
                 return;
             }
 
+            Logger.Warning("User initiated tile reset", "Reset");
+            
             foreach (var tile in _tiles.ToList())
             {
                 foreach (var track in tile.Tracks)
@@ -1265,6 +1782,51 @@ namespace Ploco
             UpdatePoolVisibility();
             PersistState();
             RefreshTapisT13();
+            
+            Logger.Info("All tiles reset successfully", "Reset");
+        }
+
+        private void MenuItem_Import_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Logger.Info("Opening Import window", "Menu");
+                
+                var importWindow = new ImportWindow(_locomotives, () =>
+                {
+                    // Callback when import is complete
+                    // Refresh the UI to show updated pools
+                    PersistState();
+                    RefreshLocomotivesDisplay();
+                });
+                
+                importWindow.Owner = this;
+                importWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to open Import window", ex, "Menu");
+                MessageBox.Show($"Impossible d'ouvrir la fenêtre d'import.\n\nErreur: {ex.Message}", 
+                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void MenuItem_Logs_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var logsDirectory = Logger.LogsDirectory;
+                Logger.Info($"Opening logs folder: {logsDirectory}", "Menu");
+                
+                // Open the logs folder in Windows Explorer
+                System.Diagnostics.Process.Start("explorer.exe", logsDirectory);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to open logs folder", ex, "Menu");
+                MessageBox.Show($"Impossible d'ouvrir le dossier de logs.\n\nChemin: {Logger.LogsDirectory}\n\nErreur: {ex.Message}", 
+                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void ToggleDarkMode_Click(object sender, RoutedEventArgs e)
@@ -1577,6 +2139,15 @@ namespace Ploco
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
             
+            // Prevent dragging ghost locomotives
+            if (loco.IsForecastGhost)
+            {
+                e.Effects = DragDropEffects.None;
+                border.Background = Brushes.MistyRose;
+                e.Handled = true;
+                return;
+            }
+            
             // Pour les lignes de roulement, on permet toujours le drop
             // Si la ligne est occupée par une autre loco, on fera un swap
             var canDrop = !track.Locomotives.Any() || track.Locomotives.Contains(loco) || 
@@ -1613,10 +2184,27 @@ namespace Ploco
 
             var loco = (LocomotiveModel)e.Data.GetData(typeof(LocomotiveModel))!;
             
+            // Prevent dropping ghost locomotives
+            if (loco.IsForecastGhost)
+            {
+                MessageBox.Show("Les locomotives fantômes (prévision) ne peuvent pas être déplacées.", "Action impossible",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            
             // Si la ligne cible contient déjà une locomotive différente, on fait un swap
             if (track.Locomotives.Any() && !track.Locomotives.Contains(loco))
             {
                 var existingLoco = track.Locomotives.First();
+                
+                // Check if existing is a ghost - don't allow swap with ghosts
+                if (existingLoco.IsForecastGhost)
+                {
+                    MessageBox.Show("Impossible d'échanger avec une locomotive fantôme (prévision).", "Action impossible",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                
                 var sourceTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
                 
                 if (sourceTrack != null && sourceTrack.Kind == TrackKind.RollingLine)
@@ -2093,6 +2681,34 @@ namespace Ploco
             public string? RightLabel { get; set; }
             public bool IsLeftBlocked { get; set; }
             public bool IsRightBlocked { get; set; }
+        }
+
+        private void RefreshLocomotivesDisplay()
+        {
+            // Force complete refresh by reassigning ItemsSource
+            LocomotiveList.ItemsSource = null;
+            LocomotiveList.ItemsSource = _locomotives;
+            
+            // Re-initialize the view (sort, etc.)
+            InitializeLocomotiveView();
+            
+            // Refresh all tiles - need to remove locomotives that are no longer in Sibelit
+            foreach (var tile in _tiles)
+            {
+                foreach (var track in tile.Tracks)
+                {
+                    // Remove locomotives that are no longer in Sibelit pool
+                    var locomotivesToRemove = track.Locomotives
+                        .Where(l => !l.IsForecastGhost && l.Pool != "Sibelit")
+                        .ToList();
+                    
+                    foreach (var loco in locomotivesToRemove)
+                    {
+                        track.Locomotives.Remove(loco);
+                        Logger.Info($"Removed locomotive {loco.Number} from track {track.Name} (pool changed to {loco.Pool})", "RefreshDisplay");
+                    }
+                }
+            }
         }
     }
 }
