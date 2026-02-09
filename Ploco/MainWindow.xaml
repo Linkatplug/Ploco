@@ -17,14 +17,15 @@
             <Setter Property="Padding" Value="4"/>
             <Setter Property="Margin" Value="2"/>
             <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Opacity" Value="1.0"/>
             <Style.Triggers>
                 <!-- Forecast origin: Blue (highest priority) -->
                 <DataTrigger Binding="{Binding IsForecastOrigin}" Value="True">
                     <Setter Property="Background" Value="Blue"/>
                 </DataTrigger>
-                <!-- Forecast ghost: Green -->
+                <!-- Forecast ghost: Show status color with slight transparency to distinguish from real locomotives -->
                 <DataTrigger Binding="{Binding IsForecastGhost}" Value="True">
-                    <Setter Property="Background" Value="Green"/>
+                    <Setter Property="Opacity" Value="0.8"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
