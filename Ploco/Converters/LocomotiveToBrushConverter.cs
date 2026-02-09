@@ -22,12 +22,13 @@ namespace Ploco.Converters
             // Gestion du placement prévisionnel
             if (loco.IsProvisionalPlacement)
             {
-                // Si on est dans une rolling line (paramètre = "rollingline"), c'est la copie verte
+                // Si on est dans une rolling line (paramètre = "rollingline"), 
+                // afficher en vert (c'est l'affichage provisionnel)
                 if (parameter is string param && param == "rollingline")
                 {
                     return Brushes.Green;
                 }
-                // Sinon, c'est la locomotive bleue dans la tuile d'origine
+                // Sinon, afficher en bleu (c'est la locomotive dans sa tuile d'origine)
                 return Brushes.Blue;
             }
 

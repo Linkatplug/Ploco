@@ -639,7 +639,7 @@ namespace Ploco
                     var track = listBox.DataContext as TrackModel;
                     if (track != null && track.Kind == TrackKind.RollingLine && track.Id == loco.ProvisionalTrackId)
                     {
-                        // C'est la copie provisionnelle (verte) dans la rolling line, ne pas permettre le drag
+                        // C'est l'affichage provisionnel (vert) dans la rolling line, ne pas permettre le drag
                         return;
                     }
                 }
@@ -720,19 +720,7 @@ namespace Ploco
             }
 
             // Si la locomotive est en placement prévisionnel, annuler ce placement
-            if (loco.IsProvisionalPlacement)
-            {
-                var provisionalTrack = _tiles
-                    .SelectMany(t => t.Tracks)
-                    .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
-                if (provisionalTrack != null && provisionalTrack.Locomotives.Contains(loco))
-                {
-                    provisionalTrack.Locomotives.Remove(loco);
-                }
-                loco.IsProvisionalPlacement = false;
-                loco.ProvisionalTrackId = null;
-                loco.ProvisionalTrackOffsetX = null;
-            }
+            CancelProvisionalPlacement(loco);
 
             if (!targetTrack.Locomotives.Contains(loco))
             {
@@ -908,19 +896,7 @@ namespace Ploco
                 loco.AssignedTrackOffsetX = null;
 
                 // Si la locomotive est en placement prévisionnel, annuler ce placement
-                if (loco.IsProvisionalPlacement)
-                {
-                    var provisionalTrack = _tiles
-                        .SelectMany(t => t.Tracks)
-                        .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
-                    if (provisionalTrack != null && provisionalTrack.Locomotives.Contains(loco))
-                    {
-                        provisionalTrack.Locomotives.Remove(loco);
-                    }
-                    loco.IsProvisionalPlacement = false;
-                    loco.ProvisionalTrackId = null;
-                    loco.ProvisionalTrackOffsetX = null;
-                }
+                CancelProvisionalPlacement(loco);
 
                 _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
                 UpdatePoolVisibility();
@@ -1001,6 +977,26 @@ namespace Ploco
             UpdatePoolVisibility();
             PersistState();
             RefreshTapisT13();
+        }
+
+        private void CancelProvisionalPlacement(LocomotiveModel loco)
+        {
+            if (!loco.IsProvisionalPlacement)
+            {
+                return;
+            }
+
+            var provisionalTrack = _tiles
+                .SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
+            if (provisionalTrack != null && provisionalTrack.Locomotives.Contains(loco))
+            {
+                provisionalTrack.Locomotives.Remove(loco);
+            }
+
+            loco.IsProvisionalPlacement = false;
+            loco.ProvisionalTrackId = null;
+            loco.ProvisionalTrackOffsetX = null;
         }
 
         private static LocomotiveModel? GetLocomotiveFromMenuItem(object sender)
@@ -1093,7 +1089,7 @@ namespace Ploco
             loco.ProvisionalTrackId = selectedTrack.Id;
             loco.ProvisionalTrackOffsetX = 0;
 
-            // Créer la copie verte (temporaire) sur la ligne de roulement
+            // Ajouter la locomotive à la ligne de roulement (elle sera affichée en vert)
             selectedTrack.Locomotives.Add(loco);
 
             _repository.AddHistory("ProvisionalPlacementStarted", 
@@ -1109,20 +1105,8 @@ namespace Ploco
                 return;
             }
 
-            // Trouver la ligne de roulement provisionnelle et retirer la copie
-            var provisionalTrack = _tiles
-                .SelectMany(t => t.Tracks)
-                .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
-
-            if (provisionalTrack != null && provisionalTrack.Locomotives.Contains(loco))
-            {
-                provisionalTrack.Locomotives.Remove(loco);
-            }
-
-            // Réinitialiser les propriétés de placement prévisionnel
-            loco.IsProvisionalPlacement = false;
-            loco.ProvisionalTrackId = null;
-            loco.ProvisionalTrackOffsetX = null;
+            // Annuler le placement prévisionnel
+            CancelProvisionalPlacement(loco);
 
             _repository.AddHistory("ProvisionalPlacementCancelled", 
                 $"Placement prévisionnel annulé pour loco {loco.Number}.");
