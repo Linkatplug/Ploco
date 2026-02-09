@@ -1051,53 +1051,98 @@ namespace Ploco
 
         /// <summary>
         /// Removes all forecast ghosts linked to the specified locomotive from ALL tracks.
-        /// Uses robust matching: first by ForecastSourceLocomotiveId, then by Number+SeriesId fallback.
-        /// This handles cases where WPF provides a different instance of the same logical locomotive.
+        /// Uses robust matching to handle cases where WPF provides different instances.
+        /// Strategy: Search by Number first (most reliable), then verify it's a ghost.
         /// </summary>
         private int RemoveForecastGhostsFor(LocomotiveModel loco)
         {
             int ghostsRemoved = 0;
             var tracksWithGhosts = new List<string>();
 
-            // Prioritize target track if known
-            var targetTrackId = loco.ForecastTargetRollingLineTrackId;
-            var allTracks = _tiles.SelectMany(t => t.Tracks).ToList();
+            // Log what we're searching for
+            Logger.Debug($"RemoveForecastGhostsFor: searching for ghosts of loco Id={loco.Id} Number={loco.Number} SeriesId={loco.SeriesId} ForecastTargetRollingLineTrackId={loco.ForecastTargetRollingLineTrackId}", "Forecast");
+
+            // Try to find the real source locomotive if the passed instance doesn't have forecast info
+            int? targetTrackId = loco.ForecastTargetRollingLineTrackId;
             
-            // Order tracks: target track first, then all others
+            if (targetTrackId == null && loco.IsForecastOrigin)
+            {
+                // This is the origin but ForecastTargetRollingLineTrackId is null, shouldn't happen
+                Logger.Warning($"IsForecastOrigin=true but ForecastTargetRollingLineTrackId=null for loco Id={loco.Id} Number={loco.Number}", "Forecast");
+            }
+            
+            // If we don't have target track info, try to find it from any origin loco with same number
+            if (targetTrackId == null)
+            {
+                var originLocoWithSameNumber = _locomotives.FirstOrDefault(l => 
+                    l.IsForecastOrigin && 
+                    l.Number == loco.Number && 
+                    l.ForecastTargetRollingLineTrackId != null);
+                
+                if (originLocoWithSameNumber != null)
+                {
+                    targetTrackId = originLocoWithSameNumber.ForecastTargetRollingLineTrackId;
+                    Logger.Debug($"Found origin loco with same number: Id={originLocoWithSameNumber.Id} Number={originLocoWithSameNumber.Number}, using its ForecastTargetRollingLineTrackId={targetTrackId}", "Forecast");
+                }
+            }
+
+            // Get all tracks, prioritizing target track if known
+            var allTracks = _tiles.SelectMany(t => t.Tracks).ToList();
             IEnumerable<TrackModel> orderedTracks;
+            
             if (targetTrackId != null)
             {
                 var targetTracks = allTracks.Where(t => t.Id == targetTrackId);
                 var otherTracks = allTracks.Where(t => t.Id != targetTrackId);
                 orderedTracks = targetTracks.Concat(otherTracks);
+                Logger.Debug($"Prioritizing target track Id={targetTrackId}", "Forecast");
             }
             else
             {
                 orderedTracks = allTracks;
+                Logger.Debug($"No target track known, searching all tracks", "Forecast");
             }
 
-            // Scan tracks for ghosts
+            // Scan tracks for ghosts - use multiple matching strategies
             foreach (var track in orderedTracks)
             {
-                // Find all ghosts for this locomotive using robust matching
+                // Strategy: Find ghosts by Number (most reliable) and verify they're ghosts
                 var ghostsToRemove = track.Locomotives
-                    .Where(l => l.IsForecastGhost && 
-                        (l.ForecastSourceLocomotiveId == loco.Id || // Primary match by Id
-                         (l.Number == loco.Number && l.SeriesId == loco.SeriesId))) // Fallback match by Number+SeriesId
+                    .Where(l => l.IsForecastGhost && l.Number == loco.Number)
                     .ToList();
+
+                if (ghostsToRemove.Any())
+                {
+                    Logger.Debug($"Found {ghostsToRemove.Count} ghost(s) in track {track.Name} with Number={loco.Number}", "Forecast");
+                }
 
                 foreach (var ghost in ghostsToRemove)
                 {
-                    track.Locomotives.Remove(ghost);
-                    ghostsRemoved++;
-                    tracksWithGhosts.Add(track.Name);
+                    // Verify this is really a match
+                    bool isMatch = false;
+                    string matchReason = "";
                     
-                    // Log the match reason for debugging
-                    var matchReason = ghost.ForecastSourceLocomotiveId == loco.Id 
-                        ? "SourceIdMatch" 
-                        : "NumberSeriesFallback";
+                    // Check 1: Exact Id match
+                    if (ghost.ForecastSourceLocomotiveId == loco.Id)
+                    {
+                        isMatch = true;
+                        matchReason = "SourceIdMatch";
+                    }
+                    // Check 2: Number match (already verified above, so this is our fallback)
+                    else if (ghost.Number == loco.Number)
+                    {
+                        isMatch = true;
+                        matchReason = "NumberFallback";
+                    }
                     
-                    Logger.Debug($"Removed ghost (Id={ghost.Id}, Number={ghost.Number}) for source loco (Id={loco.Id}, Number={loco.Number}) from track {track.Name}, reason={matchReason}", "Forecast");
+                    if (isMatch)
+                    {
+                        track.Locomotives.Remove(ghost);
+                        ghostsRemoved++;
+                        tracksWithGhosts.Add(track.Name);
+                        
+                        Logger.Debug($"Removed ghost (Id={ghost.Id}, Number={ghost.Number}, ForecastSourceLocomotiveId={ghost.ForecastSourceLocomotiveId}) for loco (Id={loco.Id}, Number={loco.Number}) from track {track.Name}, reason={matchReason}", "Forecast");
+                    }
                 }
             }
 
@@ -1107,7 +1152,12 @@ namespace Ploco
             }
             else
             {
-                Logger.Warning($"No ghosts found for loco Id={loco.Id} Number={loco.Number} in any track", "Forecast");
+                // Log all ghosts we can see to help debug
+                var allGhosts = allTracks.SelectMany(t => t.Locomotives.Where(l => l.IsForecastGhost))
+                    .Select(g => $"Ghost Id={g.Id} Number={g.Number} SeriesId={g.SeriesId} ForecastSourceLocomotiveId={g.ForecastSourceLocomotiveId}")
+                    .ToList();
+                
+                Logger.Warning($"No ghosts found for loco Id={loco.Id} Number={loco.Number} SeriesId={loco.SeriesId}. All ghosts in system: [{string.Join("; ", allGhosts)}]", "Forecast");
             }
 
             return ghostsRemoved;
