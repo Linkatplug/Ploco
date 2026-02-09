@@ -54,22 +54,45 @@ La fonctionnalité "Placement prévisionnel" permet de planifier le déplacement
 
 **Nouvelles propriétés dans `LocomotiveModel`** :
 ```csharp
-public bool IsForecastOrigin { get; set; }          // True si la loco est en mode prévisionnel (bleue)
-public int? ForecastTargetLineId { get; set; }      // ID de la ligne de roulement cible
-public bool IsForecastGhost { get; set; }           // True si c'est une copie fantôme (verte)
-public LocomotiveStatus? OriginalStatus { get; set; } // Statut original avant prévision
+public bool IsForecastOrigin { get; set; }                    // True si la loco est en mode prévisionnel (bleue)
+public int? ForecastTargetRollingLineTrackId { get; set; }    // ID de la ligne de roulement cible
+public bool IsForecastGhost { get; set; }                     // True si c'est une copie fantôme (verte)
+public int? ForecastSourceLocomotiveId { get; set; }          // ID de la loco source (pour les ghosts)
 ```
 
-### Système de couleurs
+**Ghost ID** : Les locomotives fantômes ont un ID unique négatif calculé : `-100000 - sourceId`
 
-**Nouveau convertisseur** : `LocomotiveToBrushConverter`
+### Système de couleurs (WPF DataTriggers)
+
+**IMPORTANT** : Le système de couleurs existant (`StatutToBrushConverter`) est **PRÉSERVÉ**. Les couleurs de prévision sont une **surcouche visuelle** via WPF DataTriggers.
+
+**Style appliqué** : `LocomotiveBorderStyle`
+```xml
+<Style x:Key="LocomotiveBorderStyle" TargetType="Border">
+    <!-- Binding d'origine préservé -->
+    <Setter Property="Background" Value="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"/>
+    <Style.Triggers>
+        <!-- Forecast origin: Blue (priorité haute) -->
+        <DataTrigger Binding="{Binding IsForecastOrigin}" Value="True">
+            <Setter Property="Background" Value="Blue"/>
+        </DataTrigger>
+        <!-- Forecast ghost: Green -->
+        <DataTrigger Binding="{Binding IsForecastGhost}" Value="True">
+            <Setter Property="Background" Value="Green"/>
+        </DataTrigger>
+    </Style.Triggers>
+</Style>
+```
 
 La priorité des couleurs est :
 1. **IsForecastOrigin** → Bleu (locomotive d'origine en mode prévisionnel)
 2. **IsForecastGhost** → Vert (copie fantôme sur la ligne)
-3. **Status** → Couleurs normales (Rouge/Orange/Vert selon le statut)
+3. **Status** → Couleurs normales via `StatutToBrushConverter` (Rouge/Orange/Vert selon le statut)
 
-**Important** : Le système de couleurs existant est préservé. Seules les locomotives en mode prévisionnel ont un rendu spécial.
+**Important** : 
+- Le statut de la locomotive n'est JAMAIS modifié pour obtenir une couleur
+- Les DataTriggers sont évalués en priorité et surchargent le Background si nécessaire
+- Quand on annule, la couleur revient automatiquement au statut (pas besoin de restaurer)
 
 ### Protection Drag & Drop
 
@@ -84,7 +107,8 @@ Les locomotives fantômes ne peuvent pas être déplacées :
 Les locomotives fantômes ne sont **jamais sauvegardées** dans la base de données :
 - Elles sont filtrées lors de l'appel à `PersistState()`
 - Seules les locomotives réelles et leurs états de prévision sont sauvegardés
-- Les propriétés `IsForecastOrigin`, `ForecastTargetLineId`, `OriginalStatus` sont persistées
+- Les propriétés `IsForecastOrigin`, `ForecastTargetRollingLineTrackId`, `ForecastSourceLocomotiveId` sont persistées
+- Les ghosts ne sont **pas** dans la collection `_locomotives`, uniquement dans `track.Locomotives`
 
 ## Scénarios d'utilisation
 

@@ -1,152 +1,136 @@
-# Implementation Summary: Placement Prévisionnel (Forecast Placement)
+# Implementation Summary: Placement Prévisionnel (Corrected WPF Implementation)
 
 ## Overview
-Successfully implemented the "Placement prévisionnel" feature for the Ploco locomotive management application. This feature allows operators to preview and plan locomotive movements to rolling lines before committing them, with clear visual indicators.
+Successfully implemented the "Placement prévisionnel" feature using proper WPF DataTriggers approach, preserving the existing color system completely.
 
 ## Key Features Implemented
 
-### 1. Visual Indicators
-- **Blue**: Locomotive in origin tile during forecast mode (indicates "physically still here")
-- **Green**: Ghost copy on target rolling line (indicates "planned placement")
-- **Normal colors preserved**: Red/Orange/Green status colors work as before when not in forecast mode
+### 1. Visual Indicators (WPF DataTriggers)
+- **Blue**: Locomotive in origin tile during forecast mode
+- **Green**: Ghost copy on target rolling line
+- **Normal colors preserved**: Original StatutToBrushConverter remains untouched
 
-### 2. User Workflow
+### 2. Correct WPF Implementation
 
-#### Activate Forecast
-1. Right-click on a locomotive in a tile
-2. Select "Placement prévisionnel"
-3. Choose a rolling line from the dialog
-4. See: Blue locomotive in tile + Green ghost on line
+#### Original Binding Preserved
+```xml
+<Setter Property="Background" Value="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"/>
+```
 
-#### Cancel Forecast
-1. Right-click on the blue locomotive
-2. Select "Annuler le placement prévisionnel"
-3. Result: Ghost removed, locomotive returns to normal color
+#### DataTrigger Overlay Added
+```xml
+<Style.Triggers>
+    <DataTrigger Binding="{Binding IsForecastOrigin}" Value="True">
+        <Setter Property="Background" Value="Blue"/>
+    </DataTrigger>
+    <DataTrigger Binding="{Binding IsForecastGhost}" Value="True">
+        <Setter Property="Background" Value="Green"/>
+    </DataTrigger>
+</Style.Triggers>
+```
 
-#### Validate Forecast
-1. Right-click on the blue locomotive
-2. Select "Valider le placement prévisionnel"
-3. Result: Locomotive moved to rolling line, ghost becomes real
+**Result**: Status-based colors work normally, forecast colors override when needed
 
 ### 3. Technical Implementation
 
-#### Data Model Extensions
+#### Data Model
 ```csharp
 // Added to LocomotiveModel
-bool IsForecastOrigin          // Marks origin locomotive (blue)
-int? ForecastTargetLineId      // Target rolling line ID
-bool IsForecastGhost           // Marks ghost copy (green)
-LocomotiveStatus? OriginalStatus // Preserves status for restoration
+bool IsForecastOrigin                        // Marks origin locomotive (blue)
+int? ForecastTargetRollingLineTrackId        // Target rolling line ID
+bool IsForecastGhost                         // Marks ghost copy (green)
+int? ForecastSourceLocomotiveId              // Source locomotive ID (for ghosts)
 ```
 
-#### New Components
-- `LocomotiveToBrushConverter`: Handles color rendering with forecast priority
-- `RollingLineSelectionDialog`: UI for selecting target rolling lines
-- Context menu handlers: Three new menu items with dynamic visibility
+#### Ghost Management
+- **Unique negative ID**: `-100000 - sourceId` (no ID conflicts)
+- **Not in _locomotives**: Ghosts only exist in `track.Locomotives`
+- **Matching**: Uses `ForecastSourceLocomotiveId` for reliable ghost identification
+- **Persistence**: Automatically filtered out when saving
 
-#### Safety Features
-- **Ghost Filtering**: Ghosts never saved to database
-- **Drag & Drop Protection**: Ghosts cannot be dragged or dropped
-- **Swap Protection**: Cannot swap with ghosts
-- **Validation**: Warns if target line becomes occupied
+#### Business Logic
+1. **Activation**: Sets `IsForecastOrigin`, creates ghost with negative ID
+2. **Cancel**: Removes ghost, resets flags (color reverts automatically via DataTrigger)
+3. **Validate**: Removes ghost, uses `MoveLocomotiveToTrack()` (existing mechanism)
 
-## Files Modified/Created
+## Files Modified
 
-### New Files
-1. `Ploco/Converters/LocomotiveToBrushConverter.cs` - Color converter with forecast support
-2. `Ploco/Dialogs/RollingLineSelectionDialog.xaml` - UI for line selection
-3. `Ploco/Dialogs/RollingLineSelectionDialog.xaml.cs` - Dialog logic
-4. `PLACEMENT_PREVISIONNEL.md` - Feature documentation (French)
+### Modified Files (3)
+1. `Ploco/Models/DomainModels.cs` - Updated forecast properties
+2. `Ploco/MainWindow.xaml` - Added DataTrigger Style, kept original converter bindings
+3. `Ploco/MainWindow.xaml.cs` - Fixed forecast logic (negative IDs, proper property names)
 
-### Modified Files
-1. `Ploco/Models/DomainModels.cs` - Added forecast properties to LocomotiveModel
-2. `Ploco/MainWindow.xaml` - Added context menu items and new converter
-3. `Ploco/MainWindow.xaml.cs` - Implemented all forecast logic
-
-## Code Quality
-
-### Compilation
-✅ Clean build with 0 warnings, 0 errors
-
-### Security
-✅ CodeQL scan: 0 vulnerabilities found
-
-### Code Review Improvements
-✅ Extracted color constants for maintainability
-✅ Improved ghost matching (uses multiple properties: IsForecastGhost + Number + SeriesId)
-✅ Fixed OriginalStatus restoration logic
-✅ Added documentation comments explaining design decisions
-
-## Testing Recommendations
-
-### Manual Testing (Required - WPF app cannot run in CI)
-1. **Basic Flow**
-   - Place loco in tile → Activate forecast → Select line
-   - Verify: Blue in tile, Green on line
-   - Cancel → Verify: Normal color restored, ghost removed
-   - Redo → Validate → Verify: Loco moved to line
-
-2. **Status Preservation**
-   - Set loco to HS (red) → Activate forecast
-   - Verify: Blue (not red) in tile
-   - Cancel → Verify: Red restored
-   - Change status while in forecast → Cancel
-   - Verify: Status preserved as changed
-
-3. **Drag & Drop**
-   - Try to drag ghost → Should be blocked
-   - Try to drag real loco → Should work normally
-   - Try to drop on ghost → Should show error
-
-4. **Edge Cases**
-   - Validate when target line becomes occupied → Should warn
-   - Multiple locos in forecast simultaneously → Should work independently
-   - Save/reload with locos in forecast → Ghosts should not persist
+### Deleted Files (1)
+- `Ploco/Converters/LocomotiveToBrushConverter.cs` - Removed (incorrect approach)
 
 ## Compliance with Requirements
 
-### ✅ Preserved Existing Functionality
-- Status colors (Red/Orange/Green) work as before
-- Drag & drop for real locomotives unchanged
-- Swap functionality unaffected
-- Status modification works normally
-- History tracking maintained
+### ✅ Preserved Existing System
+- ✅ `StatutToBrushConverter` bindings untouched
+- ✅ Status colors (Red/Orange/Green) work exactly as before
+- ✅ No Status manipulation for color changes
+- ✅ DataTriggers as visual overlay, not replacement
 
-### ✅ Clean Implementation
-- No hardcoded color overrides in business logic
-- Forecast is a visual overlay, not a status replacement
-- Minimal changes to existing code
-- Clear separation of concerns
+### ✅ Correct Implementation
+- ✅ Unique negative ghost IDs
+- ✅ `ForecastSourceLocomotiveId` for ghost tracking
+- ✅ Ghosts not in `_locomotives` collection
+- ✅ Uses `MoveLocomotiveToTrack()` for validation
+- ✅ Property names: `ForecastTargetRollingLineTrackId`
 
-### ✅ Data Integrity
-- Ghosts never persisted to database
-- Forecast state properly saved/restored
-- No ID conflicts (ghost matching uses multiple properties)
-- Robust error handling
+### ✅ Clean Code
+- ✅ No converter replacement
+- ✅ Minimal changes to existing code
+- ✅ Ghost filtering in persistence
+- ✅ Drag & drop protection maintained
 
-## Known Limitations
+## Build Status
+✅ Clean compilation: 0 warnings, 0 errors
 
-1. **Cannot drag ghosts**: By design, to prevent confusion
-2. **One forecast per locomotive**: Cannot forecast same loco to multiple lines
-3. **Manual testing only**: WPF app requires Windows desktop environment
+## Critical Corrections Made
 
-## Next Steps
+### Previous Issues (Fixed)
+1. ❌ **Was**: Replaced converter bindings everywhere
+   ✅ **Now**: DataTriggers overlay on original bindings
 
-1. **User Acceptance Testing**: Test the feature in the actual production environment
-2. **User Training**: Provide documentation on how to use the forecast feature
-3. **Monitor Usage**: Collect feedback on the workflow and UX
-4. **Future Enhancements** (if needed):
-   - Allow multiple forecast targets per locomotive
-   - Add forecast expiration (auto-cancel after X hours)
-   - Visual indicator count (how many locos in forecast)
+2. ❌ **Was**: Same ID for ghost and original
+   ✅ **Now**: Unique negative ID (`-100000 - sourceId`)
+
+3. ❌ **Was**: `ForecastTargetLineId`
+   ✅ **Now**: `ForecastTargetRollingLineTrackId`
+
+4. ❌ **Was**: Saved `OriginalStatus`, manipulated Status
+   ✅ **Now**: Never touch Status, DataTriggers handle visual
+
+5. ❌ **Was**: Ghost matching by Number + SeriesId
+   ✅ **Now**: `ForecastSourceLocomotiveId` (most reliable)
+
+## Testing Requirements
+
+### Manual Testing (WPF App)
+1. **Status Colors**
+   - Set loco to HS → Should show RED
+   - Set loco to ManqueTraction → Should show ORANGE
+   - Set loco to Ok → Should show GREEN
+   - All colors via StatutToBrushConverter
+
+2. **Forecast Flow**
+   - Activate forecast → Origin BLUE, ghost GREEN
+   - Cancel → Origin returns to status color, ghost removed
+   - Validate → Original moved to line, no duplicate
+
+3. **Edge Cases**
+   - Change status while in forecast → Should work normally
+   - Validate on occupied line → Should warn and replace
+   - Multiple forecasts → Should work independently
 
 ## Conclusion
 
-The "Placement prévisionnel" feature has been successfully implemented with:
+The implementation now follows the correct WPF pattern:
+- ✅ Original color system completely untouched
+- ✅ DataTriggers provide visual overlay
+- ✅ No Status manipulation for colors
+- ✅ Unique negative ghost IDs
 - ✅ Clean, maintainable code
-- ✅ No security vulnerabilities
-- ✅ Zero impact on existing functionality
-- ✅ Robust error handling
-- ✅ Comprehensive documentation
 
-The feature is ready for user acceptance testing in a Windows environment.
+Ready for user acceptance testing in Windows environment.
