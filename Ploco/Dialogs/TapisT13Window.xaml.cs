@@ -43,7 +43,7 @@ namespace Ploco.Dialogs
 
                 var isHs = loco.Status == LocomotiveStatus.HS;
                 var isOnRollingLine = track?.Kind == TrackKind.RollingLine;
-                var isNonHsOnRollingLine = isOnRollingLine && !isHs;
+                var isNonHsOnRollingLine = isOnRollingLine && !isHs && track?.IsOnTrain == true;
 
                 var locHs = isHs ? trainInfo : string.Empty;
                 
