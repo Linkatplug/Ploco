@@ -632,6 +632,18 @@ namespace Ploco
 
             if (sender is ListBox listBox && listBox.SelectedItem is LocomotiveModel loco)
             {
+                // Empêcher le déplacement d'une locomotive en placement prévisionnel depuis une rolling line
+                if (loco.IsProvisionalPlacement)
+                {
+                    // Trouver le track de ce listBox
+                    var track = listBox.DataContext as TrackModel;
+                    if (track != null && track.Kind == TrackKind.RollingLine && track.Id == loco.ProvisionalTrackId)
+                    {
+                        // C'est la copie provisionnelle (verte) dans la rolling line, ne pas permettre le drag
+                        return;
+                    }
+                }
+
                 DragDrop.DoDragDrop(listBox, loco, DragDropEffects.Move);
             }
         }
@@ -705,6 +717,21 @@ namespace Ploco
                 {
                     insertIndex--;
                 }
+            }
+
+            // Si la locomotive est en placement prévisionnel, annuler ce placement
+            if (loco.IsProvisionalPlacement)
+            {
+                var provisionalTrack = _tiles
+                    .SelectMany(t => t.Tracks)
+                    .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
+                if (provisionalTrack != null && provisionalTrack.Locomotives.Contains(loco))
+                {
+                    provisionalTrack.Locomotives.Remove(loco);
+                }
+                loco.IsProvisionalPlacement = false;
+                loco.ProvisionalTrackId = null;
+                loco.ProvisionalTrackOffsetX = null;
             }
 
             if (!targetTrack.Locomotives.Contains(loco))
@@ -879,6 +906,22 @@ namespace Ploco
                 track.Locomotives.Remove(loco);
                 loco.AssignedTrackId = null;
                 loco.AssignedTrackOffsetX = null;
+
+                // Si la locomotive est en placement prévisionnel, annuler ce placement
+                if (loco.IsProvisionalPlacement)
+                {
+                    var provisionalTrack = _tiles
+                        .SelectMany(t => t.Tracks)
+                        .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
+                    if (provisionalTrack != null && provisionalTrack.Locomotives.Contains(loco))
+                    {
+                        provisionalTrack.Locomotives.Remove(loco);
+                    }
+                    loco.IsProvisionalPlacement = false;
+                    loco.ProvisionalTrackId = null;
+                    loco.ProvisionalTrackOffsetX = null;
+                }
+
                 _repository.AddHistory("LocomotiveRemoved", $"Loco {loco.Number} retirée de {track.Name}.");
                 UpdatePoolVisibility();
                 PersistState();
