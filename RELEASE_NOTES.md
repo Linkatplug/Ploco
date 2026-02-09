@@ -1,6 +1,6 @@
 # Ploco - Notes de Version
 
-## Version 2.0.0 - Février 2026
+## Version 1.0.5 - Février 2026
 
 **Date de release** : 9 février 2026
 
