@@ -60,7 +60,14 @@ namespace Ploco.Dialogs
                     : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
                     : trainLocationText;
                 
-                var motif = isHs ? (loco.HsReason ?? string.Empty) : string.Empty;
+                // Motif/Status info for HS, DefautMineur, and ManqueTraction
+                var motif = loco.Status switch
+                {
+                    LocomotiveStatus.HS => loco.HsReason ?? string.Empty,
+                    LocomotiveStatus.DefautMineur => loco.DefautInfo ?? string.Empty,
+                    LocomotiveStatus.ManqueTraction => "Manque traction",
+                    _ => string.Empty
+                };
 
                 _rows.Add(new T13Row
                 {
@@ -70,7 +77,8 @@ namespace Ploco.Dialogs
                     LocHs = locHs,
                     Report = report,
                     IsHs = isHs,
-                    IsNonHsOnLine = isNonHsOnLine
+                    IsNonHsOnLine = isNonHsOnLine,
+                    Status = loco.Status
                 });
             }
 
@@ -262,6 +270,7 @@ namespace Ploco.Dialogs
             public string Report { get; set; } = string.Empty;
             public bool IsHs { get; set; }
             public bool IsNonHsOnLine { get; set; }
+            public LocomotiveStatus Status { get; set; }
         }
     }
 }

@@ -17,7 +17,7 @@ namespace Ploco.Converters
                     LocomotiveStatus.Ok => Brushes.Green,
                     LocomotiveStatus.ManqueTraction => Brushes.Orange,
                     LocomotiveStatus.HS => Brushes.Red,
-                    LocomotiveStatus.DefautMineur => Brushes.Yellow,
+                    LocomotiveStatus.DefautMineur => new SolidColorBrush(Color.FromRgb(255, 193, 7)), // #FFC107 - Darker yellow/amber
                     _ => Brushes.Gray,
                 };
             }
@@ -27,7 +27,7 @@ namespace Ploco.Converters
                 return legacyStatut switch
                 {
                     StatutLocomotive.Ok => Brushes.Green,
-                    StatutLocomotive.DefautMineur => Brushes.Gold,
+                    StatutLocomotive.DefautMineur => new SolidColorBrush(Color.FromRgb(255, 193, 7)), // #FFC107 - Darker yellow/amber
                     StatutLocomotive.AControler => Brushes.Orange,
                     StatutLocomotive.HS => Brushes.Red,
                     _ => Brushes.Gray,
