@@ -1130,10 +1130,35 @@ namespace Ploco
 
             var ghost = targetTrack.Locomotives.FirstOrDefault(l => l.IsForecastGhost && l.Number == loco.Number);
             
+            // Check if target line has been occupied by another real locomotive
+            var realLocosInTarget = targetTrack.Locomotives.Where(l => !l.IsForecastGhost).ToList();
+            if (realLocosInTarget.Any())
+            {
+                var result = MessageBox.Show(
+                    $"La ligne {targetTrack.Name} est maintenant occupée par la locomotive {realLocosInTarget.First().Number}.\n" +
+                    "Voulez-vous quand même valider le placement prévisionnel ? Cela remplacera la locomotive existante.",
+                    "Ligne occupée",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+            
             // Remove ghost from target track
             if (ghost != null)
             {
                 targetTrack.Locomotives.Remove(ghost);
+            }
+            
+            // Remove any real locomotives that might be in the target (user confirmed)
+            foreach (var realLoco in realLocosInTarget.ToList())
+            {
+                targetTrack.Locomotives.Remove(realLoco);
+                realLoco.AssignedTrackId = null;
+                realLoco.AssignedTrackOffsetX = null;
             }
 
             // Remove original locomotive from its current track
