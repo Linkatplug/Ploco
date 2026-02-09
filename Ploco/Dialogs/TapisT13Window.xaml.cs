@@ -45,34 +45,25 @@ namespace Ploco.Dialogs
                     Logger.Info($"  Track: NOT FOUND", "TapisT13");
                 }
                 
-                var location = ResolveLocation(track, tiles);
+                // Use EXISTING HS logic for train location text
+                var trainLocationText = GetTrainLocationText(loco, track, tiles);
                 var rollingLineNumber = ResolveRollingLineNumber(track);
-                var trainInfo = track?.IsOnTrain == true
-                    ? string.IsNullOrWhiteSpace(track.TrainNumber)
-                        ? location
-                        : $"{location} {track.TrainNumber}"
-                    : location;
 
-                Logger.Info($"  Location: {location}, RollingLineNumber: {rollingLineNumber}", "TapisT13");
-                Logger.Info($"  TrainInfo: {trainInfo}", "TapisT13");
+                Logger.Info($"  TrainLocationText: '{trainLocationText}', RollingLineNumber: '{rollingLineNumber}'", "TapisT13");
 
                 var isHs = loco.Status == LocomotiveStatus.HS;
-                var isOnRollingLine = track?.Kind == TrackKind.RollingLine;
-                var isNonHsOnRollingLine = isOnRollingLine && !isHs && track?.IsOnTrain == true;
+                var hasTrainInfo = !string.IsNullOrWhiteSpace(trainLocationText);
 
-                Logger.Info($"  Flags: isHs={isHs}, isOnRollingLine={isOnRollingLine}, isNonHsOnRollingLine={isNonHsOnRollingLine}", "TapisT13");
+                Logger.Info($"  Flags: isHs={isHs}, hasTrainInfo={hasTrainInfo}", "TapisT13");
 
-                var locHs = isHs ? trainInfo : string.Empty;
+                // HS: show train location in LocHs column (red)
+                var locHs = isHs ? trainLocationText : string.Empty;
                 
-                // Report logic:
-                // Priority: train info (HS or non-HS with train) > rolling line number > empty
-                // 1. If HS, show train info (existing behavior)
-                // 2. If non-HS on rolling line with train, show train info (NEW: green display)
-                // 3. If rolling line number exists, show it (fallback)
-                var report = isHs ? trainInfo 
-                    : isNonHsOnRollingLine ? trainInfo
-                    : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
-                    : string.Empty;
+                // Non-HS with train info: show train location in Report column (green)
+                // Otherwise: show rolling line number or empty
+                var report = isHs ? trainLocationText 
+                    : hasTrainInfo ? trainLocationText
+                    : rollingLineNumber ?? string.Empty;
                 
                 Logger.Info($"  Results: LocHs='{locHs}', Report='{report}'", "TapisT13");
                 
@@ -86,12 +77,33 @@ namespace Ploco.Dialogs
                     LocHs = locHs,
                     Report = report,
                     IsHs = isHs,
-                    IsOnRollingLine = isOnRollingLine,
-                    IsNonHsOnRollingLine = isNonHsOnRollingLine
+                    HasTrainInfo = hasTrainInfo && !isHs
                 });
             }
 
             UpdateSummary();
+        }
+        
+        /// <summary>
+        /// Gets the train location text for a locomotive using the EXISTING HS logic.
+        /// Returns "TileName" or "TileName TrainNumber" depending on track.IsOnTrain.
+        /// </summary>
+        private static string GetTrainLocationText(LocomotiveModel loco, TrackModel? track, IEnumerable<TileModel> tiles)
+        {
+            if (track == null)
+            {
+                return string.Empty;
+            }
+
+            var location = ResolveLocation(track, tiles);
+            
+            // EXISTING HS logic: if track.IsOnTrain, include train number
+            if (track.IsOnTrain && !string.IsNullOrWhiteSpace(track.TrainNumber))
+            {
+                return $"{location} {track.TrainNumber}";
+            }
+
+            return location;
         }
 
         private static bool IsT13(LocomotiveModel loco)
@@ -217,8 +229,7 @@ namespace Ploco.Dialogs
             public string LocHs { get; set; } = string.Empty;
             public string Report { get; set; } = string.Empty;
             public bool IsHs { get; set; }
-            public bool IsOnRollingLine { get; set; }
-            public bool IsNonHsOnRollingLine { get; set; }
+            public bool HasTrainInfo { get; set; }
         }
     }
 }
