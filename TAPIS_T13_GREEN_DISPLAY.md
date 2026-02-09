@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Cette fonctionnalité ajoute l'affichage en **vert** des locomotives non-HS (OK, ManqueTraction, DefautMineur) qui se trouvent sur des lignes de roulement dans le rapport TapisT13.
+Cette fonctionnalité ajoute l'affichage en **vert** des locomotives non-HS (OK, ManqueTraction, DefautMineur) qui se trouvent sur des lignes de roulement **avec affectation train** dans le rapport TapisT13.
 
 ## Comportement
 
@@ -12,7 +12,8 @@ Cette fonctionnalité ajoute l'affichage en **vert** des locomotives non-HS (OK,
 
 ### Après
 - Les locomotives **HS** restent affichées en **rouge** (inchangé)
-- Les locomotives **non-HS** sur lignes de roulement sont maintenant affichées en **vert**
+- Les locomotives **non-HS** sur lignes de roulement **avec affectation train** sont maintenant affichées en **vert**
+- Format identique à HS : "NomTuile NumeroTrain"
 
 ## Critères d'affichage
 
@@ -149,16 +150,18 @@ var isOnRollingLine = track?.Kind == TrackKind.RollingLine;
 // IMPORTANT: Nécessite IsOnTrain = true pour affichage vert
 var isNonHsOnRollingLine = isOnRollingLine && !isHs && track?.IsOnTrain == true;
 
-// Report logic:
-// 1. If rolling line number exists (old behavior), show it
-// 2. If HS, show train info (existing behavior)
-// 3. If non-HS on rolling line WITH train assignment, show train info (GREEN display)
-var report = !string.IsNullOrWhiteSpace(rollingLineNumber)
-    ? rollingLineNumber
-    : isHs ? trainInfo 
-    : isNonHsOnRollingLine ? trainInfo 
+// Report logic - ORDRE DE PRIORITÉ IMPORTANT:
+// 1. Si HS, afficher train info (comportement existant)
+// 2. Si non-HS sur ligne avec train, afficher train info (VERT)
+// 3. Si numéro de ligne existe, l'afficher (fallback)
+// 4. Sinon vide
+var report = isHs ? trainInfo 
+    : isNonHsOnRollingLine ? trainInfo
+    : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
     : string.Empty;
 ```
+
+**Note importante :** L'ordre de priorité a été modifié pour que les informations de train (HS ou non-HS) soient affichées en premier. Cela garantit que les locomotives non-HS affectées à des trains affichent correctement "NomTuile NumeroTrain" au lieu de simplement le numéro de ligne.
 
 ### Style XAML
 
@@ -196,6 +199,46 @@ Les DataTriggers sont appliqués dans l'ordre :
 3. **Pas de couleur** : Par défaut
 
 Cela signifie que si une locomotive est HS, elle sera TOUJOURS rouge, même si elle est sur une ligne de roulement.
+
+## Correction du Bug d'Affichage (9 février 2026)
+
+### Problème Identifié
+Les locomotives non-HS sur lignes de roulement avec affectation train n'affichaient pas les informations de train dans "Infos/Rapport". Le champ restait vide.
+
+**Exemple du problème :**
+- Tuile "FIZ" (ligne de roulement)
+- Loco 1347 (HS) sur train 41836 : ✅ Affichait "FIZ 41836" en rouge
+- Loco 1334 (OK) sur train 41836 : ❌ Champ vide au lieu de "FIZ 41836" en vert
+
+### Cause
+L'ordre de priorité dans la logique `Report` donnait la priorité à `rollingLineNumber` (numéro de track comme "1103") sur les informations de train, empêchant l'affichage de "NomTuile NumeroTrain".
+
+### Solution
+Modification de l'ordre de priorité dans `LoadRows()` :
+
+**Avant (incorrect) :**
+```csharp
+var report = !string.IsNullOrWhiteSpace(rollingLineNumber)
+    ? rollingLineNumber      // ← Priorité 1 (bloquait train info)
+    : isHs ? trainInfo       // ← Priorité 2
+    : isNonHsOnRollingLine ? trainInfo  // ← Priorité 3
+    : string.Empty;
+```
+
+**Après (correct) :**
+```csharp
+var report = isHs ? trainInfo               // ← Priorité 1
+    : isNonHsOnRollingLine ? trainInfo      // ← Priorité 2
+    : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber  // ← Priorité 3
+    : string.Empty;
+```
+
+### Résultat
+Les locomotives non-HS sur trains affichent maintenant correctement "NomTuile NumeroTrain" en vert dans la colonne "Infos/Rapport".
+
+**Exemple corrigé :**
+- Loco 1347 (HS) sur FIZ train 41836 : 🔴 "FIZ 41836" (rouge) ✅
+- Loco 1334 (OK) sur FIZ train 41836 : 🟢 "FIZ 41836" (vert) ✅
 
 ## Tests
 
