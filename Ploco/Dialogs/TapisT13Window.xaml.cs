@@ -47,18 +47,23 @@ namespace Ploco.Dialogs
                     && effectiveTrack?.Kind == TrackKind.Line 
                     && effectiveTrack.IsOnTrain == true;
 
-                // HS: show train location in LocHs column (red)
-                var locHs = isHs ? trainLocationText : string.Empty;
-                
-                // Report column logic:
-                // - HS: same as LocHs (red)
-                // - Non-HS on Line with train: train location (green)
-                // - Rolling line: just the number (no color)
-                // - Other: train location or empty
-                var report = isHs ? trainLocationText 
-                    : isNonHsOnLine ? trainLocationText
-                    : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
-                    : trainLocationText;
+                // For HS on rolling line: different display for LocHs vs Report
+                string locHs, report;
+                if (isHs && !string.IsNullOrWhiteSpace(rollingLineNumber))
+                {
+                    // HS on rolling line: show origin tile in LocHs, "HS CV {number}" in Report
+                    locHs = GetOriginTileLocation(loco, tiles);
+                    report = $"HS CV {rollingLineNumber}";
+                }
+                else
+                {
+                    // Normal logic for other cases
+                    locHs = isHs ? trainLocationText : string.Empty;
+                    report = isHs ? trainLocationText 
+                        : isNonHsOnLine ? trainLocationText
+                        : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
+                        : trainLocationText;
+                }
                 
                 // Motif/Status info for HS, DefautMineur, and ManqueTraction
                 var motif = loco.Status switch
@@ -113,6 +118,27 @@ namespace Ploco.Dialogs
             
             // Return real track
             return tracks.FirstOrDefault(t => t.Locomotives.Contains(loco));
+        }
+
+        /// <summary>
+        /// Gets the origin tile location for a locomotive.
+        /// Searches for the tile where the locomotive originates (Depot/Garage/Line tracks, not RollingLine).
+        /// </summary>
+        private static string GetOriginTileLocation(LocomotiveModel loco, IEnumerable<TileModel> tiles)
+        {
+            // Find the tile where loco originates (in Depot/Garage/Line tracks, not RollingLine)
+            foreach (var tile in tiles)
+            {
+                foreach (var track in tile.Tracks.Where(t => t.Kind != TrackKind.RollingLine))
+                {
+                    // Match by Id or Number (to handle WPF instance mismatches)
+                    if (track.Locomotives.Any(l => l.Id == loco.Id || l.Number == loco.Number))
+                    {
+                        return ResolveLocation(track, tiles);
+                    }
+                }
+            }
+            return string.Empty;
         }
 
         /// <summary>
