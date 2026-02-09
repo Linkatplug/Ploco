@@ -998,6 +998,222 @@ namespace Ploco
             }
         }
 
+        private void MenuItem_PlacementPrevisionnel_Click(object sender, RoutedEventArgs e)
+        {
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null)
+            {
+                return;
+            }
+
+            // Vérifier si la locomotive est déjà en placement prévisionnel
+            if (loco.IsProvisionalPlacement)
+            {
+                MessageBox.Show("Cette locomotive est déjà en placement prévisionnel.", "Placement prévisionnel",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Vérifier que la locomotive est bien dans une tuile
+            var currentTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+            if (currentTrack == null)
+            {
+                MessageBox.Show("La locomotive doit être dans une tuile pour faire un placement prévisionnel.", "Placement prévisionnel",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Obtenir toutes les rolling lines disponibles
+            var rollingLineTracks = _tiles
+                .Where(t => t.Type == TileType.RollingLine)
+                .SelectMany(t => t.RollingLineTracks)
+                .Where(track => track.Locomotives.Count == 0) // Seulement les lignes vides
+                .OrderBy(track => track.Name)
+                .ToList();
+
+            if (!rollingLineTracks.Any())
+            {
+                MessageBox.Show("Aucune ligne de roulement disponible.", "Placement prévisionnel",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Demander à l'utilisateur de sélectionner une ligne
+            var selectedTrack = ShowRollingLineSelectionDialog(rollingLineTracks);
+            if (selectedTrack == null)
+            {
+                return;
+            }
+
+            // Activer le placement prévisionnel
+            loco.IsProvisionalPlacement = true;
+            loco.ProvisionalTrackId = selectedTrack.Id;
+            loco.ProvisionalTrackOffsetX = 0;
+
+            // Créer la copie verte (temporaire) sur la ligne de roulement
+            selectedTrack.Locomotives.Add(loco);
+
+            _repository.AddHistory("ProvisionalPlacementStarted", 
+                $"Placement prévisionnel activé pour loco {loco.Number} sur {selectedTrack.Name}.");
+            PersistState();
+        }
+
+        private void MenuItem_AnnulerPrevisionnel_Click(object sender, RoutedEventArgs e)
+        {
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null || !loco.IsProvisionalPlacement)
+            {
+                return;
+            }
+
+            // Trouver la ligne de roulement provisionnelle et retirer la copie
+            var provisionalTrack = _tiles
+                .SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
+
+            if (provisionalTrack != null && provisionalTrack.Locomotives.Contains(loco))
+            {
+                provisionalTrack.Locomotives.Remove(loco);
+            }
+
+            // Réinitialiser les propriétés de placement prévisionnel
+            loco.IsProvisionalPlacement = false;
+            loco.ProvisionalTrackId = null;
+            loco.ProvisionalTrackOffsetX = null;
+
+            _repository.AddHistory("ProvisionalPlacementCancelled", 
+                $"Placement prévisionnel annulé pour loco {loco.Number}.");
+            PersistState();
+        }
+
+        private void MenuItem_ValiderPrevisionnel_Click(object sender, RoutedEventArgs e)
+        {
+            var loco = GetLocomotiveFromMenuItem(sender);
+            if (loco == null || !loco.IsProvisionalPlacement)
+            {
+                return;
+            }
+
+            // Trouver la tuile/track d'origine et retirer la locomotive bleue
+            var originalTrack = _tiles
+                .SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Locomotives.Contains(loco) && t.Id != loco.ProvisionalTrackId);
+
+            if (originalTrack != null)
+            {
+                originalTrack.Locomotives.Remove(loco);
+            }
+
+            // Trouver la ligne de roulement provisionnelle
+            var provisionalTrack = _tiles
+                .SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
+
+            if (provisionalTrack != null)
+            {
+                // S'assurer que la locomotive est bien dans la track
+                if (!provisionalTrack.Locomotives.Contains(loco))
+                {
+                    provisionalTrack.Locomotives.Add(loco);
+                }
+
+                // Mettre à jour les propriétés
+                loco.AssignedTrackId = provisionalTrack.Id;
+                loco.AssignedTrackOffsetX = loco.ProvisionalTrackOffsetX ?? 0;
+            }
+
+            // Désactiver le placement prévisionnel
+            loco.IsProvisionalPlacement = false;
+            loco.ProvisionalTrackId = null;
+            loco.ProvisionalTrackOffsetX = null;
+
+            _repository.AddHistory("ProvisionalPlacementValidated", 
+                $"Placement prévisionnel validé pour loco {loco.Number}.");
+            UpdatePoolVisibility();
+            PersistState();
+            RefreshTapisT13();
+        }
+
+        private TrackModel? ShowRollingLineSelectionDialog(List<TrackModel> rollingLineTracks)
+        {
+            // Créer une fenêtre de dialogue simple pour sélectionner une ligne
+            var dialog = new Window
+            {
+                Title = "Sélectionner une ligne de roulement",
+                Width = 400,
+                Height = 500,
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = (Brush)Resources["AppBackgroundBrush"]
+            };
+
+            var listBox = new ListBox
+            {
+                ItemsSource = rollingLineTracks,
+                DisplayMemberPath = "Name",
+                Margin = new Thickness(10),
+                Padding = new Thickness(5)
+            };
+
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 80,
+                Height = 30,
+                Margin = new Thickness(5),
+                IsDefault = true
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Annuler",
+                Width = 80,
+                Height = 30,
+                Margin = new Thickness(5),
+                IsCancel = true
+            };
+
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(10)
+            };
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+
+            var mainPanel = new DockPanel { Margin = new Thickness(10) };
+            DockPanel.SetDock(buttonPanel, Dock.Bottom);
+            mainPanel.Children.Add(buttonPanel);
+            mainPanel.Children.Add(listBox);
+
+            dialog.Content = mainPanel;
+
+            TrackModel? selectedTrack = null;
+            okButton.Click += (s, e) =>
+            {
+                if (listBox.SelectedItem is TrackModel track)
+                {
+                    selectedTrack = track;
+                    dialog.DialogResult = true;
+                    dialog.Close();
+                }
+                else
+                {
+                    MessageBox.Show("Veuillez sélectionner une ligne de roulement.", "Sélection",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            };
+
+            cancelButton.Click += (s, e) =>
+            {
+                dialog.DialogResult = false;
+                dialog.Close();
+            };
+
+            return dialog.ShowDialog() == true ? selectedTrack : null;
+        }
+
         private void LocomotiveHsCommand_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var loco = GetFocusedLocomotive();

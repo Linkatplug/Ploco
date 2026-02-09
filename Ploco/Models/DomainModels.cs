@@ -48,6 +48,9 @@ namespace Ploco.Models
         private double? _assignedTrackOffsetX;
         private int? _assignedTrackId;
         private bool _isVisibleInActivePool = true;
+        private bool _isProvisionalPlacement;
+        private int? _provisionalTrackId;
+        private double? _provisionalTrackOffsetX;
 
         public int Id { get; set; }
         public int SeriesId { get; set; }
@@ -155,6 +158,45 @@ namespace Ploco.Models
                 if (_isVisibleInActivePool != value)
                 {
                     _isVisibleInActivePool = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsProvisionalPlacement
+        {
+            get => _isProvisionalPlacement;
+            set
+            {
+                if (_isProvisionalPlacement != value)
+                {
+                    _isProvisionalPlacement = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int? ProvisionalTrackId
+        {
+            get => _provisionalTrackId;
+            set
+            {
+                if (_provisionalTrackId != value)
+                {
+                    _provisionalTrackId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public double? ProvisionalTrackOffsetX
+        {
+            get => _provisionalTrackOffsetX;
+            set
+            {
+                if (_provisionalTrackOffsetX != value)
+                {
+                    _provisionalTrackOffsetX = value;
                     OnPropertyChanged();
                 }
             }
