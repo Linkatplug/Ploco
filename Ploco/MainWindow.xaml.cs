@@ -2685,18 +2685,28 @@ namespace Ploco
 
         private void RefreshLocomotivesDisplay()
         {
-            // Refresh ListBox locomotives (zone de pioche)
-            if (LocomotiveList.ItemsSource != null)
-            {
-                CollectionViewSource.GetDefaultView(LocomotiveList.ItemsSource).Refresh();
-            }
+            // Force complete refresh by reassigning ItemsSource
+            LocomotiveList.ItemsSource = null;
+            LocomotiveList.ItemsSource = _locomotives;
             
-            // Refresh all tiles
+            // Re-initialize the view (sort, etc.)
+            InitializeLocomotiveView();
+            
+            // Refresh all tiles - need to remove locomotives that are no longer in Sibelit
             foreach (var tile in _tiles)
             {
                 foreach (var track in tile.Tracks)
                 {
-                    CollectionViewSource.GetDefaultView(track.Locomotives).Refresh();
+                    // Remove locomotives that are no longer in Sibelit pool
+                    var locomotivesToRemove = track.Locomotives
+                        .Where(l => !l.IsForecastGhost && l.Pool != "Sibelit")
+                        .ToList();
+                    
+                    foreach (var loco in locomotivesToRemove)
+                    {
+                        track.Locomotives.Remove(loco);
+                        Logger.Info($"Removed locomotive {loco.Number} from track {track.Name} (pool changed to {loco.Pool})", "RefreshDisplay");
+                    }
                 }
             }
         }
