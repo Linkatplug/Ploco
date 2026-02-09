@@ -49,9 +49,9 @@ namespace Ploco.Models
         private int? _assignedTrackId;
         private bool _isVisibleInActivePool = true;
         private bool _isForecastOrigin;
-        private int? _forecastTargetLineId;
+        private int? _forecastTargetRollingLineTrackId;
         private bool _isForecastGhost;
-        private LocomotiveStatus? _originalStatus;
+        private int? _forecastSourceLocomotiveId;
 
         public int Id { get; set; }
         public int SeriesId { get; set; }
@@ -177,14 +177,14 @@ namespace Ploco.Models
             }
         }
 
-        public int? ForecastTargetLineId
+        public int? ForecastTargetRollingLineTrackId
         {
-            get => _forecastTargetLineId;
+            get => _forecastTargetRollingLineTrackId;
             set
             {
-                if (_forecastTargetLineId != value)
+                if (_forecastTargetRollingLineTrackId != value)
                 {
-                    _forecastTargetLineId = value;
+                    _forecastTargetRollingLineTrackId = value;
                     OnPropertyChanged();
                 }
             }
@@ -203,14 +203,14 @@ namespace Ploco.Models
             }
         }
 
-        public LocomotiveStatus? OriginalStatus
+        public int? ForecastSourceLocomotiveId
         {
-            get => _originalStatus;
+            get => _forecastSourceLocomotiveId;
             set
             {
-                if (_originalStatus != value)
+                if (_forecastSourceLocomotiveId != value)
                 {
-                    _originalStatus = value;
+                    _forecastSourceLocomotiveId = value;
                     OnPropertyChanged();
                 }
             }

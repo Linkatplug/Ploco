@@ -1039,20 +1039,15 @@ namespace Ploco
 
             var targetTrack = dialog.SelectedTrack;
 
-            // Set the original locomotive to forecast origin (will turn blue)
+            // Set the original locomotive to forecast origin (will turn blue via DataTrigger)
             loco.IsForecastOrigin = true;
-            loco.ForecastTargetLineId = targetTrack.Id;
-            loco.OriginalStatus = loco.Status;
+            loco.ForecastTargetRollingLineTrackId = targetTrack.Id;
 
-            // Create a ghost locomotive for the rolling line (will be green)
-            // Note: Ghost uses same ID as original to maintain the logical link.
-            // This is safe because:
-            // 1. Ghosts are never persisted (filtered out in PersistState)
-            // 2. Ghosts cannot be dragged (blocked in PreviewMouseMove)
-            // 3. Ghost matching uses IsForecastGhost + Number + SeriesId for robustness
+            // Create a ghost locomotive for the rolling line (will be green via DataTrigger)
+            // Ghost gets unique negative ID to avoid conflicts
             var ghost = new LocomotiveModel
             {
-                Id = loco.Id, // Same ID to logically link ghost to original
+                Id = -100000 - loco.Id, // Unique negative ID
                 SeriesId = loco.SeriesId,
                 SeriesName = loco.SeriesName,
                 Number = loco.Number,
@@ -1062,10 +1057,11 @@ namespace Ploco
                 HsReason = loco.HsReason,
                 MaintenanceDate = loco.MaintenanceDate,
                 IsForecastGhost = true,
+                ForecastSourceLocomotiveId = loco.Id, // Link back to original
                 AssignedTrackId = targetTrack.Id
             };
 
-            // Add ghost to the target rolling line
+            // Add ghost ONLY to the target track, NOT to _locomotives
             targetTrack.Locomotives.Add(ghost);
 
             _repository.AddHistory("ForecastPlacement", 
@@ -1084,15 +1080,14 @@ namespace Ploco
 
             // Find and remove the ghost locomotive
             var targetTrack = _tiles.SelectMany(t => t.Tracks)
-                .FirstOrDefault(t => t.Id == loco.ForecastTargetLineId);
+                .FirstOrDefault(t => t.Id == loco.ForecastTargetRollingLineTrackId);
             
             if (targetTrack != null)
             {
-                // Match ghost by multiple properties for robustness: IsForecastGhost flag + Number + SeriesId
+                // Match ghost by ForecastSourceLocomotiveId (most reliable)
                 var ghost = targetTrack.Locomotives.FirstOrDefault(l => 
                     l.IsForecastGhost && 
-                    l.Number == loco.Number && 
-                    l.SeriesId == loco.SeriesId);
+                    l.ForecastSourceLocomotiveId == loco.Id);
                     
                 if (ghost != null)
                 {
@@ -1100,16 +1095,9 @@ namespace Ploco
                 }
             }
 
-            // Restore original locomotive state
+            // Restore original locomotive state (DO NOT touch Status)
             loco.IsForecastOrigin = false;
-            loco.ForecastTargetLineId = null;
-            
-            // Always restore status if OriginalStatus was saved
-            if (loco.OriginalStatus.HasValue)
-            {
-                loco.Status = loco.OriginalStatus.Value;
-            }
-            loco.OriginalStatus = null;
+            loco.ForecastTargetRollingLineTrackId = null;
 
             _repository.AddHistory("ForecastCancelled", 
                 $"Annulation du placement prévisionnel de la loco {loco.Number}.");
@@ -1125,13 +1113,9 @@ namespace Ploco
                 return;
             }
 
-            // Find the original track (where the locomotive currently is)
-            var originalTrack = _tiles.SelectMany(t => t.Tracks)
-                .FirstOrDefault(t => t.Locomotives.Contains(loco));
-
-            // Find the target track and ghost
+            // Find the target track
             var targetTrack = _tiles.SelectMany(t => t.Tracks)
-                .FirstOrDefault(t => t.Id == loco.ForecastTargetLineId);
+                .FirstOrDefault(t => t.Id == loco.ForecastTargetRollingLineTrackId);
 
             if (targetTrack == null)
             {
@@ -1140,11 +1124,10 @@ namespace Ploco
                 return;
             }
 
-            // Match ghost by multiple properties for robustness: IsForecastGhost flag + Number + SeriesId
+            // Match ghost by ForecastSourceLocomotiveId
             var ghost = targetTrack.Locomotives.FirstOrDefault(l => 
                 l.IsForecastGhost && 
-                l.Number == loco.Number && 
-                l.SeriesId == loco.SeriesId);
+                l.ForecastSourceLocomotiveId == loco.Id);
             
             // Check if target line has been occupied by another real locomotive
             var realLocosInTarget = targetTrack.Locomotives.Where(l => !l.IsForecastGhost).ToList();
@@ -1177,25 +1160,15 @@ namespace Ploco
                 realLoco.AssignedTrackOffsetX = null;
             }
 
-            // Remove original locomotive from its current track
-            if (originalTrack != null)
-            {
-                originalTrack.Locomotives.Remove(loco);
-            }
-
-            // Reset forecast flags - don't restore status, keep current one
+            // Reset forecast flags BEFORE moving (important!)
             loco.IsForecastOrigin = false;
-            loco.ForecastTargetLineId = null;
-            loco.OriginalStatus = null;
+            loco.ForecastTargetRollingLineTrackId = null;
 
-            // Add the real locomotive to the target track
-            loco.AssignedTrackId = targetTrack.Id;
-            targetTrack.Locomotives.Add(loco);
-            EnsureTrackOffsets(targetTrack);
+            // Use existing MoveLocomotiveToTrack method to properly move the locomotive
+            MoveLocomotiveToTrack(loco, targetTrack, 0);
 
             _repository.AddHistory("ForecastValidated", 
                 $"Validation du placement prévisionnel de la loco {loco.Number} vers {targetTrack.Name}.");
-            UpdatePoolVisibility();
             PersistState();
             RefreshTapisT13();
         }

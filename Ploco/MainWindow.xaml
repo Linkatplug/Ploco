@@ -9,8 +9,26 @@
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
         <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
-        <local:LocomotiveToBrushConverter x:Key="LocomotiveToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        
+        <!-- Style for locomotive Border with forecast color overlay -->
+        <Style x:Key="LocomotiveBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{Binding Status, Converter={StaticResource StatutToBrushConverter}}"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Style.Triggers>
+                <!-- Forecast origin: Blue (highest priority) -->
+                <DataTrigger Binding="{Binding IsForecastOrigin}" Value="True">
+                    <Setter Property="Background" Value="Blue"/>
+                </DataTrigger>
+                <!-- Forecast ghost: Green -->
+                <DataTrigger Binding="{Binding IsForecastGhost}" Value="True">
+                    <Setter Property="Background" Value="Green"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        
         <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFF2F2F2"/>
         <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#FFEFF4FF"/>
         <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FFF7F7F7"/>
@@ -172,8 +190,8 @@
                                         </ListBox.ItemsPanel>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                            <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
-                                                    Padding="4" Margin="2" CornerRadius="4"
+                                            <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                    
                                                     ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                     PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                     <Grid>
@@ -245,8 +263,8 @@
                                                             </ListBox.ItemContainerStyle>
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
-                                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                                    <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                            
                                                                             ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                             PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                         <Grid>
@@ -357,8 +375,8 @@
                                             </ListBox.ItemsPanel>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
-                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                    <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                            
                                                             ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                             PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                         <Grid>
@@ -521,8 +539,8 @@
                                                             </ListBox.ItemContainerStyle>
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
-                                                                            Padding="4" Margin="2" CornerRadius="4"
+                                                                    <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                            
                                                                             ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                             PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                         <Grid>
@@ -644,8 +662,8 @@
                                                         </ListBox.ItemContainerStyle>
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
-                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                        
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                         PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                     <Grid>
@@ -756,8 +774,8 @@
                                                         </ListBox.ItemsPanel>
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
-                                                                        Padding="4" Margin="2" CornerRadius="4"
+                                                                <Border Style="{StaticResource LocomotiveBorderStyle}"
+                                                                        
                                                                         ContextMenu="{StaticResource LocomotiveTileContextMenu}"
                                                                         PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
                                                                     <Grid>
@@ -883,7 +901,7 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{Binding Converter={StaticResource LocomotiveToBrushConverter}}"
+                                <Border Style="{StaticResource LocomotiveBorderStyle}"
                                         Padding="6" Margin="4" CornerRadius="4"
                                         ContextMenu="{StaticResource LocomotiveListContextMenu}"
                                         PreviewMouseRightButtonDown="LocomotiveItem_PreviewMouseRightButtonDown">
