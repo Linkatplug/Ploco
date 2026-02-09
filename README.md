@@ -14,11 +14,17 @@ Ploco est actuellement en cours de développement actif.
 ## Fonctionnalités
 
 ### Gestion des locomotives
-- Gestion visuelle du parc de locomotives (OK / traction réduite / HS)
-- Pourcentage de traction et motif HS obligatoire
+- Gestion visuelle du parc de locomotives avec 4 statuts :
+  - ✅ **OK** (Vert) : Locomotive opérationnelle
+  - 🟠 **Manque de Traction** (Orange) : Traction réduite avec pourcentage
+  - 🟡 **Défaut Mineur** (Jaune) : À vérifier avec description obligatoire
+  - 🔴 **HS** (Rouge) : Hors service avec motif obligatoire
+- Pourcentage de traction et commentaires pour traction réduite
 - Glisser-déposer des locomotives entre les voies
+- Double-clic rapide pour transférer entre pools (Sibelit ↔ Lineas)
 - Retour des locomotives vers la liste par glisser-déposer
 - Gestion des pools avec fenêtre de transfert dédiée
+- **Import par lot** : Synchronisation automatique des pools depuis le presse-papier
 - Comptage automatique des locomotives par pool
 - Historique complet des actions (affectations, statuts, modifications de layout)
 - Intégration de l'historique des pools dans la nouvelle interface
@@ -45,14 +51,84 @@ Ploco est actuellement en cours de développement actif.
 - Filtrage des layouts de tuiles par pool et lieu
 
 ### Fonctionnalités avancées
+- **🔵 Placement Prévisionnel** : Planification visuelle des affectations
+  - Locomotive bleue dans tuile d'origine + copie verte sur ligne cible
+  - Validation ou annulation du placement planifié
+  - Gestion des conflits si ligne occupée entre-temps
 - Presets de layout (sauvegarde / chargement / suppression)
 - Fenêtre de gestion de la base de données
-- Résumé T13 amélioré avec affichage du tapis
+- **Résumé T13 complet** : Affichage intelligent selon type de voie et statut
+  - Support du mode prévisionnel (utilise position future)
+  - Affichage différencié : HS (rouge), en ligne avec train (vert), disponible, etc.
+  - Pourcentages de traction inclus dans le rapport
 - Génération de planning PDF
 - Fenêtres auxiliaires non bloquantes (modeless)
+- **Sauvegarde automatique** de la taille et position des fenêtres
+- **Système de logs complet** avec rotation automatique (30 jours)
 - Mode sombre avec contraste amélioré
 - Sauvegarde locale automatique
 - Aucun serveur externe requis
+
+---
+
+## Nouveautés (Dernières 48 heures)
+
+### 🔵 Placement Prévisionnel (Forecast Placement)
+Planifiez l'affectation de locomotives avant leur déplacement réel !
+- **Activation** : Clic droit sur une locomotive → "Placement prévisionnel"
+- **Indicateurs visuels** :
+  - 🔵 **Bleu** : Locomotive dans sa tuile d'origine (en attente)
+  - 🟢 **Vert** : Copie fantôme sur la ligne de roulement cible
+- **Actions** : Valider pour effectuer le déplacement, ou annuler pour tout réinitialiser
+- **Sécurité** : Les copies fantômes ne peuvent pas être déplacées, gestion des conflits automatique
+
+### 📦 Import de Données par Lot
+Synchronisez vos pools en un seul clic !
+- **Accès** : Menu Options > Import
+- **Fonctionnement** : Copiez une liste de numéros de locomotives (depuis Excel), collez dans la fenêtre
+- **Synchronisation automatique** :
+  - ✅ Locomotives listées → Ajoutées à Sibelit
+  - ⬅️ Locomotives non listées → Retournées à Lineas
+- **Résultat** : Statistiques détaillées des modifications effectuées
+
+### 🟡 Nouveau Statut "Défaut Mineur"
+Un statut intermédiaire pour les problèmes mineurs !
+- **Couleur** : Jaune (entre OK/vert et HS/rouge)
+- **Obligation** : Description du problème requise
+- **Usage** : Marquer les locomotives nécessitant vérification sans les déclarer HS
+- **Nettoyage auto** : La description est effacée lors du changement de statut
+
+### 📊 Améliorations TapisT13
+Rapport T13 plus intelligent et précis !
+- **Support du placement prévisionnel** : Affiche la position future (ghost)
+- **Affichage différencié** :
+  - 🔴 HS → "TileName TrainNumber" (rouge, les deux colonnes)
+  - 🟢 Sur ligne avec train → "TileName TrainNumber" (vert, colonne rapport)
+  - Disponible → "DISPO TileName" (pas de couleur)
+  - Sur ligne de roulement → "1103" (numéro seul)
+- **Pourcentages de traction** inclus dans le rapport
+
+### 🎯 Améliorations d'Ergonomie
+
+#### Double-clic Transfert de Pool
+- Double-cliquez sur une locomotive pour la transférer instantanément entre Sibelit et Lineas
+- Plus besoin d'ouvrir la fenêtre de gestion des pools !
+
+#### Sauvegarde Automatique des Fenêtres
+- Taille, position et état (maximisé/normal) sauvegardés automatiquement
+- S'applique à toutes les fenêtres principales
+- Plus besoin de redimensionner à chaque ouverture !
+
+#### Informations de Traction Enrichies
+- Commentaire optionnel pour le statut "Manque de Traction"
+- Affichage du pourcentage (75%, 50%, 25%) dans les rapports
+- Documentation détaillée des problèmes de traction
+
+#### Système de Logs Complet
+- Enregistrement de toutes les opérations importantes
+- Stockage dans `%AppData%\Ploco\Logs\`
+- Rotation automatique sur 30 jours
+- Accès rapide via le menu Options
 
 ---
 
@@ -70,6 +146,9 @@ Ploco est actuellement en cours de développement actif.
 - Gestion des valeurs nulles de configuration des voies
 - Correction du chevauchement des locomotives sur les voies
 - Correction des avertissements nullable sur les statuts legacy
+- **Correction du rafraîchissement** de la liste de gauche après import de locomotives
+- Gestion robuste des locomotives fantômes (non persistées en base)
+- Validation stricte des statuts avec champs obligatoires
 
 ---
 
