@@ -10,7 +10,8 @@ namespace Ploco.Models
     {
         Ok,
         ManqueTraction,
-        HS
+        HS,
+        DefautMineur
     }
 
     public enum TileType
@@ -44,6 +45,7 @@ namespace Ploco.Models
         private LocomotiveStatus _status;
         private int? _tractionPercent;
         private string? _hsReason;
+        private string? _defautInfo;
         private string? _maintenanceDate;
         private double? _assignedTrackOffsetX;
         private int? _assignedTrackId;
@@ -94,6 +96,19 @@ namespace Ploco.Models
                 if (_hsReason != value)
                 {
                     _hsReason = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? DefautInfo
+        {
+            get => _defautInfo;
+            set
+            {
+                if (_defautInfo != value)
+                {
+                    _defautInfo = value;
                     OnPropertyChanged();
                 }
             }

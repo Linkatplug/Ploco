@@ -17,6 +17,7 @@ namespace Ploco.Converters
                     LocomotiveStatus.Ok => Brushes.Green,
                     LocomotiveStatus.ManqueTraction => Brushes.Orange,
                     LocomotiveStatus.HS => Brushes.Red,
+                    LocomotiveStatus.DefautMineur => Brushes.Yellow,
                     _ => Brushes.Gray,
                 };
             }
