@@ -1092,6 +1092,15 @@ namespace Ploco
             // Ajouter la locomotive à la ligne de roulement (elle sera affichée en vert)
             selectedTrack.Locomotives.Add(loco);
 
+            // Forcer le rafraîchissement de l'affichage dans la tuile d'origine
+            // en retirant et rajoutant temporairement la locomotive
+            if (currentTrack != null)
+            {
+                var index = currentTrack.Locomotives.IndexOf(loco);
+                currentTrack.Locomotives.RemoveAt(index);
+                currentTrack.Locomotives.Insert(index, loco);
+            }
+
             _repository.AddHistory("ProvisionalPlacementStarted", 
                 $"Placement prévisionnel activé pour loco {loco.Number} sur {selectedTrack.Name}.");
             PersistState();
@@ -1105,8 +1114,21 @@ namespace Ploco
                 return;
             }
 
+            // Trouver la track d'origine pour forcer le rafraîchissement
+            var originalTrack = _tiles
+                .SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Id == loco.AssignedTrackId);
+
             // Annuler le placement prévisionnel
             CancelProvisionalPlacement(loco);
+
+            // Forcer le rafraîchissement de l'affichage dans la tuile d'origine
+            if (originalTrack != null && originalTrack.Locomotives.Contains(loco))
+            {
+                var index = originalTrack.Locomotives.IndexOf(loco);
+                originalTrack.Locomotives.RemoveAt(index);
+                originalTrack.Locomotives.Insert(index, loco);
+            }
 
             _repository.AddHistory("ProvisionalPlacementCancelled", 
                 $"Placement prévisionnel annulé pour loco {loco.Number}.");
@@ -1121,30 +1143,31 @@ namespace Ploco
                 return;
             }
 
-            // Trouver la tuile/track d'origine et retirer la locomotive bleue
-            var originalTrack = _tiles
-                .SelectMany(t => t.Tracks)
-                .FirstOrDefault(t => t.Locomotives.Contains(loco) && t.Id != loco.ProvisionalTrackId);
-
-            if (originalTrack != null)
-            {
-                originalTrack.Locomotives.Remove(loco);
-            }
-
-            // Trouver la ligne de roulement provisionnelle
+            // Trouver la ligne de roulement provisionnelle (destination)
             var provisionalTrack = _tiles
                 .SelectMany(t => t.Tracks)
                 .FirstOrDefault(t => t.Id == loco.ProvisionalTrackId);
 
+            // Trouver la tuile/track d'origine (utiliser AssignedTrackId qui pointe vers la track d'origine)
+            var originalTrack = _tiles
+                .SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Id == loco.AssignedTrackId);
+
+            // Validation: Retirer de la tuile d'origine, garder dans la ligne de roulement
+            if (originalTrack != null && originalTrack.Locomotives.Contains(loco))
+            {
+                originalTrack.Locomotives.Remove(loco);
+            }
+
+            // S'assurer que la locomotive est bien dans la ligne de roulement
             if (provisionalTrack != null)
             {
-                // S'assurer que la locomotive est bien dans la track
                 if (!provisionalTrack.Locomotives.Contains(loco))
                 {
                     provisionalTrack.Locomotives.Add(loco);
                 }
 
-                // Mettre à jour les propriétés
+                // Mettre à jour les propriétés: la ligne de roulement devient la track assignée
                 loco.AssignedTrackId = provisionalTrack.Id;
                 loco.AssignedTrackOffsetX = loco.ProvisionalTrackOffsetX ?? 0;
             }

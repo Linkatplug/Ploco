@@ -14,32 +14,54 @@ namespace Ploco.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not LocomotiveModel loco)
+            // Note: We bind to Status property, but the value passed is the Status enum
+            // We need the whole locomotive object to check IsProvisionalPlacement
+            // So we need to change how this converter is used
+            
+            // For now, if value is a LocomotiveModel, use it directly
+            // If value is a LocomotiveStatus, we can't access provisional placement status
+            if (value is LocomotiveModel loco)
             {
-                return Brushes.Gray;
-            }
-
-            // Gestion du placement prévisionnel
-            if (loco.IsProvisionalPlacement)
-            {
-                // Si on est dans une rolling line (paramètre = "rollingline"), 
-                // afficher en vert (c'est l'affichage provisionnel)
-                if (parameter is string param && param == "rollingline")
+                // Priorité 1: Statuts critiques (HS et ManqueTraction) - toujours afficher en rouge/orange
+                if (loco.Status == LocomotiveStatus.HS)
                 {
-                    return Brushes.Green;
+                    return Brushes.Red;
                 }
-                // Sinon, afficher en bleu (c'est la locomotive dans sa tuile d'origine)
-                return Brushes.Blue;
+                if (loco.Status == LocomotiveStatus.ManqueTraction)
+                {
+                    return Brushes.Orange;
+                }
+
+                // Priorité 2: Gestion du placement prévisionnel (seulement si statut OK)
+                if (loco.IsProvisionalPlacement && loco.Status == LocomotiveStatus.Ok)
+                {
+                    // Si on est dans une rolling line (paramètre = "rollingline"), 
+                    // afficher en vert (c'est l'affichage provisionnel)
+                    if (parameter is string param && param == "rollingline")
+                    {
+                        return Brushes.Green;
+                    }
+                    // Sinon, afficher en bleu (c'est la locomotive dans sa tuile d'origine)
+                    return Brushes.Blue;
+                }
+
+                // Priorité 3: Statut normal (OK)
+                return loco.Status == LocomotiveStatus.Ok ? Brushes.Green : Brushes.Gray;
             }
 
-            // Sinon, utiliser la couleur basée sur le statut
-            return loco.Status switch
+            // Fallback for when binding to Status enum directly (old behavior)
+            if (value is LocomotiveStatus status)
             {
-                LocomotiveStatus.Ok => Brushes.Green,
-                LocomotiveStatus.ManqueTraction => Brushes.Orange,
-                LocomotiveStatus.HS => Brushes.Red,
-                _ => Brushes.Gray,
-            };
+                return status switch
+                {
+                    LocomotiveStatus.Ok => Brushes.Green,
+                    LocomotiveStatus.ManqueTraction => Brushes.Orange,
+                    LocomotiveStatus.HS => Brushes.Red,
+                    _ => Brushes.Gray,
+                };
+            }
+
+            return Brushes.Gray;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
