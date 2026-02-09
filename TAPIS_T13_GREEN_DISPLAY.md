@@ -25,15 +25,18 @@ Une locomotive apparaît en rouge dans "Infos/Rapport" si :
 - Si `IsOnTrain == true` et `TrainNumber` existe : `"NomTuile TrainNumber"`
 - Sinon : `"NomTuile"`
 
-### Affichage en Vert (Non-HS sur ligne de roulement)
-Une locomotive apparaît en vert dans "Infos/Rapport" si :
+### Affichage en Vert (Non-HS sur ligne de roulement AVEC affectation train)
+Une locomotive apparaît en vert dans "Infos/Rapport" si **TOUTES** les conditions suivantes sont remplies :
 - `Status != LocomotiveStatus.HS` (OK, ManqueTraction, DefautMineur)
 - `track.Kind == TrackKind.RollingLine` (sur une ligne de roulement)
+- `track.IsOnTrain == true` (affectée à un train) **← IMPORTANT**
 
 **Format d'affichage :**
 - Identique au format HS
 - Si `IsOnTrain == true` et `TrainNumber` existe : `"NomTuile TrainNumber"`
 - Sinon : `"NomTuile"`
+
+**Note importante :** Une locomotive sur une ligne de roulement SANS affectation train (`IsOnTrain = false`) n'apparaîtra PAS en vert et le champ "Infos/Rapport" restera vide.
 
 ### Pas d'affichage couleur
 Les locomotives ne sont pas colorées si :
@@ -52,14 +55,25 @@ TileName: "Thionville"
 → Affichage dans "Infos/Rapport" : "THL 42350" (en VERT)
 ```
 
-### Exemple 2 : Locomotive ManqueTraction sur ligne 1105
+### Exemple 2 : Locomotive ManqueTraction sur ligne 1105 SANS affectation train
 ```
 Status: ManqueTraction
 Track: 1105 (RollingLine)
-IsOnTrain: false
+IsOnTrain: false  ← Pas de train affecté
 TileName: "Anvers Nord"
 
-→ Affichage dans "Infos/Rapport" : "FN" (en VERT)
+→ Affichage dans "Infos/Rapport" : "" (VIDE, pas de couleur)
+```
+
+### Exemple 2bis : Locomotive ManqueTraction sur ligne 1105 AVEC affectation train
+```
+Status: ManqueTraction
+Track: 1105 (RollingLine)
+IsOnTrain: true  ← Train affecté
+TrainNumber: "42352"
+TileName: "Anvers Nord"
+
+→ Affichage dans "Infos/Rapport" : "FN 42352" (en VERT)
 ```
 
 ### Exemple 3 : Locomotive HS sur ligne 1106
@@ -132,12 +146,13 @@ private sealed class T13Row
 ```csharp
 var isHs = loco.Status == LocomotiveStatus.HS;
 var isOnRollingLine = track?.Kind == TrackKind.RollingLine;
-var isNonHsOnRollingLine = isOnRollingLine && !isHs;
+// IMPORTANT: Nécessite IsOnTrain = true pour affichage vert
+var isNonHsOnRollingLine = isOnRollingLine && !isHs && track?.IsOnTrain == true;
 
 // Report logic:
 // 1. If rolling line number exists (old behavior), show it
 // 2. If HS, show train info (existing behavior)
-// 3. If non-HS on rolling line, show train info (NEW: green display)
+// 3. If non-HS on rolling line WITH train assignment, show train info (GREEN display)
 var report = !string.IsNullOrWhiteSpace(rollingLineNumber)
     ? rollingLineNumber
     : isHs ? trainInfo 
