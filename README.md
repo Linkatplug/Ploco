@@ -9,6 +9,14 @@ Les locomotives peuvent être déplacées par **glisser-déposer**, avec un suiv
 
 Ploco est actuellement en cours de développement actif.
 
+## 📚 Documentation
+
+- **[Guide Utilisateur](docs/USER_GUIDE.md)** - Manuel complet d'utilisation
+- **[Guide des Fonctionnalités](docs/FEATURES.md)** - Toutes les fonctionnalités détaillées
+- **[Notes de Version](RELEASE_NOTES.md)** - Dernières nouveautés et améliorations
+- **[Changelog](CHANGELOG.md)** - Historique des modifications
+- **[Documentation des Fonctionnalités](docs/features/)** - Détails techniques par fonctionnalité
+
 ---
 
 ## Fonctionnalités
@@ -71,151 +79,63 @@ Ploco est actuellement en cours de développement actif.
 
 ---
 
-## Nouveautés (Dernières 48 heures)
+## 🎯 Fonctionnalités Principales
 
-### 🔵 Placement Prévisionnel (Forecast Placement)
-Planifiez l'affectation de locomotives avant leur déplacement réel !
-- **Activation** : Clic droit sur une locomotive → "Placement prévisionnel"
-- **Indicateurs visuels** :
-  - 🔵 **Bleu** : Locomotive dans sa tuile d'origine (en attente)
-  - 🟢 **Vert** : Copie fantôme sur la ligne de roulement cible
-- **Actions** : Valider pour effectuer le déplacement, ou annuler pour tout réinitialiser
-- **Sécurité** : Les copies fantômes ne peuvent pas être déplacées, gestion des conflits automatique
+### Gestion des Locomotives
+- 4 statuts avec codes couleur : OK (vert), Manque de Traction (orange), Défaut Mineur (jaune), HS (rouge)
+- Glisser-déposer intuitif entre voies
+- Double-clic pour transfert rapide entre pools
+- **Placement prévisionnel** pour planifier les affectations
 
-### 📦 Import de Données par Lot
-Synchronisez vos pools en un seul clic !
-- **Accès** : Menu Options > Import
-- **Fonctionnement** : Copiez une liste de numéros de locomotives (depuis Excel), collez dans la fenêtre
-- **Synchronisation automatique** :
-  - ✅ Locomotives listées → Ajoutées à Sibelit
-  - ⬅️ Locomotives non listées → Retournées à Lineas
-- **Résultat** : Statistiques détaillées des modifications effectuées
+### Import et Synchronisation
+- **Import par lot** depuis Excel/presse-papier
+- Synchronisation automatique des pools (Sibelit ↔ Lineas)
+- Statistiques détaillées des modifications
 
-### 🟡 Nouveau Statut "Défaut Mineur"
-Un statut intermédiaire pour les problèmes mineurs !
-- **Couleur** : Jaune (entre OK/vert et HS/rouge)
-- **Obligation** : Description du problème requise
-- **Usage** : Marquer les locomotives nécessitant vérification sans les déclarer HS
-- **Nettoyage auto** : La description est effacée lors du changement de statut
+### Rapports et Suivi
+- **TapisT13** : Rapport intelligent avec support du placement prévisionnel
+- Historique complet des actions
+- Système de logs avec rotation automatique (30 jours)
 
-### 📊 Améliorations TapisT13
-Rapport T13 plus intelligent et précis !
-- **Support du placement prévisionnel** : Affiche la position future (ghost)
-- **Affichage différencié** :
-  - 🔴 HS → "TileName TrainNumber" (rouge, les deux colonnes)
-  - 🟢 Sur ligne avec train → "TileName TrainNumber" (vert, colonne rapport)
-  - Disponible → "DISPO TileName" (pas de couleur)
-  - Sur ligne de roulement → "1103" (numéro seul)
-- **Pourcentages de traction** inclus dans le rapport
+### Interface et Ergonomie
+- Canvas de tuiles interactif (dépôts, garages, lignes)
+- Redimensionnement des tuiles par glisser-déposer
+- Mode sombre avec contraste optimisé
+- Sauvegarde automatique de la taille et position des fenêtres
 
-### 🎯 Améliorations d'Ergonomie
+📖 **[Voir toutes les fonctionnalités](docs/FEATURES.md)**
 
-#### Double-clic Transfert de Pool
-- Double-cliquez sur une locomotive pour la transférer instantanément entre Sibelit et Lineas
-- Plus besoin d'ouvrir la fenêtre de gestion des pools !
+## 🚀 Démarrage Rapide
 
-#### Sauvegarde Automatique des Fenêtres
-- Taille, position et état (maximisé/normal) sauvegardés automatiquement
-- S'applique à toutes les fenêtres principales
-- Plus besoin de redimensionner à chaque ouverture !
+### Installation
 
-#### Informations de Traction Enrichies
-- Commentaire optionnel pour le statut "Manque de Traction"
-- Affichage du pourcentage (75%, 50%, 25%) dans les rapports
-- Documentation détaillée des problèmes de traction
+1. Télécharger la dernière version
+2. Extraire l'archive
+3. Lancer `Ploco.exe`
 
-#### Système de Logs Complet
-- Enregistrement de toutes les opérations importantes
-- Stockage dans `%AppData%\Ploco\Logs\`
-- Rotation automatique sur 30 jours
-- Accès rapide via le menu Options
+### Première Utilisation
 
----
+1. **Ajouter des lieux** : Bouton "Ajouter un lieu" pour créer dépôts, garages, lignes
+2. **Importer des locomotives** : Menu Options > Import pour synchroniser depuis Excel
+3. **Déplacer des locomotives** : Glisser-déposer depuis la liste vers les voies
+4. **Planifier** : Clic droit > Placement prévisionnel pour visualiser avant validation
 
-## Améliorations récentes
+📖 **[Guide Utilisateur Complet](docs/USER_GUIDE.md)**
 
-### Optimisations
-- Optimisation de la liste de sélection des tuiles pour de meilleures performances
-- Amélioration du contraste et des espacements en mode sombre
-- Séparation du numéro de locomotive et du badge de traction pour plus de clarté
-- Correction du wrapping de flotte et des aiguillages bloqués
+## 💻 Stack Technique
 
-### Corrections
-- Protection contre les fichiers SQLite invalides
-- Correction de la récupération du dernier ID SQLite
-- Gestion des valeurs nulles de configuration des voies
-- Correction du chevauchement des locomotives sur les voies
-- Correction des avertissements nullable sur les statuts legacy
-- **Correction du rafraîchissement** de la liste de gauche après import de locomotives
-- Gestion robuste des locomotives fantômes (non persistées en base)
-- Validation stricte des statuts avec champs obligatoires
+- **.NET 8.0**
+- **WPF** (Windows Presentation Foundation)
+- **SQLite** (Microsoft.Data.Sqlite) - Persistance locale
+- **Newtonsoft.Json** - Gestion des layouts et presets
 
----
+## 📦 Persistance des Données
 
-## À venir
-
-### Fonctionnalités planifiées
-- Export des données vers Excel/CSV
-- Synchronisation cloud optionnelle
-- Notifications et alertes pour les locomotives HS
-- Module de statistiques et rapports avancés
-- Support multi-utilisateurs avec gestion des permissions
-- Application mobile companion pour consultation
-
-### Améliorations prévues
-- Amélioration de l'interface utilisateur avec animations
-- Thèmes supplémentaires personnalisables
-- Raccourcis clavier configurables
-- Mode plein écran optimisé
-- Système de sauvegarde automatique avec versioning
-
----
-
-## Stack technique
-
-- .NET 8.0
-- WPF (Windows Presentation Foundation)
-- SQLite (persistance locale)
-- Newtonsoft.Json (gestion des layouts et presets)
-- Microsoft.Data.Sqlite
-
----
-
-## Données et persistance
-
-- Base de données principale : `ploco.db`
-- Presets de layout : `layout_presets.json`
-- Toutes les données sont stockées localement
-
----
-
-## Utilisation
-
-- **Ajouter un lieu (tuile)**  
-  Bouton *Ajouter un lieu*, puis sélection du type (dépôt, voie de garage, arrêt de ligne)
-
-- **Déplacer ou redimensionner une tuile**  
-  Glisser la tuile pour la déplacer  
-  Utiliser la poignée en bas à droite pour la redimensionner
-
-- **Configurer les voies**  
-  Menu contextuel de la tuile (ajout de voie, zone, sortie, etc.)
-
-- **Déplacer une locomotive**  
-  Glisser la locomotive depuis la liste vers une voie
-
-- **Modifier le statut d'une locomotive**  
-  Clic droit → modifier statut ou déclarer HS
-
-- **Changer de pool**  
-  Clic droit → swap de pool
-
-- **Gestion des parcs et historique**  
-  Menu *Gestion*
-
-- **Presets et thème**  
-  Menu *Vue* pour les presets  
-  Menu *Options* pour le thème
+Toutes les données sont stockées localement :
+- **Base de données** : `ploco.db` (SQLite)
+- **Presets** : `layout_presets.json`
+- **Paramètres** : `%AppData%\Ploco\WindowSettings.json`
+- **Logs** : `%AppData%\Ploco\Logs\`
 
 ### Screenshot
 
@@ -226,13 +146,15 @@ Rapport T13 plus intelligent et précis !
 <img width="1425" height="878" alt="DEIlEmP72y" src="https://github.com/user-attachments/assets/ff065709-afba-4f10-ab6d-344b25382622" />
 <img width="1425" height="878" alt="Hlu7fSlRMC" src="https://github.com/user-attachments/assets/d83e76e5-1ed7-4cb6-b904-a28c8c5ad7b9" />
 
-## Auteur
+---
+
+## 👨‍💻 Développeur
 
 Développé par **LinkAtPlug**
 
 ---
 
-## Licence
+## 📄 Licence
 
 Ce projet est distribué sous licence MIT.  
 Voir le fichier `LICENSE` pour plus d'informations.
