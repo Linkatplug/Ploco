@@ -48,13 +48,13 @@ namespace Ploco.Dialogs
                 var locHs = isHs ? trainInfo : string.Empty;
                 
                 // Report logic:
-                // 1. If rolling line number exists (old behavior), show it
-                // 2. If HS, show train info (existing behavior)
-                // 3. If non-HS on rolling line, show train info (NEW: green display)
-                var report = !string.IsNullOrWhiteSpace(rollingLineNumber)
-                    ? rollingLineNumber
-                    : isHs ? trainInfo 
-                    : isNonHsOnRollingLine ? trainInfo 
+                // Priority: train info (HS or non-HS with train) > rolling line number > empty
+                // 1. If HS, show train info (existing behavior)
+                // 2. If non-HS on rolling line with train, show train info (NEW: green display)
+                // 3. If rolling line number exists, show it (fallback)
+                var report = isHs ? trainInfo 
+                    : isNonHsOnRollingLine ? trainInfo
+                    : !string.IsNullOrWhiteSpace(rollingLineNumber) ? rollingLineNumber
                     : string.Empty;
                 
                 var motif = isHs ? (loco.HsReason ?? string.Empty) : string.Empty;
