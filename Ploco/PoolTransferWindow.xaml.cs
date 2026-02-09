@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
 using System.Linq;
+using System.Windows.Input;
 using Ploco.Models;
 
 namespace Ploco
@@ -86,6 +87,59 @@ namespace Ploco
             var lineasCount = _locomotives.Count(loco => string.Equals(loco.Pool, "Lineas", System.StringComparison.OrdinalIgnoreCase));
             SibelitCountText.Text = $"Nombre de locomotives : {sibelitCount}";
             LineasCountText.Text = $"Nombre de locomotives : {lineasCount}";
+        }
+
+        private void ListBoxSibelit_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            // Get the item under the mouse cursor (not the entire selection)
+            var listBox = sender as System.Windows.Controls.ListBox;
+            if (listBox == null) return;
+
+            var item = GetItemUnderMouse(listBox, e);
+            if (item is LocomotiveModel loco)
+            {
+                // Transfer only the double-clicked locomotive to Lineas
+                loco.Pool = "Lineas";
+                RefreshViews();
+            }
+        }
+
+        private void ListBoxLineas_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            // Get the item under the mouse cursor (not the entire selection)
+            var listBox = sender as System.Windows.Controls.ListBox;
+            if (listBox == null) return;
+
+            var item = GetItemUnderMouse(listBox, e);
+            if (item is LocomotiveModel loco)
+            {
+                // Transfer only the double-clicked locomotive to Sibelit
+                loco.Pool = "Sibelit";
+                RefreshViews();
+            }
+        }
+
+        private object? GetItemUnderMouse(System.Windows.Controls.ListBox listBox, MouseButtonEventArgs e)
+        {
+            // Hit test to get the item at the mouse position
+            var mousePosition = e.GetPosition(listBox);
+            var hitTestResult = System.Windows.Media.VisualTreeHelper.HitTest(listBox, mousePosition);
+            
+            if (hitTestResult != null)
+            {
+                // Walk up the visual tree to find the ListBoxItem
+                var element = hitTestResult.VisualHit;
+                while (element != null && element != listBox)
+                {
+                    if (element is System.Windows.Controls.ListBoxItem listBoxItem)
+                    {
+                        return listBoxItem.Content;
+                    }
+                    element = System.Windows.Media.VisualTreeHelper.GetParent(element);
+                }
+            }
+
+            return null;
         }
     }
 }
