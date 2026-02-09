@@ -1045,9 +1045,14 @@ namespace Ploco
             loco.OriginalStatus = loco.Status;
 
             // Create a ghost locomotive for the rolling line (will be green)
+            // Note: Ghost uses same ID as original to maintain the logical link.
+            // This is safe because:
+            // 1. Ghosts are never persisted (filtered out in PersistState)
+            // 2. Ghosts cannot be dragged (blocked in PreviewMouseMove)
+            // 3. Ghost matching uses IsForecastGhost + Number + SeriesId for robustness
             var ghost = new LocomotiveModel
             {
-                Id = loco.Id, // Same ID to link them
+                Id = loco.Id, // Same ID to logically link ghost to original
                 SeriesId = loco.SeriesId,
                 SeriesName = loco.SeriesName,
                 Number = loco.Number,
@@ -1083,7 +1088,12 @@ namespace Ploco
             
             if (targetTrack != null)
             {
-                var ghost = targetTrack.Locomotives.FirstOrDefault(l => l.IsForecastGhost && l.Number == loco.Number);
+                // Match ghost by multiple properties for robustness: IsForecastGhost flag + Number + SeriesId
+                var ghost = targetTrack.Locomotives.FirstOrDefault(l => 
+                    l.IsForecastGhost && 
+                    l.Number == loco.Number && 
+                    l.SeriesId == loco.SeriesId);
+                    
                 if (ghost != null)
                 {
                     targetTrack.Locomotives.Remove(ghost);
@@ -1093,11 +1103,13 @@ namespace Ploco
             // Restore original locomotive state
             loco.IsForecastOrigin = false;
             loco.ForecastTargetLineId = null;
+            
+            // Always restore status if OriginalStatus was saved
             if (loco.OriginalStatus.HasValue)
             {
                 loco.Status = loco.OriginalStatus.Value;
-                loco.OriginalStatus = null;
             }
+            loco.OriginalStatus = null;
 
             _repository.AddHistory("ForecastCancelled", 
                 $"Annulation du placement prévisionnel de la loco {loco.Number}.");
@@ -1128,7 +1140,11 @@ namespace Ploco
                 return;
             }
 
-            var ghost = targetTrack.Locomotives.FirstOrDefault(l => l.IsForecastGhost && l.Number == loco.Number);
+            // Match ghost by multiple properties for robustness: IsForecastGhost flag + Number + SeriesId
+            var ghost = targetTrack.Locomotives.FirstOrDefault(l => 
+                l.IsForecastGhost && 
+                l.Number == loco.Number && 
+                l.SeriesId == loco.SeriesId);
             
             // Check if target line has been occupied by another real locomotive
             var realLocosInTarget = targetTrack.Locomotives.Where(l => !l.IsForecastGhost).ToList();
@@ -1167,7 +1183,7 @@ namespace Ploco
                 originalTrack.Locomotives.Remove(loco);
             }
 
-            // Reset forecast flags
+            // Reset forecast flags - don't restore status, keep current one
             loco.IsForecastOrigin = false;
             loco.ForecastTargetLineId = null;
             loco.OriginalStatus = null;

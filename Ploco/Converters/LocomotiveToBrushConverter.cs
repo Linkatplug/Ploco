@@ -12,6 +12,10 @@ namespace Ploco.Converters
     /// </summary>
     public class LocomotiveToBrushConverter : IValueConverter
     {
+        // Forecast color constants
+        private static readonly Brush ForecastOriginColor = Brushes.Blue;  // Color for locomotive in origin tile during forecast
+        private static readonly Brush ForecastGhostColor = Brushes.Green;  // Color for ghost on target rolling line
+
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is LocomotiveModel loco)
@@ -19,12 +23,12 @@ namespace Ploco.Converters
                 // Forecast states take priority over status colors
                 if (loco.IsForecastOrigin)
                 {
-                    return Brushes.Blue; // Blue in origin tile
+                    return ForecastOriginColor;
                 }
 
                 if (loco.IsForecastGhost)
                 {
-                    return Brushes.Green; // Green ghost on rolling line
+                    return ForecastGhostColor;
                 }
 
                 // Otherwise, use the normal status-based color
