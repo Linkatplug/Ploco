@@ -1797,6 +1797,7 @@ namespace Ploco
                     // Callback when import is complete
                     // Refresh the UI to show updated pools
                     PersistState();
+                    RefreshLocomotivesDisplay();
                 });
                 
                 importWindow.Owner = this;
@@ -2680,6 +2681,24 @@ namespace Ploco
             public string? RightLabel { get; set; }
             public bool IsLeftBlocked { get; set; }
             public bool IsRightBlocked { get; set; }
+        }
+
+        private void RefreshLocomotivesDisplay()
+        {
+            // Refresh ListBox locomotives (zone de pioche)
+            if (LocomotiveList.ItemsSource != null)
+            {
+                CollectionViewSource.GetDefaultView(LocomotiveList.ItemsSource).Refresh();
+            }
+            
+            // Refresh all tiles
+            foreach (var tile in _tiles)
+            {
+                foreach (var track in tile.Tracks)
+                {
+                    CollectionViewSource.GetDefaultView(track.Locomotives).Refresh();
+                }
+            }
         }
     }
 }
