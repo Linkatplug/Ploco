@@ -2692,6 +2692,10 @@ namespace Ploco
             // Re-initialize the view (sort, etc.)
             InitializeLocomotiveView();
             
+            // Update pool visibility - this updates IsVisibleInActivePool property
+            // which controls whether locomotives appear in the left panel
+            UpdatePoolVisibility();
+            
             // Refresh all tiles - need to remove locomotives that are no longer in Sibelit
             foreach (var tile in _tiles)
             {
