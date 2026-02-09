@@ -228,22 +228,38 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+### Ajouts
+
+#### 🗺️ Roadmap du Projet
+- Ajout d'une roadmap complète (ROADMAP.md)
+- Vision claire du développement futur
+- Planification court, moyen et long terme
+- Priorisation transparente des fonctionnalités
+- Processus de contribution documenté
+
 ### Évolutions Prévues
 
-#### Court Terme
+**Note** : Consultez le [ROADMAP.md](ROADMAP.md) pour la planification complète et détaillée.
+
+#### Court Terme (v1.1.0)
 - Import des dates d'entretien depuis presse-papier
 - Export Excel/CSV des données
 - Notifications pour locomotives HS
+- Recherche et filtres avancés
+- Statistiques de base
 
-#### Moyen Terme
+#### Moyen Terme (v1.2.0 - v1.5.0)
 - Module de statistiques avancées
 - Synchronisation cloud optionnelle
 - Application mobile companion
+- Intégrations externes (API REST)
 
-#### Long Terme
+#### Long Terme (v2.0.0+)
 - Support multi-utilisateurs
 - Système de permissions
-- API REST pour intégrations tierces
+- Collaboration temps réel
+- Intelligence artificielle et ML
+- Intégration IoT
 
 ---
 
@@ -251,6 +267,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ### Liens
 - **Repository** : https://github.com/Linkatplug/PlocoManager
+- **Roadmap** : Voir [ROADMAP.md](ROADMAP.md)
 - **Documentation** : Voir dossier docs/
 - **Licence** : MIT
 

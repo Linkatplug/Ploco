@@ -48,6 +48,7 @@ Le dossier [`features/`](features/) contient la documentation détaillée de cha
 
 À la racine du projet :
 - [README.md](../README.md) - Vue d'ensemble du projet
+- [ROADMAP.md](../ROADMAP.md) - Vision et planification du projet
 - [CHANGELOG.md](../CHANGELOG.md) - Historique des modifications
 - [RELEASE_NOTES.md](../RELEASE_NOTES.md) - Notes de version détaillées
 
@@ -65,8 +66,9 @@ Ces documents sont conservés pour référence historique.
 
 1. **Nouveau sur Ploco ?** → Commencez par le [Guide Utilisateur](USER_GUIDE.md)
 2. **Découvrir les fonctionnalités ?** → Consultez le [Guide des Fonctionnalités](FEATURES.md)
-3. **Besoin d'aide sur une fonction ?** → Explorez [`features/`](features/)
-4. **Historique des versions ?** → Voir [RELEASE_NOTES.md](../RELEASE_NOTES.md)
+3. **Comprendre la vision du projet ?** → Lisez la [Roadmap](../ROADMAP.md)
+4. **Besoin d'aide sur une fonction ?** → Explorez [`features/`](features/)
+5. **Historique des versions ?** → Voir [RELEASE_NOTES.md](../RELEASE_NOTES.md)
 
 ## 📞 Support
 

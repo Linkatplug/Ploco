@@ -11,6 +11,7 @@ Ploco est actuellement en cours de développement actif.
 
 ## 📚 Documentation
 
+- **[Roadmap](ROADMAP.md)** - Vision et planification du projet
 - **[Guide Utilisateur](docs/USER_GUIDE.md)** - Manuel complet d'utilisation
 - **[Guide des Fonctionnalités](docs/FEATURES.md)** - Toutes les fonctionnalités détaillées
 - **[Notes de Version](RELEASE_NOTES.md)** - Dernières nouveautés et améliorations
