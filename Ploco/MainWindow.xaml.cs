@@ -54,6 +54,9 @@ namespace Ploco
         {
             Logger.Info("Main window loaded", "Application");
             
+            // Restore window settings
+            WindowSettingsHelper.RestoreWindowSettings(this, "MainWindow");
+            
             _repository.Initialize();
             _repository.SeedDefaultDataIfNeeded();
 
@@ -86,6 +89,10 @@ namespace Ploco
 
             Logger.Info("Saving state before closing", "Application");
             PersistState();
+            
+            // Save window settings
+            WindowSettingsHelper.SaveWindowSettings(this, "MainWindow");
+            
             Logger.Shutdown();
         }
 

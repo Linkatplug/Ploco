@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Tapis T13" Height="520" Width="680"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded" Closing="Window_Closing">
     <Grid Margin="12">
         <Grid.Resources>
             <Style x:Key="HsCellStyle" TargetType="DataGridCell">

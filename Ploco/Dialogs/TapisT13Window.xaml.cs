@@ -302,6 +302,18 @@ namespace Ploco.Dialogs
             return percent;
         }
 
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Restore window settings
+            WindowSettingsHelper.RestoreWindowSettings(this, "TapisT13Window");
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Save window settings
+            WindowSettingsHelper.SaveWindowSettings(this, "TapisT13Window");
+        }
+
         private sealed class T13Row
         {
             public string Locomotive { get; set; } = string.Empty;

@@ -21,5 +21,17 @@ namespace Ploco
                 tbHistorique.Text = "Aucun historique disponible.";
             }
         }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Restore window settings
+            Helpers.WindowSettingsHelper.RestoreWindowSettings(this, "HistoriqueWindow");
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Save window settings
+            Helpers.WindowSettingsHelper.SaveWindowSettings(this, "HistoriqueWindow");
+        }
     }
 }

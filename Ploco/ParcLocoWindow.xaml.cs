@@ -51,5 +51,17 @@ namespace Ploco
             Helpers.ContextMenuHelper.HandleVoirHistorique(sender, this);
         }
 
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Restore window settings
+            WindowSettingsHelper.RestoreWindowSettings(this, "ParcLocoWindow");
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Save window settings
+            WindowSettingsHelper.SaveWindowSettings(this, "ParcLocoWindow");
+        }
+
     }
 }

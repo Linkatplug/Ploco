@@ -141,5 +141,17 @@ namespace Ploco
 
             return null;
         }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Restore window settings
+            Helpers.WindowSettingsHelper.RestoreWindowSettings(this, "PoolTransferWindow");
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Save window settings
+            Helpers.WindowSettingsHelper.SaveWindowSettings(this, "PoolTransferWindow");
+        }
     }
 }
