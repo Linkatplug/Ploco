@@ -3003,15 +3003,36 @@ namespace Ploco
                 switch (message.MessageType)
                 {
                     case "LocomotiveMove":
-                        ApplyLocomotiveMove(message.Data);
+                        if (message.Data != null)
+                        {
+                            ApplyLocomotiveMove(message.Data);
+                        }
+                        else
+                        {
+                            Logger.Warning("LocomotiveMove message has null data", "Sync");
+                        }
                         break;
 
                     case "LocomotiveStatusChange":
-                        ApplyLocomotiveStatusChange(message.Data);
+                        if (message.Data != null)
+                        {
+                            ApplyLocomotiveStatusChange(message.Data);
+                        }
+                        else
+                        {
+                            Logger.Warning("LocomotiveStatusChange message has null data", "Sync");
+                        }
                         break;
 
                     case "TileUpdate":
-                        ApplyTileUpdate(message.Data);
+                        if (message.Data != null)
+                        {
+                            ApplyTileUpdate(message.Data);
+                        }
+                        else
+                        {
+                            Logger.Warning("TileUpdate message has null data", "Sync");
+                        }
                         break;
 
                     default:
