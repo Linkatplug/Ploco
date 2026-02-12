@@ -1665,6 +1665,22 @@ namespace Ploco
                 _repository.AddHistory("TileMoved", $"Tuile {_draggedTile.Name} déplacée.");
                 PersistState();
                 UpdateTileCanvasExtent();
+                
+                // Sync: Send tile move to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var tileData = new TileUpdateData
+                    {
+                        TileId = _draggedTile.Id,
+                        X = _draggedTile.X,
+                        Y = _draggedTile.Y,
+                        Width = _draggedTile.Width,
+                        Height = _draggedTile.Height
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending tile move for tile {_draggedTile.Name} (ID: {_draggedTile.Id})", "Sync");
+                    _ = _syncService.SendChangeAsync("TileUpdate", tileData);
+                }
             }
             if (sender is Border border)
             {
@@ -1693,6 +1709,22 @@ namespace Ploco
                 _repository.AddHistory("TileResized", $"Tuile {tile.Name} redimensionnée.");
                 PersistState();
                 UpdateTileCanvasExtent();
+                
+                // Sync: Send tile resize to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var tileData = new TileUpdateData
+                    {
+                        TileId = tile.Id,
+                        X = tile.X,
+                        Y = tile.Y,
+                        Width = tile.Width,
+                        Height = tile.Height
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending tile resize for tile {tile.Name} (ID: {tile.Id})", "Sync");
+                    _ = _syncService.SendChangeAsync("TileUpdate", tileData);
+                }
             }
         }
 
@@ -2974,6 +3006,70 @@ namespace Ploco
             if (tileData.Height.HasValue) tile.Height = tileData.Height.Value;
 
             Logger.Info($"Applied tile update: Tile {tile.Name}", "Sync");
+        }
+
+        /// <summary>
+        /// Helper method for safe string property extraction from dynamic JSON data
+        /// </summary>
+        private static bool TryGetStringProperty(object? data, string propertyName, out string? value)
+        {
+            value = null;
+            
+            if (data == null)
+                return false;
+
+            try
+            {
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                
+                if (doc.RootElement.TryGetProperty(propertyName, out var property))
+                {
+                    if (property.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        value = property.GetString();
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to extract property '{propertyName}': {ex.Message}", "Sync");
+            }
+            
+            return false;
+        }
+
+        /// <summary>
+        /// Helper method for safe integer property extraction from dynamic JSON data
+        /// </summary>
+        private static bool TryGetIntProperty(object? data, string propertyName, out int? value)
+        {
+            value = null;
+            
+            if (data == null)
+                return false;
+
+            try
+            {
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                
+                if (doc.RootElement.TryGetProperty(propertyName, out var property))
+                {
+                    if (property.ValueKind == System.Text.Json.JsonValueKind.Number && property.TryGetInt32(out var intValue))
+                    {
+                        value = intValue;
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to extract property '{propertyName}': {ex.Message}", "Sync");
+            }
+            
+            return false;
         }
 
         private TrackModel? FindTrackById(int trackId)
