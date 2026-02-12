@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace Ploco.Services
 {
-    public class SyncService : IDisposable
+    public class SyncService : IAsyncDisposable, IDisposable
     {
         private HubConnection? _connection;
         private readonly SyncConfiguration _config;
@@ -355,6 +355,12 @@ namespace Ploco.Services
                 _heartbeatTimer = null;
                 Logger.Info("Heartbeat timer stopped", "Sync");
             }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            StopHeartbeat();
+            await DisconnectAsync();
         }
 
         public void Dispose()

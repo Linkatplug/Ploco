@@ -43,6 +43,7 @@ namespace Ploco
         // 🆕 Synchronisation
         private SyncService? _syncService;
         private bool _isApplyingRemoteChange = false;
+        private bool _isClosing = false;
         
         public MainWindow()
         {
@@ -88,6 +89,12 @@ namespace Ploco
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Prevent re-entry if already closing
+            if (_isClosing)
+            {
+                return;
+            }
+
             var result = MessageBox.Show("Êtes-vous sûr de vouloir quitter ?", "Quitter", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes)
             {
@@ -96,20 +103,54 @@ namespace Ploco
                 return;
             }
 
-            Logger.Info("Saving state before closing", "Application");
-            PersistState();
-            
-            // Save window settings
-            WindowSettingsHelper.SaveWindowSettings(this, "MainWindow");
-            
-            // 🆕 Déconnecter la synchronisation
-            if (_syncService != null)
+            // Cancel the close event to perform async shutdown
+            e.Cancel = true;
+            _isClosing = true;
+
+            // Perform async shutdown
+            _ = ShutdownAsync();
+        }
+
+        private async Task ShutdownAsync()
+        {
+            try
             {
-                _syncService.DisconnectAsync().Wait();
-                _syncService.Dispose();
+                Logger.Info("Shutting down application...", "Application");
+
+                // Save state before closing
+                Logger.Info("Saving state before closing", "Application");
+                PersistState();
+                
+                // Save window settings
+                WindowSettingsHelper.SaveWindowSettings(this, "MainWindow");
+                
+                // Disconnect and dispose sync service properly
+                if (_syncService != null)
+                {
+                    Logger.Info("Disconnecting sync service...", "Application");
+                    await _syncService.DisposeAsync();
+                    _syncService = null;
+                    Logger.Info("Sync service disconnected", "Application");
+                }
+                
+                // Shutdown logger
+                Logger.Shutdown();
+
+                // Close the application on UI thread
+                Dispatcher.Invoke(() =>
+                {
+                    Application.Current.Shutdown();
+                });
             }
-            
-            Logger.Shutdown();
+            catch (Exception ex)
+            {
+                Logger.Error("Error during shutdown", ex, "Application");
+                // Force shutdown even if there's an error
+                Dispatcher.Invoke(() =>
+                {
+                    Application.Current.Shutdown();
+                });
+            }
         }
 
         private void LoadState()
