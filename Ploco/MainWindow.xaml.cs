@@ -241,6 +241,9 @@ namespace Ploco
                 Tiles = tilesToSave
             };
             _repository.SaveState(state);
+            
+            // Update last save time in status bar
+            UpdateLastSaveTime(isServerSave: false);
         }
 
         private void InitializeLocomotiveView()
@@ -2910,6 +2913,62 @@ namespace Ploco
             {
                 Logger.Info("Synchronization is disabled", "Sync");
             }
+            
+            // Update status bar
+            UpdateStatusBar();
+        }
+
+        private void UpdateStatusBar()
+        {
+            if (_syncService != null && _syncService.IsConnected)
+            {
+                // Connected mode
+                ConnectionStatusText.Text = "Connecté";
+                ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Green);
+                
+                // Mode
+                if (_syncService.Configuration.ForceConsultantMode)
+                {
+                    ModeText.Text = "Consultation";
+                }
+                else if (_syncService.IsMaster)
+                {
+                    ModeText.Text = "Permanent (Master)";
+                }
+                else
+                {
+                    ModeText.Text = "Consultation";
+                }
+                
+                // Username
+                UserNameText.Text = $"Utilisateur : {_syncService.Configuration.UserName}";
+                UserNameText.Visibility = Visibility.Visible;
+                
+                // Last save will be updated when saves occur
+            }
+            else if (_syncService != null && !_syncService.IsConnected)
+            {
+                // Disconnected but sync enabled
+                ConnectionStatusText.Text = "Déconnecté";
+                ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                ModeText.Text = "Mode local";
+                UserNameText.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // No sync
+                ConnectionStatusText.Text = "Déconnecté";
+                ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+                ModeText.Text = "Mode local";
+                UserNameText.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void UpdateLastSaveTime(bool isServerSave = false)
+        {
+            var now = DateTime.Now;
+            var location = isServerSave ? "(Serveur)" : "(Local)";
+            LastSaveText.Text = $"{now:HH:mm:ss} {location}";
         }
 
         private SyncConfiguration LoadSyncConfiguration()
@@ -3164,8 +3223,6 @@ namespace Ploco
 
         private void UpdateMasterStatus(bool isMaster)
         {
-            // TODO: Mettre à jour l'UI pour indiquer le statut Master/Consultant
-            // Par exemple: afficher un badge, activer/désactiver des contrôles
             Logger.Info($"Status changed to: {(isMaster ? "Master" : "Consultant")}", "Sync");
 
             if (!isMaster)
@@ -3174,13 +3231,17 @@ namespace Ploco
                 // Pour l'instant, on log juste
                 Logger.Info("Running in Consultant mode - consider disabling edit controls", "Sync");
             }
+            
+            // Update status bar
+            UpdateStatusBar();
         }
 
         private void UpdateConnectionStatus(bool isConnected)
         {
-            // TODO: Mettre à jour l'UI pour indiquer l'état de connexion
-            // Par exemple: icône verte/rouge dans la barre de statut
             Logger.Info($"Connection status: {(isConnected ? "Connected" : "Disconnected")}", "Sync");
+            
+            // Update status bar
+            UpdateStatusBar();
         }
 
         #endregion
