@@ -94,11 +94,17 @@ namespace Ploco.Dialogs
 
         private void Mode_Changed(object sender, RoutedEventArgs e)
         {
+            // Guard against null during XAML initialization
+            if (RadioMaster == null || RadioConsultant == null || ServerConfigPanel == null)
+            {
+                return;
+            }
+
             // Activer/désactiver le panneau de configuration du serveur
             bool syncEnabled = RadioMaster.IsChecked == true || RadioConsultant.IsChecked == true;
             ServerConfigPanel.IsEnabled = syncEnabled;
 
-            if (!syncEnabled)
+            if (!syncEnabled && ConnectionStatusText != null)
             {
                 ConnectionStatusText.Text = "";
             }
