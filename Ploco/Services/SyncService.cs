@@ -357,6 +357,83 @@ namespace Ploco.Services
             }
         }
 
+        /// <summary>
+        /// Gets the current shared state from the server
+        /// </summary>
+        /// <returns>Database bytes or null if no state exists</returns>
+        public async Task<byte[]?> GetStateAsync()
+        {
+            if (_connection == null || _connection.State != HubConnectionState.Connected)
+            {
+                Logger.Warning("Cannot get state: Not connected", "Sync");
+                return null;
+            }
+
+            try
+            {
+                Logger.Info("Requesting state from server", "Sync");
+                var stateBytes = await _connection.InvokeAsync<byte[]?>("GetState");
+                
+                if (stateBytes == null)
+                {
+                    Logger.Info("Server has no state (starting fresh)", "Sync");
+                }
+                else
+                {
+                    Logger.Info($"Received state from server: {stateBytes.Length} bytes", "Sync");
+                }
+
+                return stateBytes;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to get state from server: {ex.Message}", ex, "Sync");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Saves the current state to the server (Master only)
+        /// </summary>
+        /// <param name="dbBytes">Database file bytes</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> SaveStateAsync(byte[] dbBytes)
+        {
+            if (_connection == null || _connection.State != HubConnectionState.Connected)
+            {
+                Logger.Warning("Cannot save state: Not connected", "Sync");
+                return false;
+            }
+
+            if (!_isMaster)
+            {
+                Logger.Warning("Cannot save state: Not Master", "Sync");
+                return false;
+            }
+
+            try
+            {
+                Logger.Info($"Saving state to server: {dbBytes.Length} bytes", "Sync");
+                var success = await _connection.InvokeAsync<bool>("SaveState", dbBytes);
+                
+                if (success)
+                {
+                    Logger.Info("State saved to server successfully", "Sync");
+                }
+                else
+                {
+                    Logger.Warning("Server rejected state save", "Sync");
+                }
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to save state to server: {ex.Message}", ex, "Sync");
+                return false;
+            }
+        }
+
         public async ValueTask DisposeAsync()
         {
             StopHeartbeat();

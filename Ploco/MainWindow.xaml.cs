@@ -153,6 +153,81 @@ namespace Ploco
             }
         }
 
+        /// <summary>
+        /// Loads the shared state from the server after connection
+        /// </summary>
+        private async Task LoadStateFromServerAsync()
+        {
+            if (_syncService == null || !_syncService.IsConnected)
+            {
+                Logger.Warning("Cannot load state from server: Not connected", "Sync");
+                return;
+            }
+
+            try
+            {
+                Logger.Info("Loading state from server...", "Sync");
+                
+                // Get state from server
+                var stateBytes = await _syncService.GetStateAsync();
+                
+                if (stateBytes == null)
+                {
+                    // No state on server
+                    Logger.Info("No state found on server", "Sync");
+                    
+                    // Only show message to Master (Consultant shouldn't see this)
+                    if (_syncService.IsMaster)
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show(
+                                "Aucun état trouvé sur le serveur.\n\nDémarrage sur une base vide.\n\n" +
+                                "En tant que Master, vos modifications seront sauvegardées sur le serveur.",
+                                "Nouvel État",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+                        });
+                    }
+                    return;
+                }
+
+                Logger.Info($"Received {stateBytes.Length} bytes from server, loading into local database", "Sync");
+
+                // Save received state to local database
+                var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ploco.db");
+                
+                // Write the received state to local DB file
+                // Note: This will replace the local DB, connections will be recreated on next access
+                await File.WriteAllBytesAsync(dbPath, stateBytes);
+                Logger.Info("State written to local database", "Sync");
+
+                // Reload data from the database
+                Dispatcher.Invoke(() =>
+                {
+                    Logger.Info("Reloading data from updated database", "Sync");
+                    LoadState();
+                    Logger.Info("State loaded from server successfully", "Sync");
+                    
+                    // Update status bar to show server time
+                    UpdateLastSaveTime(true); // true = from server
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to load state from server: {ex.Message}", ex, "Sync");
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(
+                        $"Erreur lors du chargement de l'état depuis le serveur:\n\n{ex.Message}\n\n" +
+                        "Utilisation de l'état local à la place.",
+                        "Erreur de Chargement",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                });
+            }
+        }
+
         private void LoadState()
         {
             _locomotives.Clear();
@@ -3216,6 +3291,12 @@ namespace Ploco
             Dispatcher.Invoke(() =>
             {
                 UpdateConnectionStatus(isConnected);
+                
+                // Load state from server when connected
+                if (isConnected && _syncService != null)
+                {
+                    _ = LoadStateFromServerAsync();
+                }
             });
         }
 
