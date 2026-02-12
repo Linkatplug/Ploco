@@ -56,12 +56,12 @@ namespace Ploco.Services
                     .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
                     .Build();
 
-                // Configurer les handlers
+                // Configurer les handlers avec types fortement typés
                 _connection.On<SyncMessage>("ReceiveChange", HandleChangeReceived);
-                _connection.On<object>("MasterTransferred", HandleMasterTransferred);
-                _connection.On<object>("UserConnected", HandleUserConnected);
-                _connection.On<object>("UserDisconnected", HandleUserDisconnected);
-                _connection.On<object>("MasterRequested", HandleMasterRequested);
+                _connection.On<MasterTransferredMessage>("MasterTransferred", HandleMasterTransferred);
+                _connection.On<UserConnectedMessage>("UserConnected", HandleUserConnected);
+                _connection.On<UserDisconnectedMessage>("UserDisconnected", HandleUserDisconnected);
+                _connection.On<MasterRequestedMessage>("MasterRequested", HandleMasterRequested);
 
                 _connection.Closed += async (error) =>
                 {
@@ -93,7 +93,7 @@ namespace Ploco.Services
                     ConnectionStatusChanged?.Invoke(this, true);
 
                     // Se réenregistrer
-                    var result = await _connection.InvokeAsync<dynamic>(
+                    var result = await _connection.InvokeAsync<SyncConnectResponse>(
                         "Connect",
                         _config.UserId,
                         _config.UserName
@@ -111,7 +111,7 @@ namespace Ploco.Services
                 await _connection.StartAsync();
 
                 // S'enregistrer auprès du serveur
-                var result = await _connection.InvokeAsync<dynamic>(
+                var result = await _connection.InvokeAsync<SyncConnectResponse>(
                     "Connect",
                     _config.UserId,
                     _config.UserName
@@ -268,9 +268,9 @@ namespace Ploco.Services
             ChangeReceived?.Invoke(this, message);
         }
 
-        private void HandleMasterTransferred(dynamic data)
+        private void HandleMasterTransferred(MasterTransferredMessage message)
         {
-            string newMasterId = data.NewMasterId.ToString();
+            string newMasterId = message.NewMasterId;
             
             // Respecter ForceConsultantMode même lors d'un transfert
             bool shouldBeMaster = (newMasterId == _config.UserId) && !_config.ForceConsultantMode;
@@ -285,19 +285,19 @@ namespace Ploco.Services
             Logger.Info($"Master transferred to: {newMasterId} (Je suis Master: {_isMaster})", "Sync");
         }
 
-        private void HandleUserConnected(dynamic data)
+        private void HandleUserConnected(UserConnectedMessage message)
         {
-            Logger.Info($"User connected: {data.UserName}", "Sync");
+            Logger.Info($"User connected: {message.UserName}", "Sync");
         }
 
-        private void HandleUserDisconnected(dynamic data)
+        private void HandleUserDisconnected(UserDisconnectedMessage message)
         {
-            Logger.Info($"User disconnected: {data.UserName}", "Sync");
+            Logger.Info($"User disconnected: {message.UserName}", "Sync");
 
             // Si le Master se déconnecte et qu'un nouveau Master est désigné
-            if (data.WasMaster && data.NewMasterId != null)
+            if (message.WasMaster && message.NewMasterId != null)
             {
-                string newMasterId = data.NewMasterId.ToString();
+                string newMasterId = message.NewMasterId;
                 
                 // Respecter ForceConsultantMode
                 bool shouldBeMaster = (newMasterId == _config.UserId) && !_config.ForceConsultantMode;
@@ -315,10 +315,10 @@ namespace Ploco.Services
             }
         }
 
-        private void HandleMasterRequested(dynamic data)
+        private void HandleMasterRequested(MasterRequestedMessage message)
         {
-            string requesterId = data.RequesterId?.ToString() ?? "";
-            string requesterName = data.RequesterName?.ToString() ?? "";
+            string requesterId = message.RequesterId;
+            string requesterName = message.RequesterName;
             Logger.Info($"Master requested by: {requesterName} (ID: {requesterId})", "Sync");
             MasterRequested?.Invoke(this, (requesterId, requesterName));
         }

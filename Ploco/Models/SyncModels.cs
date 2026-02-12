@@ -50,4 +50,40 @@ namespace Ploco.Models
         public double? Width { get; set; }
         public double? Height { get; set; }
     }
+
+    // DTOs pour les messages SignalR (éviter dynamic/JsonElement)
+    
+    public class SyncConnectResponse
+    {
+        public bool IsMaster { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+    }
+
+    public class MasterTransferredMessage
+    {
+        public string NewMasterId { get; set; } = string.Empty;
+        public string NewMasterName { get; set; } = string.Empty;
+    }
+
+    public class UserConnectedMessage
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+    }
+
+    public class UserDisconnectedMessage
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public bool WasMaster { get; set; }
+        public string? NewMasterId { get; set; }
+        public string? NewMasterName { get; set; }
+    }
+
+    public class MasterRequestedMessage
+    {
+        public string RequesterId { get; set; } = string.Empty;
+        public string RequesterName { get; set; } = string.Empty;
+    }
 }
