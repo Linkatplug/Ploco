@@ -16,6 +16,7 @@ using Ploco.Data;
 using Ploco.Dialogs;
 using Ploco.Helpers;
 using Ploco.Models;
+using Ploco.Services;
 
 namespace Ploco
 {
@@ -38,6 +39,14 @@ namespace Ploco
         private Point _tileDragStart;
         private bool _isResizingTile;
         private readonly Dictionary<Type, Window> _modelessWindows = new();
+        
+        // 🆕 Synchronisation
+        private SyncService? _syncService;
+        private bool _isApplyingRemoteChange = false;
+        private bool _isClosing = false;
+        private System.Timers.Timer? _serverSaveTimer;
+        private const int SERVER_SAVE_DEBOUNCE_MS = 800;
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -70,6 +79,9 @@ namespace Ploco
             UpdateTileCanvasExtent();
             
             Logger.Info($"Loaded {_locomotives.Count} locomotives and {_tiles.Count} tiles", "Application");
+            
+            // 🆕 Initialiser la synchronisation
+            InitializeSyncService();
         }
 
         private void TileScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -79,6 +91,12 @@ namespace Ploco
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Prevent re-entry if already closing
+            if (_isClosing)
+            {
+                return;
+            }
+
             var result = MessageBox.Show("Êtes-vous sûr de vouloir quitter ?", "Quitter", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes)
             {
@@ -87,13 +105,214 @@ namespace Ploco
                 return;
             }
 
-            Logger.Info("Saving state before closing", "Application");
-            PersistState();
-            
-            // Save window settings
-            WindowSettingsHelper.SaveWindowSettings(this, "MainWindow");
-            
-            Logger.Shutdown();
+            // Cancel the close event to perform async shutdown
+            e.Cancel = true;
+            _isClosing = true;
+
+            // Perform async shutdown
+            _ = ShutdownAsync();
+        }
+
+        private async Task ShutdownAsync()
+        {
+            try
+            {
+                Logger.Info("Shutting down application...", "Application");
+
+                // Save state before closing
+                Logger.Info("Saving state before closing", "Application");
+                PersistState();
+                
+                // Save window settings
+                WindowSettingsHelper.SaveWindowSettings(this, "MainWindow");
+                
+                // Stop server save timer
+                _serverSaveTimer?.Stop();
+                _serverSaveTimer?.Dispose();
+                _serverSaveTimer = null;
+                
+                // Disconnect and dispose sync service properly
+                if (_syncService != null)
+                {
+                    Logger.Info("Disconnecting sync service...", "Application");
+                    await _syncService.DisposeAsync();
+                    _syncService = null;
+                    Logger.Info("Sync service disconnected", "Application");
+                }
+                
+                // Shutdown logger
+                Logger.Shutdown();
+
+                // Close the application on UI thread
+                Dispatcher.Invoke(() =>
+                {
+                    Application.Current.Shutdown();
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error during shutdown", ex, "Application");
+                // Force shutdown even if there's an error
+                Dispatcher.Invoke(() =>
+                {
+                    Application.Current.Shutdown();
+                });
+            }
+        }
+
+        /// <summary>
+        /// Loads the shared state from the server after connection
+        /// </summary>
+        private async Task LoadStateFromServerAsync()
+        {
+            if (_syncService == null || !_syncService.IsConnected)
+            {
+                Logger.Warning("Cannot load state from server: Not connected", "Sync");
+                return;
+            }
+
+            try
+            {
+                Logger.Info("Loading state from server...", "Sync");
+                
+                // Get state from server
+                var stateBytes = await _syncService.GetStateAsync();
+                
+                if (stateBytes == null)
+                {
+                    // No state on server
+                    Logger.Info("No state found on server", "Sync");
+                    
+                    // Only show message to Master (Consultant shouldn't see this)
+                    if (_syncService.IsMaster)
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show(
+                                "Aucun état trouvé sur le serveur.\n\nDémarrage sur une base vide.\n\n" +
+                                "En tant que Master, vos modifications seront sauvegardées sur le serveur.",
+                                "Nouvel État",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+                        });
+                    }
+                    return;
+                }
+
+                Logger.Info($"Received {stateBytes.Length} bytes from server, loading into local database", "Sync");
+
+                // Save received state to local database
+                var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ploco.db");
+                
+                // Write the received state to local DB file
+                // Note: This will replace the local DB, connections will be recreated on next access
+                await File.WriteAllBytesAsync(dbPath, stateBytes);
+                Logger.Info("State written to local database", "Sync");
+
+                // Reload data from the database
+                Dispatcher.Invoke(() =>
+                {
+                    Logger.Info("Reloading data from updated database", "Sync");
+                    LoadState();
+                    Logger.Info("State loaded from server successfully", "Sync");
+                    
+                    // Update status bar to show server time
+                    UpdateLastSaveTime(true); // true = from server
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to load state from server: {ex.Message}", ex, "Sync");
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(
+                        $"Erreur lors du chargement de l'état depuis le serveur:\n\n{ex.Message}\n\n" +
+                        "Utilisation de l'état local à la place.",
+                        "Erreur de Chargement",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                });
+            }
+        }
+
+        /// <summary>
+        /// Schedules a save to the server with debouncing (Master only)
+        /// </summary>
+        private void ScheduleServerSave()
+        {
+            // Only save if Master and connected
+            if (_syncService == null || !_syncService.IsMaster || !_syncService.IsConnected)
+            {
+                return;
+            }
+
+            // Only save if not applying remote changes (prevent loops)
+            if (_isApplyingRemoteChange)
+            {
+                return;
+            }
+
+            // Stop existing timer if any
+            _serverSaveTimer?.Stop();
+
+            // Create new timer for debouncing
+            _serverSaveTimer = new System.Timers.Timer(SERVER_SAVE_DEBOUNCE_MS);
+            _serverSaveTimer.AutoReset = false;
+            _serverSaveTimer.Elapsed += async (s, e) => await SaveStateToServerAsync();
+            _serverSaveTimer.Start();
+
+            Logger.Info($"Server save scheduled (debounce {SERVER_SAVE_DEBOUNCE_MS}ms)", "Sync");
+        }
+
+        /// <summary>
+        /// Saves the current state to the server (Master only)
+        /// </summary>
+        private async Task SaveStateToServerAsync()
+        {
+            if (_syncService == null || !_syncService.IsMaster || !_syncService.IsConnected)
+            {
+                Logger.Warning("Cannot save to server: Not Master or not connected", "Sync");
+                return;
+            }
+
+            try
+            {
+                Logger.Info("Saving state to server...", "Sync");
+
+                // Read local database file as bytes
+                var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ploco.db");
+                
+                if (!File.Exists(dbPath))
+                {
+                    Logger.Warning($"Database file not found: {dbPath}", "Sync");
+                    return;
+                }
+
+                var dbBytes = await File.ReadAllBytesAsync(dbPath);
+                Logger.Info($"Read local database: {dbBytes.Length} bytes", "Sync");
+
+                // Save to server
+                var success = await _syncService.SaveStateAsync(dbBytes);
+
+                if (success)
+                {
+                    Logger.Info("State saved to server successfully", "Sync");
+                    
+                    // Update status bar to show server save
+                    Dispatcher.Invoke(() =>
+                    {
+                        UpdateLastSaveTime(true); // true = server
+                    });
+                }
+                else
+                {
+                    Logger.Warning("Failed to save state to server", "Sync");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error saving state to server: {ex.Message}", ex, "Sync");
+            }
         }
 
         private void LoadState()
@@ -184,6 +403,12 @@ namespace Ploco
                 Tiles = tilesToSave
             };
             _repository.SaveState(state);
+            
+            // Update last save time in status bar
+            UpdateLastSaveTime(isServerSave: false);
+            
+            // Schedule server save (Master only, with debouncing)
+            ScheduleServerSave();
         }
 
         private void InitializeLocomotiveView()
@@ -228,6 +453,17 @@ namespace Ploco
 
         private void AddPlace_Click(object sender, RoutedEventArgs e)
         {
+            // Prevent adding places in Consultant mode
+            if (IsConsultantMode())
+            {
+                MessageBox.Show(
+                    "Vous êtes en mode Consultation (lecture seule).\n\nImpossible d'ajouter un lieu.",
+                    "Mode Consultation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
             var dialog = new PlaceDialog { Owner = this };
             if (dialog.ShowDialog() == true)
             {
@@ -641,6 +877,12 @@ namespace Ploco
 
         private void LocomotiveList_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            // Prevent drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                return;
+            }
+
             if (e.LeftButton != MouseButtonState.Pressed)
             {
                 return;
@@ -695,6 +937,12 @@ namespace Ploco
 
         private void TrackLocomotives_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            // Prevent drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                return;
+            }
+
             if (e.LeftButton != MouseButtonState.Pressed)
             {
                 return;
@@ -826,6 +1074,22 @@ namespace Ploco
             RefreshTapisT13();
             
             Logger.Info($"Successfully moved loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name}", "Movement");
+
+            // Synchronisation: Envoyer le changement au serveur
+            if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+            {
+                var fromTrackId = currentTrack?.Id;
+                var moveData = new
+                {
+                    LocomotiveId = loco.Id,
+                    FromTrackId = fromTrackId,
+                    ToTrackId = targetTrack.Id,
+                    OffsetX = loco.AssignedTrackOffsetX
+                };
+
+                Logger.Info($"[SYNC EMIT] LocomotiveMove: Loco {loco.Number} from Track {fromTrackId} to Track {targetTrack.Id}", "Sync");
+                _ = _syncService.SendChangeAsync("LocomotiveMove", moveData);
+            }
         }
 
         private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
@@ -933,6 +1197,17 @@ namespace Ploco
 
         private void MenuItem_ModifierStatut_Click(object sender, RoutedEventArgs e)
         {
+            // Prevent status modification in Consultant mode
+            if (IsConsultantMode())
+            {
+                MessageBox.Show(
+                    "Vous êtes en mode Consultation (lecture seule).\n\nImpossible de modifier le statut.",
+                    "Mode Consultation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
             var loco = GetLocomotiveFromMenuItem(sender);
             if (loco == null)
             {
@@ -949,6 +1224,23 @@ namespace Ploco
                 _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
                 PersistState();
                 RefreshTapisT13();
+                
+                // Sync: Send status change to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var statusData = new LocomotiveStatusChangeData
+                    {
+                        LocomotiveId = loco.Id,
+                        Status = loco.Status.ToString(),
+                        TractionPercent = loco.TractionPercent,
+                        HsReason = loco.HsReason,
+                        DefautInfo = loco.DefautInfo,
+                        TractionInfo = loco.TractionInfo
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending status change for loco {loco.Number}: {statusData.Status}", "Sync");
+                    _ = _syncService.SendChangeAsync("LocomotiveStatusChange", statusData);
+                }
             }
             else
             {
@@ -1506,6 +1798,23 @@ namespace Ploco
                 _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number} (HS).");
                 PersistState();
                 RefreshTapisT13();
+                
+                // Sync: Send status change to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var statusData = new LocomotiveStatusChangeData
+                    {
+                        LocomotiveId = loco.Id,
+                        Status = loco.Status.ToString(),
+                        TractionPercent = loco.TractionPercent,
+                        HsReason = loco.HsReason,
+                        DefautInfo = loco.DefautInfo,
+                        TractionInfo = loco.TractionInfo
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending HS status for loco {loco.Number}", "Sync");
+                    _ = _syncService.SendChangeAsync("LocomotiveStatusChange", statusData);
+                }
             }
         }
 
@@ -1554,6 +1863,12 @@ namespace Ploco
 
         private void Tile_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // Prevent tile drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                return;
+            }
+
             if (e.OriginalSource is DependencyObject source
                 && (FindAncestor<Button>(source) != null
                     || FindAncestor<MenuItem>(source) != null
@@ -1578,6 +1893,21 @@ namespace Ploco
 
         private void Tile_MouseMove(object sender, MouseEventArgs e)
         {
+            // Prevent tile drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                if (_draggedTile != null)
+                {
+                    // Release capture if somehow started
+                    if (sender is Border border)
+                    {
+                        border.ReleaseMouseCapture();
+                    }
+                    _draggedTile = null;
+                }
+                return;
+            }
+
             if (_draggedTile == null || e.LeftButton != MouseButtonState.Pressed || _isResizingTile)
             {
                 return;
@@ -1599,6 +1929,22 @@ namespace Ploco
                 _repository.AddHistory("TileMoved", $"Tuile {_draggedTile.Name} déplacée.");
                 PersistState();
                 UpdateTileCanvasExtent();
+                
+                // Sync: Send tile move to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var tileData = new TileUpdateData
+                    {
+                        TileId = _draggedTile.Id,
+                        X = _draggedTile.X,
+                        Y = _draggedTile.Y,
+                        Width = _draggedTile.Width,
+                        Height = _draggedTile.Height
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending tile move for tile {_draggedTile.Name} (ID: {_draggedTile.Id})", "Sync");
+                    _ = _syncService.SendChangeAsync("TileUpdate", tileData);
+                }
             }
             if (sender is Border border)
             {
@@ -1609,6 +1955,13 @@ namespace Ploco
 
         private void TileResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
+            // Prevent tile resize in Consultant mode
+            if (IsConsultantMode())
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (sender is Thumb thumb && thumb.DataContext is TileModel tile)
             {
                 _isResizingTile = true;
@@ -1627,6 +1980,22 @@ namespace Ploco
                 _repository.AddHistory("TileResized", $"Tuile {tile.Name} redimensionnée.");
                 PersistState();
                 UpdateTileCanvasExtent();
+                
+                // Sync: Send tile resize to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var tileData = new TileUpdateData
+                    {
+                        TileId = tile.Id,
+                        X = tile.X,
+                        Y = tile.Y,
+                        Width = tile.Width,
+                        Height = tile.Height
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending tile resize for tile {tile.Name} (ID: {tile.Id})", "Sync");
+                    _ = _syncService.SendChangeAsync("TileUpdate", tileData);
+                }
             }
         }
 
@@ -2714,5 +3083,431 @@ namespace Ploco
                 }
             }
         }
+
+        #region Synchronization
+
+        private void InitializeSyncService()
+        {
+            // Load existing configuration first
+            var existingConfig = SyncConfigStore.LoadOrDefault();
+            
+            // Show startup dialog
+            var startupDialog = new Dialogs.SyncStartupDialog
+            {
+                Owner = this
+            };
+
+            var result = startupDialog.ShowDialog();
+
+            if (startupDialog.ShouldQuit)
+            {
+                // User chose to quit
+                Logger.Info("User chose to quit from sync startup dialog", "Application");
+                Application.Current.Shutdown();
+                return;
+            }
+
+            if (result != true)
+            {
+                // Dialog cancelled, continue without sync
+                Logger.Info("Sync startup dialog cancelled, continuing without sync", "Sync");
+                return;
+            }
+
+            // Get configuration from dialog (already complete SyncConfiguration)
+            var config = startupDialog.Configuration;
+
+            if (config.Enabled)
+            {
+                // Save configuration for next startup
+                SyncConfigStore.Save(config);
+                
+                // Initialize sync service
+                _syncService = new SyncService(config);
+                _syncService.ChangeReceived += SyncService_ChangeReceived;
+                _syncService.MasterStatusChanged += SyncService_MasterStatusChanged;
+                _syncService.ConnectionStatusChanged += SyncService_ConnectionStatusChanged;
+                _syncService.MasterRequested += SyncService_MasterRequested;
+
+                // Connect asynchronously
+                _ = _syncService.ConnectAsync();
+                
+                var mode = config.ForceConsultantMode ? "Consultant" : 
+                           config.RequestMasterOnConnect ? "Master" : "Auto";
+                Logger.Info($"Synchronization service initialized - Mode: {mode}", "Sync");
+            }
+            else
+            {
+                Logger.Info("Synchronization is disabled", "Sync");
+            }
+            
+            // Update status bar
+            UpdateStatusBar();
+        }
+
+        private void UpdateStatusBar()
+        {
+            if (_syncService != null && _syncService.IsConnected)
+            {
+                // Connected mode
+                ConnectionStatusText.Text = "Connecté";
+                ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Green);
+                
+                // Mode
+                if (_syncService.Configuration.ForceConsultantMode)
+                {
+                    ModeText.Text = "Consultation";
+                }
+                else if (_syncService.IsMaster)
+                {
+                    ModeText.Text = "Permanent (Master)";
+                }
+                else
+                {
+                    ModeText.Text = "Consultation";
+                }
+                
+                // Username
+                UserNameText.Text = $"Utilisateur : {_syncService.Configuration.UserName}";
+                UserNameText.Visibility = Visibility.Visible;
+                
+                // Last save will be updated when saves occur
+            }
+            else if (_syncService != null && !_syncService.IsConnected)
+            {
+                // Disconnected but sync enabled
+                ConnectionStatusText.Text = "Déconnecté";
+                ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                ModeText.Text = "Mode local";
+                UserNameText.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // No sync
+                ConnectionStatusText.Text = "Déconnecté";
+                ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+                ModeText.Text = "Mode local";
+                UserNameText.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void UpdateLastSaveTime(bool isServerSave = false)
+        {
+            var now = DateTime.Now;
+            var location = isServerSave ? "(Serveur)" : "(Local)";
+            LastSaveText.Text = $"{now:HH:mm:ss} {location}";
+        }
+
+        private SyncConfiguration LoadSyncConfiguration()
+        {
+            // Use SyncConfigStore to load configuration
+            return SyncConfigStore.LoadOrDefault();
+        }
+
+        private void SyncService_ChangeReceived(object? sender, SyncMessage message)
+        {
+            // Appliquer le changement sur le thread UI
+            Dispatcher.Invoke(() =>
+            {
+                _isApplyingRemoteChange = true;
+                try
+                {
+                    ApplyRemoteChange(message);
+                }
+                finally
+                {
+                    _isApplyingRemoteChange = false;
+                }
+            });
+        }
+
+        private void ApplyRemoteChange(SyncMessage message)
+        {
+            Logger.Info($"Applying remote change: {message.MessageType}", "Sync");
+
+            try
+            {
+                switch (message.MessageType)
+                {
+                    case "LocomotiveMove":
+                        if (message.Data != null)
+                        {
+                            ApplyLocomotiveMove(message.Data);
+                        }
+                        else
+                        {
+                            Logger.Warning("LocomotiveMove message has null data", "Sync");
+                        }
+                        break;
+
+                    case "LocomotiveStatusChange":
+                        if (message.Data != null)
+                        {
+                            ApplyLocomotiveStatusChange(message.Data);
+                        }
+                        else
+                        {
+                            Logger.Warning("LocomotiveStatusChange message has null data", "Sync");
+                        }
+                        break;
+
+                    case "TileUpdate":
+                        if (message.Data != null)
+                        {
+                            ApplyTileUpdate(message.Data);
+                        }
+                        else
+                        {
+                            Logger.Warning("TileUpdate message has null data", "Sync");
+                        }
+                        break;
+
+                    default:
+                        Logger.Warning($"Unknown message type: {message.MessageType}", "Sync");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error applying remote change: {message.MessageType}", ex, "Sync");
+            }
+        }
+
+        private void ApplyLocomotiveMove(object data)
+        {
+            // Désérialiser les données
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+            var moveData = Newtonsoft.Json.JsonConvert.DeserializeObject<LocomotiveMoveData>(json);
+
+            if (moveData == null) return;
+
+            // Trouver la locomotive
+            var loco = _locomotives.FirstOrDefault(l => l.Id == moveData.LocomotiveId);
+            if (loco == null)
+            {
+                Logger.Warning($"Locomotive {moveData.LocomotiveId} not found", "Sync");
+                return;
+            }
+
+            // Retirer de l'ancienne voie
+            if (moveData.FromTrackId.HasValue)
+            {
+                var oldTrack = FindTrackById(moveData.FromTrackId.Value);
+                if (oldTrack != null)
+                {
+                    oldTrack.Locomotives.Remove(loco);
+                }
+            }
+
+            // Ajouter à la nouvelle voie
+            var newTrack = FindTrackById(moveData.ToTrackId);
+            if (newTrack != null)
+            {
+                loco.AssignedTrackId = moveData.ToTrackId;
+                loco.AssignedTrackOffsetX = moveData.OffsetX;
+                newTrack.Locomotives.Add(loco);
+                Logger.Info($"Applied locomotive move: Loco {loco.Number} to Track {moveData.ToTrackId}", "Sync");
+            }
+        }
+
+        private void ApplyLocomotiveStatusChange(object data)
+        {
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+            var statusData = Newtonsoft.Json.JsonConvert.DeserializeObject<LocomotiveStatusChangeData>(json);
+
+            if (statusData == null) return;
+
+            var loco = _locomotives.FirstOrDefault(l => l.Id == statusData.LocomotiveId);
+            if (loco == null)
+            {
+                Logger.Warning($"Locomotive {statusData.LocomotiveId} not found", "Sync");
+                return;
+            }
+
+            loco.Status = Enum.Parse<LocomotiveStatus>(statusData.Status);
+            loco.TractionPercent = statusData.TractionPercent;
+            loco.HsReason = statusData.HsReason;
+            loco.DefautInfo = statusData.DefautInfo;
+            loco.TractionInfo = statusData.TractionInfo;
+
+            Logger.Info($"Applied status change: Loco {loco.Number} = {statusData.Status}", "Sync");
+        }
+
+        private void ApplyTileUpdate(object data)
+        {
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+            var tileData = Newtonsoft.Json.JsonConvert.DeserializeObject<TileUpdateData>(json);
+
+            if (tileData == null) return;
+
+            var tile = _tiles.FirstOrDefault(t => t.Id == tileData.TileId);
+            if (tile == null)
+            {
+                Logger.Warning($"Tile {tileData.TileId} not found", "Sync");
+                return;
+            }
+
+            if (tileData.Name != null) tile.Name = tileData.Name;
+            if (tileData.X.HasValue) tile.X = tileData.X.Value;
+            if (tileData.Y.HasValue) tile.Y = tileData.Y.Value;
+            if (tileData.Width.HasValue) tile.Width = tileData.Width.Value;
+            if (tileData.Height.HasValue) tile.Height = tileData.Height.Value;
+
+            Logger.Info($"Applied tile update: Tile {tile.Name}", "Sync");
+        }
+
+        /// <summary>
+        /// Helper method for safe string property extraction from dynamic JSON data
+        /// </summary>
+        private static bool TryGetStringProperty(object? data, string propertyName, out string? value)
+        {
+            value = null;
+            
+            if (data == null)
+                return false;
+
+            try
+            {
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                
+                if (doc.RootElement.TryGetProperty(propertyName, out var property))
+                {
+                    if (property.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        value = property.GetString();
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to extract property '{propertyName}': {ex.Message}", "Sync");
+            }
+            
+            return false;
+        }
+
+        /// <summary>
+        /// Helper method for safe integer property extraction from dynamic JSON data
+        /// </summary>
+        private static bool TryGetIntProperty(object? data, string propertyName, out int? value)
+        {
+            value = null;
+            
+            if (data == null)
+                return false;
+
+            try
+            {
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                
+                if (doc.RootElement.TryGetProperty(propertyName, out var property))
+                {
+                    if (property.ValueKind == System.Text.Json.JsonValueKind.Number && property.TryGetInt32(out var intValue))
+                    {
+                        value = intValue;
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to extract property '{propertyName}': {ex.Message}", "Sync");
+            }
+            
+            return false;
+        }
+
+        private TrackModel? FindTrackById(int trackId)
+        {
+            foreach (var tile in _tiles)
+            {
+                var track = tile.Tracks.FirstOrDefault(t => t.Id == trackId);
+                if (track != null) return track;
+            }
+            return null;
+        }
+
+        private void SyncService_MasterStatusChanged(object? sender, bool isMaster)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                UpdateMasterStatus(isMaster);
+            });
+        }
+
+        private void SyncService_ConnectionStatusChanged(object? sender, bool isConnected)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                UpdateConnectionStatus(isConnected);
+                
+                // Load state from server when connected
+                if (isConnected && _syncService != null)
+                {
+                    _ = LoadStateFromServerAsync();
+                }
+            });
+        }
+
+        private void SyncService_MasterRequested(object? sender, (string RequesterId, string RequesterName) data)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var result = MessageBox.Show(
+                    $"{data.RequesterName} demande le rôle Master.\n\nVoulez-vous transférer le rôle Master ?",
+                    "Demande de Transfert Master",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes && _syncService != null)
+                {
+                    // Transfer to the requester using their user ID
+                    Logger.Info($"Master transfer accepted for {data.RequesterName} (ID: {data.RequesterId})", "Sync");
+                    _ = _syncService.TransferMasterAsync(data.RequesterId);
+                }
+                else
+                {
+                    Logger.Info($"Master transfer declined for {data.RequesterName}", "Sync");
+                }
+            });
+        }
+
+        private void UpdateMasterStatus(bool isMaster)
+        {
+            Logger.Info($"Status changed to: {(isMaster ? "Master" : "Consultant")}", "Sync");
+
+            if (!isMaster)
+            {
+                // En mode Consultant, on pourrait désactiver certains contrôles
+                // Pour l'instant, on log juste
+                Logger.Info("Running in Consultant mode - consider disabling edit controls", "Sync");
+            }
+            
+            // Update status bar
+            UpdateStatusBar();
+        }
+
+        private void UpdateConnectionStatus(bool isConnected)
+        {
+            Logger.Info($"Connection status: {(isConnected ? "Connected" : "Disconnected")}", "Sync");
+            
+            // Update status bar
+            UpdateStatusBar();
+        }
+
+        /// <summary>
+        /// Checks if the user is in Consultant (read-only) mode
+        /// </summary>
+        private bool IsConsultantMode()
+        {
+            return _syncService != null && 
+                   _syncService.IsConnected && 
+                   !_syncService.IsMaster;
+        }
+
+        #endregion
     }
 }
