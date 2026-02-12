@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -12,8 +10,6 @@ namespace Ploco.Dialogs
 {
     public partial class SyncStartupDialog : Window
     {
-        private const string ConfigFileName = "sync_config.json";
-
         public enum SyncMode
         {
             Disabled,
@@ -21,82 +17,57 @@ namespace Ploco.Dialogs
             Consultant
         }
 
-        public class SyncStartupConfiguration
-        {
-            public SyncMode Mode { get; set; }
-            public string ServerUrl { get; set; } = "http://localhost:5000";
-            public string UserName { get; set; } = string.Empty;
-            public bool RememberChoice { get; set; }
-        }
-
-        public SyncStartupConfiguration Configuration { get; private set; }
+        public SyncConfiguration Configuration { get; private set; }
         public bool ShouldQuit { get; private set; }
 
         public SyncStartupDialog()
         {
             InitializeComponent();
-            Configuration = new SyncStartupConfiguration();
+            Configuration = new SyncConfiguration();
             LoadSavedConfiguration();
-            InitializeDefaults();
-        }
-
-        private void InitializeDefaults()
-        {
-            // Définir le nom d'utilisateur par défaut
-            if (string.IsNullOrWhiteSpace(UserNameTextBox.Text))
-            {
-                UserNameTextBox.Text = Environment.UserName;
-            }
-        }
-
-        private string GetConfigFilePath()
-        {
-            var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var plocoFolder = Path.Combine(appDataFolder, "Ploco");
-            
-            if (!Directory.Exists(plocoFolder))
-            {
-                Directory.CreateDirectory(plocoFolder);
-            }
-            
-            return Path.Combine(plocoFolder, ConfigFileName);
         }
 
         private void LoadSavedConfiguration()
         {
             try
             {
-                var configPath = GetConfigFilePath();
-                if (File.Exists(configPath))
+                // Load configuration using SyncConfigStore
+                var savedConfig = SyncConfigStore.LoadOrDefault();
+                
+                // Apply saved values to UI
+                ServerUrlTextBox.Text = savedConfig.ServerUrl;
+                UserNameTextBox.Text = savedConfig.UserName;
+                
+                // Determine mode from saved configuration and whether to remember
+                if (!savedConfig.Enabled)
                 {
-                    var json = File.ReadAllText(configPath);
-                    var savedConfig = JsonSerializer.Deserialize<SyncStartupConfiguration>(json);
-                    
-                    if (savedConfig != null && savedConfig.RememberChoice)
-                    {
-                        // Appliquer la configuration sauvegardée
-                        ServerUrlTextBox.Text = savedConfig.ServerUrl;
-                        UserNameTextBox.Text = savedConfig.UserName;
-                        RememberChoiceCheckBox.IsChecked = true;
-
-                        switch (savedConfig.Mode)
-                        {
-                            case SyncMode.Disabled:
-                                RadioDisabled.IsChecked = true;
-                                break;
-                            case SyncMode.Master:
-                                RadioMaster.IsChecked = true;
-                                break;
-                            case SyncMode.Consultant:
-                                RadioConsultant.IsChecked = true;
-                                break;
-                        }
-                    }
+                    RadioDisabled.IsChecked = true;
+                    RememberChoiceCheckBox.IsChecked = false;
+                }
+                else if (savedConfig.ForceConsultantMode)
+                {
+                    RadioConsultant.IsChecked = true;
+                    RememberChoiceCheckBox.IsChecked = true;
+                }
+                else if (savedConfig.RequestMasterOnConnect)
+                {
+                    RadioMaster.IsChecked = true;
+                    RememberChoiceCheckBox.IsChecked = true;
+                }
+                else if (savedConfig.Enabled)
+                {
+                    // Enabled but no specific mode flags - could be either
+                    RadioMaster.IsChecked = true;
+                    RememberChoiceCheckBox.IsChecked = true;
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error("Failed to load sync configuration", ex, "SyncStartup");
+                // Set defaults on error
+                ServerUrlTextBox.Text = "http://localhost:5000";
+                UserNameTextBox.Text = Environment.UserName;
+                RadioDisabled.IsChecked = true;
             }
         }
 
@@ -106,21 +77,13 @@ namespace Ploco.Dialogs
             {
                 if (RememberChoiceCheckBox.IsChecked == true)
                 {
-                    var configPath = GetConfigFilePath();
-                    var json = JsonSerializer.Serialize(Configuration, new JsonSerializerOptions 
-                    { 
-                        WriteIndented = true 
-                    });
-                    File.WriteAllText(configPath, json);
+                    // Save using SyncConfigStore
+                    SyncConfigStore.Save(Configuration);
                 }
                 else
                 {
-                    // Si on ne veut pas se souvenir, supprimer le fichier existant
-                    var configPath = GetConfigFilePath();
-                    if (File.Exists(configPath))
-                    {
-                        File.Delete(configPath);
-                    }
+                    // Delete saved configuration if user doesn't want to remember
+                    SyncConfigStore.Delete();
                 }
             }
             catch (Exception ex)
@@ -203,22 +166,27 @@ namespace Ploco.Dialogs
 
         private void Continue_Click(object sender, RoutedEventArgs e)
         {
-            // Déterminer le mode choisi
+            // Build SyncConfiguration from dialog values
+            SyncMode mode;
             if (RadioDisabled.IsChecked == true)
             {
-                Configuration.Mode = SyncMode.Disabled;
+                mode = SyncMode.Disabled;
             }
             else if (RadioMaster.IsChecked == true)
             {
-                Configuration.Mode = SyncMode.Master;
+                mode = SyncMode.Master;
             }
             else if (RadioConsultant.IsChecked == true)
             {
-                Configuration.Mode = SyncMode.Consultant;
+                mode = SyncMode.Consultant;
+            }
+            else
+            {
+                mode = SyncMode.Disabled;
             }
 
             // Valider si la synchronisation est activée
-            if (Configuration.Mode != SyncMode.Disabled)
+            if (mode != SyncMode.Disabled)
             {
                 if (string.IsNullOrWhiteSpace(ServerUrlTextBox.Text))
                 {
@@ -233,12 +201,20 @@ namespace Ploco.Dialogs
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-
-                Configuration.ServerUrl = ServerUrlTextBox.Text.Trim();
-                Configuration.UserName = UserNameTextBox.Text.Trim();
             }
 
-            Configuration.RememberChoice = RememberChoiceCheckBox.IsChecked == true;
+            // Create complete SyncConfiguration
+            Configuration = new SyncConfiguration
+            {
+                Enabled = mode != SyncMode.Disabled,
+                ServerUrl = ServerUrlTextBox.Text.Trim(),
+                UserId = UserNameTextBox.Text.Trim(),
+                UserName = UserNameTextBox.Text.Trim(),
+                AutoReconnect = true,
+                ReconnectDelaySeconds = 5,
+                ForceConsultantMode = mode == SyncMode.Consultant,
+                RequestMasterOnConnect = mode == SyncMode.Master
+            };
 
             // Sauvegarder la configuration si demandé
             SaveConfiguration();
