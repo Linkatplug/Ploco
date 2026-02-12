@@ -842,6 +842,22 @@ namespace Ploco
             RefreshTapisT13();
             
             Logger.Info($"Successfully moved loco Id={loco.Id} Number={loco.Number} to {targetTrack.Name}", "Movement");
+
+            // Synchronisation: Envoyer le changement au serveur
+            if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+            {
+                var fromTrackId = currentTrack?.Id;
+                var moveData = new
+                {
+                    LocomotiveId = loco.Id,
+                    FromTrackId = fromTrackId,
+                    ToTrackId = targetTrack.Id,
+                    OffsetX = loco.AssignedTrackOffsetX
+                };
+
+                Logger.Info($"[SYNC EMIT] LocomotiveMove: Loco {loco.Number} from Track {fromTrackId} to Track {targetTrack.Id}", "Sync");
+                _ = _syncService.SendChangeAsync("LocomotiveMove", moveData);
+            }
         }
 
         private void SwapLocomotivesBetweenTracks(LocomotiveModel loco1, TrackModel track1, LocomotiveModel loco2, TrackModel track2)
@@ -2952,21 +2968,25 @@ namespace Ploco
             });
         }
 
-        private void SyncService_MasterRequested(object? sender, string requesterName)
+        private void SyncService_MasterRequested(object? sender, (string RequesterId, string RequesterName) data)
         {
             Dispatcher.Invoke(() =>
             {
                 var result = MessageBox.Show(
-                    $"{requesterName} demande le rôle Master.\n\nVoulez-vous transférer le rôle Master ?",
+                    $"{data.RequesterName} demande le rôle Master.\n\nVoulez-vous transférer le rôle Master ?",
                     "Demande de Transfert Master",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
 
                 if (result == MessageBoxResult.Yes && _syncService != null)
                 {
-                    // Transfer to the requester
-                    // Note: We need the userId, not just the name - for now we'll log it
-                    Logger.Info($"Master transfer accepted for {requesterName}", "Sync");
+                    // Transfer to the requester using their user ID
+                    Logger.Info($"Master transfer accepted for {data.RequesterName} (ID: {data.RequesterId})", "Sync");
+                    _ = _syncService.TransferMasterAsync(data.RequesterId);
+                }
+                else
+                {
+                    Logger.Info($"Master transfer declined for {data.RequesterName}", "Sync");
                 }
             });
         }

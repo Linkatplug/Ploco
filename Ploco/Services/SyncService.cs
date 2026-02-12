@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Ploco.Models;
@@ -14,11 +15,12 @@ namespace Ploco.Services
         private bool _isMaster;
         private bool _isConnected;
         private bool _isConnecting;
+        private Timer? _heartbeatTimer;
 
         public event EventHandler<SyncMessage>? ChangeReceived;
         public event EventHandler<bool>? MasterStatusChanged;
         public event EventHandler<bool>? ConnectionStatusChanged;
-        public event EventHandler<string>? MasterRequested;
+        public event EventHandler<(string RequesterId, string RequesterName)>? MasterRequested;
 
         public bool IsConnected => _isConnected;
         public bool IsMaster => _isMaster;
@@ -64,6 +66,7 @@ namespace Ploco.Services
                 _connection.Closed += async (error) =>
                 {
                     _isConnected = false;
+                    StopHeartbeat();
                     ConnectionStatusChanged?.Invoke(this, false);
                     Logger.Warning($"Connection closed: {error?.Message ?? "Unknown"}", "Sync");
 
@@ -77,6 +80,7 @@ namespace Ploco.Services
                 _connection.Reconnecting += (error) =>
                 {
                     _isConnected = false;
+                    StopHeartbeat();
                     ConnectionStatusChanged?.Invoke(this, false);
                     Logger.Info("Reconnecting...", "Sync");
                     return Task.CompletedTask;
@@ -95,8 +99,13 @@ namespace Ploco.Services
                         _config.UserName
                     );
 
-                    _isMaster = result.IsMaster;
+                    // Respecter ForceConsultantMode après reconnexion
+                    bool serverAssignedMaster = result.IsMaster;
+                    _isMaster = _config.ForceConsultantMode ? false : serverAssignedMaster;
                     MasterStatusChanged?.Invoke(this, _isMaster);
+                    
+                    // Redémarrer le heartbeat
+                    StartHeartbeat();
                 };
 
                 await _connection.StartAsync();
@@ -108,7 +117,15 @@ namespace Ploco.Services
                     _config.UserName
                 );
 
-                _isMaster = result.IsMaster;
+                // Gérer ForceConsultantMode - toujours consultant même si serveur donne master
+                bool serverAssignedMaster = result.IsMaster;
+                _isMaster = _config.ForceConsultantMode ? false : serverAssignedMaster;
+                
+                if (_config.ForceConsultantMode && serverAssignedMaster)
+                {
+                    Logger.Info("ForceConsultantMode active: Consultant forcé même si Master assigné", "Sync");
+                }
+                
                 _isConnected = true;
                 _isConnecting = false;
 
@@ -116,6 +133,21 @@ namespace Ploco.Services
                 MasterStatusChanged?.Invoke(this, _isMaster);
 
                 Logger.Info($"Connected as {(_isMaster ? "Master" : "Consultant")}", "Sync");
+
+                // Démarrer le heartbeat timer
+                StartHeartbeat();
+
+                // Si RequestMasterOnConnect et pas consultant forcé, demander master
+                if (_config.RequestMasterOnConnect && !_config.ForceConsultantMode && !_isMaster)
+                {
+                    Logger.Info("RequestMasterOnConnect: Demande du rôle Master...", "Sync");
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(1000); // Délai pour stabilisation
+                        await RequestMasterAsync();
+                    });
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -129,6 +161,8 @@ namespace Ploco.Services
 
         public async Task DisconnectAsync()
         {
+            StopHeartbeat();
+            
             if (_connection != null)
             {
                 try
@@ -152,6 +186,13 @@ namespace Ploco.Services
             if (!_isConnected || !_isMaster || _connection == null)
             {
                 Logger.Warning("Cannot send change: not connected or not master", "Sync");
+                return false;
+            }
+
+            // Sécurité supplémentaire: refuser si consultant forcé
+            if (_config.ForceConsultantMode)
+            {
+                Logger.Warning("Cannot send change: ForceConsultantMode is active", "Sync");
                 return false;
             }
 
@@ -230,9 +271,18 @@ namespace Ploco.Services
         private void HandleMasterTransferred(dynamic data)
         {
             string newMasterId = data.NewMasterId.ToString();
-            _isMaster = (newMasterId == _config.UserId);
+            
+            // Respecter ForceConsultantMode même lors d'un transfert
+            bool shouldBeMaster = (newMasterId == _config.UserId) && !_config.ForceConsultantMode;
+            _isMaster = shouldBeMaster;
+            
+            if (newMasterId == _config.UserId && _config.ForceConsultantMode)
+            {
+                Logger.Info("Master transféré mais ForceConsultantMode actif - restant Consultant", "Sync");
+            }
+            
             MasterStatusChanged?.Invoke(this, _isMaster);
-            Logger.Info($"Master transferred to: {newMasterId}", "Sync");
+            Logger.Info($"Master transferred to: {newMasterId} (Je suis Master: {_isMaster})", "Sync");
         }
 
         private void HandleUserConnected(dynamic data)
@@ -248,24 +298,68 @@ namespace Ploco.Services
             if (data.WasMaster && data.NewMasterId != null)
             {
                 string newMasterId = data.NewMasterId.ToString();
-                _isMaster = (newMasterId == _config.UserId);
+                
+                // Respecter ForceConsultantMode
+                bool shouldBeMaster = (newMasterId == _config.UserId) && !_config.ForceConsultantMode;
+                _isMaster = shouldBeMaster;
+                
                 if (_isMaster)
                 {
                     MasterStatusChanged?.Invoke(this, true);
                     Logger.Info("You are now the Master!", "Sync");
+                }
+                else if (newMasterId == _config.UserId && _config.ForceConsultantMode)
+                {
+                    Logger.Info("Master proposé mais ForceConsultantMode actif - restant Consultant", "Sync");
                 }
             }
         }
 
         private void HandleMasterRequested(dynamic data)
         {
-            string requesterName = data.RequesterName.ToString();
-            Logger.Info($"Master requested by: {requesterName}", "Sync");
-            MasterRequested?.Invoke(this, requesterName);
+            string requesterId = data.RequesterId?.ToString() ?? "";
+            string requesterName = data.RequesterName?.ToString() ?? "";
+            Logger.Info($"Master requested by: {requesterName} (ID: {requesterId})", "Sync");
+            MasterRequested?.Invoke(this, (requesterId, requesterName));
+        }
+
+        private void StartHeartbeat()
+        {
+            StopHeartbeat();
+            
+            // Timer qui envoie un heartbeat toutes les 5 secondes
+            _heartbeatTimer = new Timer(async _ =>
+            {
+                if (_isConnected && _connection != null)
+                {
+                    try
+                    {
+                        await _connection.InvokeAsync("Heartbeat");
+                        Logger.Debug("Heartbeat sent", "Sync");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Heartbeat failed: {ex.Message}", "Sync");
+                    }
+                }
+            }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+            
+            Logger.Info("Heartbeat timer started (5s interval)", "Sync");
+        }
+
+        private void StopHeartbeat()
+        {
+            if (_heartbeatTimer != null)
+            {
+                _heartbeatTimer.Dispose();
+                _heartbeatTimer = null;
+                Logger.Info("Heartbeat timer stopped", "Sync");
+            }
         }
 
         public void Dispose()
         {
+            StopHeartbeat();
             DisconnectAsync().Wait();
         }
     }
