@@ -19,6 +19,8 @@ namespace Ploco.Models
         public string UserName { get; set; } = string.Empty;
         public bool AutoReconnect { get; set; } = true;
         public int ReconnectDelaySeconds { get; set; } = 5;
+        public bool ForceConsultantMode { get; set; } = false; // 🆕 Force le mode Consultant (lecture seule)
+        public bool RequestMasterOnConnect { get; set; } = false; // 🆕 Demander le Master au démarrage si possible
     }
 
     public class LocomotiveMoveData

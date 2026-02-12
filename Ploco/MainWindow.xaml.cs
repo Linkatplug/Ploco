@@ -2735,8 +2735,43 @@ namespace Ploco
 
         private void InitializeSyncService()
         {
-            // Charger la configuration de synchronisation
-            var config = LoadSyncConfiguration();
+            // 🆕 Afficher le dialog de démarrage
+            var startupDialog = new Dialogs.SyncStartupDialog
+            {
+                Owner = this
+            };
+
+            var result = startupDialog.ShowDialog();
+
+            if (startupDialog.ShouldQuit)
+            {
+                // L'utilisateur a choisi de quitter
+                Logger.Info("User chose to quit from sync startup dialog", "Application");
+                Application.Current.Shutdown();
+                return;
+            }
+
+            if (result != true)
+            {
+                // Dialog annulé, continuer sans sync
+                Logger.Info("Sync startup dialog cancelled, continuing without sync", "Sync");
+                return;
+            }
+
+            var startupConfig = startupDialog.Configuration;
+
+            // Créer la configuration de synchronisation
+            var config = new SyncConfiguration
+            {
+                Enabled = startupConfig.Mode != Dialogs.SyncStartupDialog.SyncMode.Disabled,
+                ServerUrl = startupConfig.ServerUrl,
+                UserId = startupConfig.UserName,
+                UserName = startupConfig.UserName,
+                AutoReconnect = true,
+                ReconnectDelaySeconds = 5,
+                ForceConsultantMode = startupConfig.Mode == Dialogs.SyncStartupDialog.SyncMode.Consultant,
+                RequestMasterOnConnect = startupConfig.Mode == Dialogs.SyncStartupDialog.SyncMode.Master
+            };
 
             if (config.Enabled)
             {
@@ -2748,7 +2783,7 @@ namespace Ploco
 
                 // Connecter de manière asynchrone
                 _ = _syncService.ConnectAsync();
-                Logger.Info("Synchronization service initialized", "Sync");
+                Logger.Info($"Synchronization service initialized - Mode: {startupConfig.Mode}", "Sync");
             }
             else
             {
@@ -2758,11 +2793,11 @@ namespace Ploco
 
         private SyncConfiguration LoadSyncConfiguration()
         {
-            // Pour l'instant, retourner une config par défaut (désactivée)
-            // TODO: Charger depuis un fichier de configuration
+            // Cette méthode n'est plus utilisée, remplacée par le dialog
+            // Conservée pour compatibilité
             return new SyncConfiguration
             {
-                Enabled = false, // Désactivé par défaut
+                Enabled = false,
                 ServerUrl = "http://localhost:5000",
                 UserId = Environment.UserName,
                 UserName = Environment.UserName,
