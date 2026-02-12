@@ -981,6 +981,23 @@ namespace Ploco
                 _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number}.");
                 PersistState();
                 RefreshTapisT13();
+                
+                // Sync: Send status change to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var statusData = new LocomotiveStatusChangeData
+                    {
+                        LocomotiveId = loco.Id,
+                        Status = loco.Status.ToString(),
+                        TractionPercent = loco.TractionPercent,
+                        HsReason = loco.HsReason,
+                        DefautInfo = loco.DefautInfo,
+                        TractionInfo = loco.TractionInfo
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending status change for loco {loco.Number}: {statusData.Status}", "Sync");
+                    _ = _syncService.SendChangeAsync("LocomotiveStatusChange", statusData);
+                }
             }
             else
             {
@@ -1538,6 +1555,23 @@ namespace Ploco
                 _repository.AddHistory("StatusChanged", $"Statut modifié pour {loco.Number} (HS).");
                 PersistState();
                 RefreshTapisT13();
+                
+                // Sync: Send status change to server if Master and not applying remote change
+                if (_syncService != null && _syncService.IsConnected && _syncService.IsMaster && !_isApplyingRemoteChange)
+                {
+                    var statusData = new LocomotiveStatusChangeData
+                    {
+                        LocomotiveId = loco.Id,
+                        Status = loco.Status.ToString(),
+                        TractionPercent = loco.TractionPercent,
+                        HsReason = loco.HsReason,
+                        DefautInfo = loco.DefautInfo,
+                        TractionInfo = loco.TractionInfo
+                    };
+                    
+                    Logger.Info($"[SYNC EMIT] Sending HS status for loco {loco.Number}", "Sync");
+                    _ = _syncService.SendChangeAsync("LocomotiveStatusChange", statusData);
+                }
             }
         }
 
