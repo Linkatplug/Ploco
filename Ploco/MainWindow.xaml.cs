@@ -44,6 +44,8 @@ namespace Ploco
         private SyncService? _syncService;
         private bool _isApplyingRemoteChange = false;
         private bool _isClosing = false;
+        private System.Timers.Timer? _serverSaveTimer;
+        private const int SERVER_SAVE_DEBOUNCE_MS = 800;
         
         public MainWindow()
         {
@@ -123,6 +125,11 @@ namespace Ploco
                 
                 // Save window settings
                 WindowSettingsHelper.SaveWindowSettings(this, "MainWindow");
+                
+                // Stop server save timer
+                _serverSaveTimer?.Stop();
+                _serverSaveTimer?.Dispose();
+                _serverSaveTimer = null;
                 
                 // Disconnect and dispose sync service properly
                 if (_syncService != null)
@@ -228,6 +235,86 @@ namespace Ploco
             }
         }
 
+        /// <summary>
+        /// Schedules a save to the server with debouncing (Master only)
+        /// </summary>
+        private void ScheduleServerSave()
+        {
+            // Only save if Master and connected
+            if (_syncService == null || !_syncService.IsMaster || !_syncService.IsConnected)
+            {
+                return;
+            }
+
+            // Only save if not applying remote changes (prevent loops)
+            if (_isApplyingRemoteChange)
+            {
+                return;
+            }
+
+            // Stop existing timer if any
+            _serverSaveTimer?.Stop();
+
+            // Create new timer for debouncing
+            _serverSaveTimer = new System.Timers.Timer(SERVER_SAVE_DEBOUNCE_MS);
+            _serverSaveTimer.AutoReset = false;
+            _serverSaveTimer.Elapsed += async (s, e) => await SaveStateToServerAsync();
+            _serverSaveTimer.Start();
+
+            Logger.Info($"Server save scheduled (debounce {SERVER_SAVE_DEBOUNCE_MS}ms)", "Sync");
+        }
+
+        /// <summary>
+        /// Saves the current state to the server (Master only)
+        /// </summary>
+        private async Task SaveStateToServerAsync()
+        {
+            if (_syncService == null || !_syncService.IsMaster || !_syncService.IsConnected)
+            {
+                Logger.Warning("Cannot save to server: Not Master or not connected", "Sync");
+                return;
+            }
+
+            try
+            {
+                Logger.Info("Saving state to server...", "Sync");
+
+                // Read local database file as bytes
+                var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ploco.db");
+                
+                if (!File.Exists(dbPath))
+                {
+                    Logger.Warning($"Database file not found: {dbPath}", "Sync");
+                    return;
+                }
+
+                var dbBytes = await File.ReadAllBytesAsync(dbPath);
+                Logger.Info($"Read local database: {dbBytes.Length} bytes", "Sync");
+
+                // Save to server
+                var success = await _syncService.SaveStateAsync(dbBytes);
+
+                if (success)
+                {
+                    Logger.Info("State saved to server successfully", "Sync");
+                    
+                    // Update status bar to show server save
+                    Dispatcher.Invoke(() =>
+                    {
+                        UpdateLastSaveTime(true); // true = server
+                    });
+                }
+                else
+                {
+                    Logger.Warning("Failed to save state to server", "Sync");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error saving state to server: {ex.Message}", ex, "Sync");
+            }
+        }
+
         private void LoadState()
         {
             _locomotives.Clear();
@@ -319,6 +406,9 @@ namespace Ploco
             
             // Update last save time in status bar
             UpdateLastSaveTime(isServerSave: false);
+            
+            // Schedule server save (Master only, with debouncing)
+            ScheduleServerSave();
         }
 
         private void InitializeLocomotiveView()
