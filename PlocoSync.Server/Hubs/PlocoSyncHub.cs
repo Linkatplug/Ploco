@@ -7,11 +7,13 @@ namespace PlocoSync.Server.Hubs
     public class PlocoSyncHub : Hub
     {
         private readonly SessionManager _sessionManager;
+        private readonly StateStorageService _stateStorage;
         private readonly ILogger<PlocoSyncHub> _logger;
 
-        public PlocoSyncHub(SessionManager sessionManager, ILogger<PlocoSyncHub> logger)
+        public PlocoSyncHub(SessionManager sessionManager, StateStorageService stateStorage, ILogger<PlocoSyncHub> logger)
         {
             _sessionManager = sessionManager;
+            _stateStorage = stateStorage;
             _logger = logger;
         }
 
@@ -151,6 +153,76 @@ namespace PlocoSync.Server.Hubs
         {
             _sessionManager.UpdateHeartbeat(Context.ConnectionId);
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Gets the current shared state (database snapshot) from the server
+        /// </summary>
+        /// <returns>Database bytes or null if no state exists</returns>
+        public async Task<byte[]?> GetState()
+        {
+            try
+            {
+                var session = _sessionManager.GetSession(Context.ConnectionId);
+                if (session == null)
+                {
+                    _logger.LogWarning("GetState called by unknown session");
+                    return null;
+                }
+
+                var stateBytes = await _stateStorage.GetStateAsync();
+                
+                if (stateBytes == null)
+                {
+                    _logger.LogInformation($"GetState: No state exists yet (requested by {session.UserName})");
+                }
+                else
+                {
+                    _logger.LogInformation($"GetState: Returning {stateBytes.Length} bytes to {session.UserName}");
+                }
+
+                return stateBytes;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get state");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Saves the shared state (database snapshot) to the server
+        /// </summary>
+        /// <param name="dbBytes">Database file bytes</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> SaveState(byte[] dbBytes)
+        {
+            try
+            {
+                var session = _sessionManager.GetSession(Context.ConnectionId);
+                if (session == null)
+                {
+                    _logger.LogWarning("SaveState called by unknown session");
+                    return false;
+                }
+
+                // Only Master can save state
+                if (!session.IsMaster)
+                {
+                    _logger.LogWarning($"SaveState rejected: {session.UserName} is not Master");
+                    return false;
+                }
+
+                await _stateStorage.SaveStateAsync(dbBytes, session.UserName);
+                _logger.LogInformation($"SaveState: Saved {dbBytes.Length} bytes from Master {session.UserName}");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to save state");
+                return false;
+            }
         }
     }
 }

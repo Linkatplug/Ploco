@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Ajouter les services
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<SessionManager>();
+builder.Services.AddSingleton<StateStorageService>();
 
 // Configurer CORS pour permettre les connexions depuis le client WPF
 builder.Services.AddCors(options =>
