@@ -453,6 +453,17 @@ namespace Ploco
 
         private void AddPlace_Click(object sender, RoutedEventArgs e)
         {
+            // Prevent adding places in Consultant mode
+            if (IsConsultantMode())
+            {
+                MessageBox.Show(
+                    "Vous êtes en mode Consultation (lecture seule).\n\nImpossible d'ajouter un lieu.",
+                    "Mode Consultation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
             var dialog = new PlaceDialog { Owner = this };
             if (dialog.ShowDialog() == true)
             {
@@ -866,6 +877,12 @@ namespace Ploco
 
         private void LocomotiveList_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            // Prevent drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                return;
+            }
+
             if (e.LeftButton != MouseButtonState.Pressed)
             {
                 return;
@@ -920,6 +937,12 @@ namespace Ploco
 
         private void TrackLocomotives_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            // Prevent drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                return;
+            }
+
             if (e.LeftButton != MouseButtonState.Pressed)
             {
                 return;
@@ -1174,6 +1197,17 @@ namespace Ploco
 
         private void MenuItem_ModifierStatut_Click(object sender, RoutedEventArgs e)
         {
+            // Prevent status modification in Consultant mode
+            if (IsConsultantMode())
+            {
+                MessageBox.Show(
+                    "Vous êtes en mode Consultation (lecture seule).\n\nImpossible de modifier le statut.",
+                    "Mode Consultation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
             var loco = GetLocomotiveFromMenuItem(sender);
             if (loco == null)
             {
@@ -1829,6 +1863,12 @@ namespace Ploco
 
         private void Tile_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // Prevent tile drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                return;
+            }
+
             if (e.OriginalSource is DependencyObject source
                 && (FindAncestor<Button>(source) != null
                     || FindAncestor<MenuItem>(source) != null
@@ -1853,6 +1893,21 @@ namespace Ploco
 
         private void Tile_MouseMove(object sender, MouseEventArgs e)
         {
+            // Prevent tile drag in Consultant mode
+            if (IsConsultantMode())
+            {
+                if (_draggedTile != null)
+                {
+                    // Release capture if somehow started
+                    if (sender is Border border)
+                    {
+                        border.ReleaseMouseCapture();
+                    }
+                    _draggedTile = null;
+                }
+                return;
+            }
+
             if (_draggedTile == null || e.LeftButton != MouseButtonState.Pressed || _isResizingTile)
             {
                 return;
@@ -1900,6 +1955,13 @@ namespace Ploco
 
         private void TileResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
+            // Prevent tile resize in Consultant mode
+            if (IsConsultantMode())
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (sender is Thumb thumb && thumb.DataContext is TileModel tile)
             {
                 _isResizingTile = true;
@@ -3434,6 +3496,16 @@ namespace Ploco
             
             // Update status bar
             UpdateStatusBar();
+        }
+
+        /// <summary>
+        /// Checks if the user is in Consultant (read-only) mode
+        /// </summary>
+        private bool IsConsultantMode()
+        {
+            return _syncService != null && 
+                   _syncService.IsConnected && 
+                   !_syncService.IsMaster;
         }
 
         #endregion
