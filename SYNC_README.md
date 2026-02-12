@@ -38,6 +38,67 @@ Le serveur démarre sur `http://localhost:5000`
 
 Vérifiez que ça fonctionne en ouvrant http://localhost:5000 dans un navigateur.
 
+### Build serveur en EXE
+
+Pour créer un exécutable autonome du serveur (sans nécessiter l'installation de .NET) :
+
+#### Windows (64-bit)
+```bash
+cd PlocoSync.Server
+dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+```
+
+L'exécutable sera créé dans : `bin/Release/net8.0/win-x64/publish/PlocoSync.Server.exe`
+
+#### Linux (64-bit)
+```bash
+cd PlocoSync.Server
+dotnet publish -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true
+```
+
+L'exécutable sera créé dans : `bin/Release/net8.0/linux-x64/publish/PlocoSync.Server`
+
+#### Lancer le serveur EXE
+
+Pour lancer le serveur sur toutes les interfaces réseau (accessible depuis d'autres PC) :
+
+```bash
+# Windows
+PlocoSync.Server.exe --urls http://0.0.0.0:5000
+
+# Linux
+./PlocoSync.Server --urls http://0.0.0.0:5000
+```
+
+**Note** : `0.0.0.0` permet l'accès depuis d'autres machines du réseau. Pour localhost uniquement, utilisez `http://localhost:5000`.
+
+#### Configuration du pare-feu
+
+**Windows** :
+```powershell
+# Autoriser le port 5000 en entrée
+netsh advfirewall firewall add rule name="PlocoSync Server" dir=in action=allow protocol=TCP localport=5000
+
+# Ou via l'interface graphique :
+# Panneau de configuration > Pare-feu Windows Defender > Paramètres avancés > Règles de trafic entrant > Nouvelle règle
+```
+
+**Linux** :
+```bash
+# UFW (Ubuntu/Debian)
+sudo ufw allow 5000/tcp
+
+# FirewallD (CentOS/RHEL/Fedora)
+sudo firewall-cmd --permanent --add-port=5000/tcp
+sudo firewall-cmd --reload
+
+# iptables
+sudo iptables -A INPUT -p tcp --dport 5000 -j ACCEPT
+sudo iptables-save > /etc/iptables/rules.v4
+```
+
+**⚠️ Important** : N'ouvrez le port que sur les réseaux de confiance (réseau local). Pour un accès Internet, utilisez HTTPS et authentification.
+
 ### 2. Configurer les Clients
 
 Pour l'instant, la synchronisation est **désactivée par défaut**.
