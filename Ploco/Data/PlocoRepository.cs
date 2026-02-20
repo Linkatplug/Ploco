@@ -9,7 +9,7 @@ using Ploco.Models;
 
 namespace Ploco.Data
 {
-    public class PlocoRepository
+    public class PlocoRepository : IPlocoRepository
     {
         private readonly string _databasePath;
         private readonly string _connectionString;
