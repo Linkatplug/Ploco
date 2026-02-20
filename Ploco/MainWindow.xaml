@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ploco.Converters"
         xmlns:helpers="clr-namespace:Ploco.Helpers"
-        Title="Ploco - Gestion de parcs locomotives - 1.0.6-beta2.3_build.001" Height="800" Width="1200"
+        Title="Ploco - Gestion de parcs locomotives - 1.0.6-beta3.1_build.001" Height="800" Width="1200"
         Icon="pack://application:,,,/img/train_logo.ico"
         Background="{DynamicResource AppBackgroundBrush}"
         Loaded="Window_Loaded" Closing="Window_Closing">
@@ -52,6 +52,14 @@
             <Setter Property="Padding" Value="4"/>
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                    </Style>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style x:Key="RollingLineDropListStyle" TargetType="ListBox" BasedOn="{StaticResource DropListBoxStyle}">
             <Setter Property="MinHeight" Value="28"/>
@@ -166,10 +174,10 @@
                             <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
                             <Menu Grid.Column="1" HorizontalAlignment="Right">
                                 <MenuItem Header="...">
-                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
-                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Renommer tuile" Command="{Binding DataContext.RenameTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Command="{Binding DataContext.DeleteTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     <Separator/>
-                                    <MenuItem Header="Ajouter voie de sortie" Click="AddDepotOutput_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Ajouter voie de sortie" Command="{Binding DataContext.AddDepotOutputTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                 </MenuItem>
                             </Menu>
                         </Grid>
@@ -261,6 +269,8 @@
                                                                 <Style TargetType="ListBoxItem">
                                                                     <Setter Property="Canvas.Left" Value="{Binding AssignedTrackOffsetX, TargetNullValue=0}"/>
                                                                     <Setter Property="Canvas.Top" Value="0"/>
+                                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
                                                                 </Style>
                                                             </ListBox.ItemContainerStyle>
                                                             <ListBox.ItemTemplate>
@@ -340,10 +350,10 @@
                             <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
                             <Menu Grid.Column="1" HorizontalAlignment="Right">
                                 <MenuItem Header="...">
-                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
-                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Renommer tuile" Command="{Binding DataContext.RenameTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Command="{Binding DataContext.DeleteTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     <Separator/>
-                                    <MenuItem Header="Ajouter zone" Click="AddGarageZone_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Ajouter zone" Command="{Binding DataContext.AddZoneTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                 </MenuItem>
                             </Menu>
                         </Grid>
@@ -478,8 +488,8 @@
                                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,6,0"/>
                                                                 <Menu VerticalAlignment="Center">
                                                                     <MenuItem Header="...">
-                                                                        <MenuItem Header="Renommer zone" Click="RenameZone_Click" Tag="{Binding}"/>
-                                                                        <MenuItem Header="Supprimer zone" Click="RemoveZone_Click" Tag="{Binding}"/>
+                                                                        <MenuItem Header="Renommer zone" Command="{Binding DataContext.RenameTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                                        <MenuItem Header="Supprimer zone" Command="{Binding DataContext.DeleteTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                                                     </MenuItem>
                                                                 </Menu>
                                                             </StackPanel>
@@ -514,8 +524,8 @@
                                                                     </Style>
                                                                 </Menu.Style>
                                                                 <MenuItem Header="...">
-                                                                    <MenuItem Header="Renommer zone" Click="RenameZone_Click" Tag="{Binding}"/>
-                                                                    <MenuItem Header="Supprimer zone" Click="RemoveZone_Click" Tag="{Binding}"/>
+                                                                    <MenuItem Header="Renommer zone" Command="{Binding DataContext.RenameTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                                    <MenuItem Header="Supprimer zone" Command="{Binding DataContext.DeleteTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                                                 </MenuItem>
                                                             </Menu>
                                                         </StackPanel>
@@ -537,6 +547,8 @@
                                                                 <Style TargetType="ListBoxItem">
                                                                     <Setter Property="Canvas.Left" Value="{Binding AssignedTrackOffsetX, TargetNullValue=0}"/>
                                                                     <Setter Property="Canvas.Top" Value="0"/>
+                                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
                                                                 </Style>
                                                             </ListBox.ItemContainerStyle>
                                                             <ListBox.ItemTemplate>
@@ -616,10 +628,10 @@
                             <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
                             <Menu Grid.Column="1" HorizontalAlignment="Right">
                                 <MenuItem Header="...">
-                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
-                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Renommer tuile" Command="{Binding DataContext.RenameTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Command="{Binding DataContext.DeleteTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     <Separator/>
-                                    <MenuItem Header="Ajouter voie" Click="AddLineTrack_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Ajouter voie" Command="{Binding DataContext.AddLineTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                 </MenuItem>
                             </Menu>
                         </Grid>
@@ -637,8 +649,8 @@
                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"/>
                                                     <Menu Grid.Column="1" HorizontalAlignment="Right">
                                                         <MenuItem Header="...">
-                                                            <MenuItem Header="Renommer voie" Click="RenameLineTrack_Click" Tag="{Binding}"/>
-                                                            <MenuItem Header="Supprimer voie" Click="RemoveLineTrack_Click" Tag="{Binding}"/>
+                                                            <MenuItem Header="Renommer voie" Command="{Binding DataContext.RenameTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                            <MenuItem Header="Supprimer voie" Command="{Binding DataContext.DeleteTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                                         </MenuItem>
                                                     </Menu>
                                                 </Grid>
@@ -660,6 +672,8 @@
                                                             <Style TargetType="ListBoxItem">
                                                                 <Setter Property="Canvas.Left" Value="{Binding AssignedTrackOffsetX, TargetNullValue=0}"/>
                                                                 <Setter Property="Canvas.Top" Value="0"/>
+                                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                                                <Setter Property="VerticalContentAlignment" Value="Center"/>
                                                             </Style>
                                                         </ListBox.ItemContainerStyle>
                                                         <ListBox.ItemTemplate>
@@ -738,10 +752,10 @@
                             <TextBlock Grid.Column="0" Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="14"/>
                             <Menu Grid.Column="1" HorizontalAlignment="Right">
                                 <MenuItem Header="...">
-                                    <MenuItem Header="Renommer tuile" Click="RenameTile_Click" Tag="{Binding}"/>
-                                    <MenuItem Header="Supprimer tuile" Click="DeleteTile_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Renommer tuile" Command="{Binding DataContext.RenameTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                    <MenuItem Header="Supprimer tuile" Command="{Binding DataContext.DeleteTileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     <Separator/>
-                                    <MenuItem Header="Configurer lignes" Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
+                                    <MenuItem Header="Configurer lignes" Command="{Binding DataContext.ConfigureRollingLineTracksCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                 </MenuItem>
                             </Menu>
                         </Grid>
@@ -826,7 +840,7 @@
                             </ItemsControl>
                         </ScrollViewer>
                         <Button Content="Configurer lignes" Margin="0,6,0,0" HorizontalAlignment="Right"
-                                Click="AddRollingLineTrack_Click" Tag="{Binding}"/>
+                                Command="{Binding DataContext.ConfigureRollingLineTracksCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                     </StackPanel>
                     <Thumb Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                            Cursor="SizeNWSE" DragDelta="TileResizeThumb_DragDelta" DragCompleted="TileResizeThumb_DragCompleted"
@@ -844,8 +858,8 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="Fichier">
-                <MenuItem Header="Sauvegarder" Click="MenuItem_Save_Click"/>
-                <MenuItem Header="Charger" Click="MenuItem_Load_Click"/>
+                <MenuItem Header="Sauvegarder" Command="{Binding SaveDatabaseCommand}"/>
+                <MenuItem Header="Charger" Command="{Binding LoadDatabaseCommand}"/>
             </MenuItem>
             <MenuItem Header="Gestion">
                 <MenuItem Header="Gestion des parcs" Click="MenuItem_PoolManagement_Click"/>
@@ -872,11 +886,11 @@
                     <MenuItem Header="Réinitialiser tuiles" Click="MenuItem_ResetTiles_Click"/>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="Logs" Click="MenuItem_Logs_Click"/>
+                <MenuItem Header="Logs" Command="{Binding OpenLogsFolderCommand}"/>
             </MenuItem>
         </Menu>
         <ToolBar DockPanel.Dock="Top">
-            <Button Content="Ajouter un lieu" Click="AddPlace_Click"/>
+            <Button Content="Ajouter un lieu" Command="{Binding AddTileCommand}"/>
         </ToolBar>
         <Grid>
             <Grid.ColumnDefinitions>

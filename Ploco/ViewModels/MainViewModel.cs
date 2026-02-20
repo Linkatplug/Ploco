@@ -76,5 +76,22 @@ namespace Ploco.ViewModels
                 OnStateLoaded?.Invoke();
             }
         }
+
+        [RelayCommand]
+        public void OpenLogsFolder()
+        {
+            try
+            {
+                var logsDirectory = Helpers.Logger.LogsDirectory;
+                Helpers.Logger.Info($"Opening logs folder: {logsDirectory}", "Menu");
+                System.Diagnostics.Process.Start("explorer.exe", logsDirectory);
+            }
+            catch (Exception ex)
+            {
+                Helpers.Logger.Error("Failed to open logs folder", ex, "Menu");
+                System.Windows.MessageBox.Show($"Impossible d'ouvrir le dossier de logs.\n\nChemin: {Helpers.Logger.LogsDirectory}\n\nErreur: {ex.Message}", 
+                    "Erreur", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
     }
 }

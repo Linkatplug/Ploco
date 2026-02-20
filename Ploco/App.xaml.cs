@@ -5,6 +5,7 @@ using Serilog;
 using Microsoft.Extensions.DependencyInjection;
 using Ploco.Data;
 using Ploco.ViewModels;
+using Ploco.Dialogs;
 
 namespace Ploco
 {
@@ -33,6 +34,7 @@ namespace Ploco
         private void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton<IPlocoRepository>(provider => new PlocoRepository("ploco.db"));
+            services.AddSingleton<IDialogService, DialogService>();
             services.AddTransient<MainViewModel>();
         }
 
