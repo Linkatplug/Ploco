@@ -3,11 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ploco.Converters"
         xmlns:helpers="clr-namespace:Ploco.Helpers"
-        Title="Ploco - Gestion de parcs locomotives - 1.0.6-beta3.1_build.001" Height="800" Width="1200"
+        Title="Ploco - Gestion de parcs locomotives - 1.0.6-beta3.2_build.001" Height="800" Width="1200"
         Icon="pack://application:,,,/img/train_logo.ico"
         Background="{DynamicResource AppBackgroundBrush}"
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
+        <helpers:BindingProxy x:Key="DataContextProxy" Data="{Binding}" />
         <local:StatutToBrushConverter x:Key="StatutToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         
@@ -147,9 +148,9 @@
             <MenuItem Header="Swap" Click="MenuItem_SwapPool_Click"/>
             <MenuItem Header="Retirer de la tuile" Click="MenuItem_RemoveFromTile_Click"/>
             <Separator/>
-            <MenuItem Header="Placement prévisionnel" Click="MenuItem_PlacementPrevisionnel_Click" x:Name="MenuItemPlacementPrevisionnel"/>
-            <MenuItem Header="Annuler le placement prévisionnel" Click="MenuItem_AnnulerPrevisionnel_Click" x:Name="MenuItemAnnulerPrevisionnel"/>
-            <MenuItem Header="Valider le placement prévisionnel" Click="MenuItem_ValiderPrevisionnel_Click" x:Name="MenuItemValiderPrevisionnel"/>
+            <MenuItem Header="Placement prévisionnel" Command="{Binding Data.PlacementPrevisionnelCommand, Source={StaticResource DataContextProxy}}" CommandParameter="{Binding}" x:Name="MenuItemPlacementPrevisionnel"/>
+            <MenuItem Header="Annuler le placement prévisionnel" Command="{Binding Data.AnnulerPrevisionnelCommand, Source={StaticResource DataContextProxy}}" CommandParameter="{Binding}" x:Name="MenuItemAnnulerPrevisionnel"/>
+            <MenuItem Header="Valider le placement prévisionnel" Command="{Binding Data.ValiderPrevisionnelCommand, Source={StaticResource DataContextProxy}}" CommandParameter="{Binding}" x:Name="MenuItemValiderPrevisionnel"/>
         </ContextMenu>
         <ContextMenu x:Key="LocomotiveListContextMenu">
             <MenuItem Header="Modifier statut" Click="MenuItem_ModifierStatut_Click"/>
