@@ -74,7 +74,8 @@ namespace Ploco
 
         private void TileScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            UpdateTileCanvasExtent();
+            // Do not call UpdateTileCanvasExtent() here to prevent infinite layout cycles
+            // resulting from ScrollBar toggles adjusting Viewport Width/Height.
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -1290,9 +1291,17 @@ namespace Ploco
                 return;
             }
 
-            // Find the target track
+            // Find the target track primarily by looking for where the ghost is currently located
+            // This is safely robust since track IDs might be out of sync after an unsaved Tile creation
             var targetTrack = _tiles.SelectMany(t => t.Tracks)
-                .FirstOrDefault(t => t.Id == targetTrackId);
+                .FirstOrDefault(t => t.Locomotives.Any(l => l.IsForecastGhost && l.ForecastSourceLocomotiveId == loco.Id));
+
+            if (targetTrack == null && targetTrackId != null)
+            {
+                // Fallback to ID if ghost wasn't found for some reason
+                targetTrack = _tiles.SelectMany(t => t.Tracks)
+                    .FirstOrDefault(t => t.Id == targetTrackId);
+            }
 
             if (targetTrack == null)
             {
@@ -2620,17 +2629,16 @@ namespace Ploco
 
             if (!_tiles.Any())
             {
-                TileCanvas.Width = Math.Max(0, TileScrollViewer?.ViewportWidth ?? 0);
-                TileCanvas.Height = Math.Max(0, TileScrollViewer?.ViewportHeight ?? 0);
+                TileCanvas.Width = 0;
+                TileCanvas.Height = 0;
                 return;
             }
 
             var maxX = _tiles.Max(tile => tile.X + tile.Width);
             var maxY = _tiles.Max(tile => tile.Y + tile.Height);
-            var viewportWidth = TileScrollViewer?.ViewportWidth ?? 0;
-            var viewportHeight = TileScrollViewer?.ViewportHeight ?? 0;
-            TileCanvas.Width = Math.Max(viewportWidth, maxX + CanvasPadding);
-            TileCanvas.Height = Math.Max(viewportHeight, maxY + CanvasPadding);
+            
+            TileCanvas.Width = maxX + CanvasPadding;
+            TileCanvas.Height = maxY + CanvasPadding;
         }
 
         private Point GetDropPositionInWorkspace(MouseEventArgs e)

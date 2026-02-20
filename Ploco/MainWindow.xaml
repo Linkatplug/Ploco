@@ -23,8 +23,9 @@
                 <DataTrigger Binding="{Binding IsForecastOrigin}" Value="True">
                     <Setter Property="Background" Value="Blue"/>
                 </DataTrigger>
-                <!-- Forecast ghost: Show status color with slight transparency to distinguish from real locomotives -->
+                <!-- Forecast ghost: Show status color with slight transparency to distinguish from real locomotives. Now set to Blue to match origin -->
                 <DataTrigger Binding="{Binding IsForecastGhost}" Value="True">
+                    <Setter Property="Background" Value="Blue"/>
                     <Setter Property="Opacity" Value="0.8"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -838,6 +839,12 @@
                                     GarageTemplate="{StaticResource GarageTileTemplate}"
                                     LineTemplate="{StaticResource LineTileTemplate}"
                                     RollingLineTemplate="{StaticResource RollingLineTileTemplate}"/>
+
+        <!-- Fix WPF Data Binding warnings: "Cannot find source for binding with reference 'RelativeSource FindAncestor, AncestorType='System.Windows.Controls.ItemsControl'" -->
+        <Style TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
     </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
