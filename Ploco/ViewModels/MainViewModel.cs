@@ -20,20 +20,19 @@ namespace Ploco.ViewModels
         private ObservableCollection<LayoutPreset> _layoutPresets = new();
 
         // Référence au repository
-        private Ploco.Data.PlocoRepository? _repository;
+        private readonly Ploco.Data.IPlocoRepository _repository;
 
         // Événements pour indiquer à la vue qu'elle doit mettre à jour son UI (semi-MVVM temporaire)
         public event Action? OnStateLoaded;
         public event Action? OnStatePersisted;
 
-        public MainViewModel()
-        {
-            // Initialisation de base
-        }
-
-        public void Initialize(Ploco.Data.PlocoRepository repository, Action persistStateCallback, Action loadStateCallback)
+        public MainViewModel(Ploco.Data.IPlocoRepository repository)
         {
             _repository = repository;
+        }
+
+        public void InitializeEvents(Action persistStateCallback, Action loadStateCallback)
+        {
             OnStatePersisted = persistStateCallback;
             OnStateLoaded = loadStateCallback;
         }

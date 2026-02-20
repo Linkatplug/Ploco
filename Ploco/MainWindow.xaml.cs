@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
+using Microsoft.Extensions.DependencyInjection;
 using Ploco.Data;
 using Ploco.Dialogs;
 using Ploco.Helpers;
@@ -22,7 +23,7 @@ namespace Ploco
     public partial class MainWindow : Window
     {
         public static readonly RoutedUICommand LocomotiveHsCommand = new("Loc HS", "LocomotiveHsCommand", typeof(MainWindow));
-        private readonly PlocoRepository _repository;
+        private readonly IPlocoRepository _repository;
         private readonly ViewModels.MainViewModel _viewModel;
         
         private const string LayoutPresetFileName = "layout_presets.json";
@@ -41,11 +42,11 @@ namespace Ploco
         public MainWindow()
         {
             InitializeComponent();
-            _viewModel = new ViewModels.MainViewModel();
+            _viewModel = App.ServiceProvider.GetRequiredService<ViewModels.MainViewModel>();
             DataContext = _viewModel;
             
-            _repository = new PlocoRepository("ploco.db");
-            _viewModel.Initialize(_repository, PersistState, LoadState);
+            _repository = App.ServiceProvider.GetRequiredService<IPlocoRepository>();
+            _viewModel.InitializeEvents(PersistState, LoadState);
             
             InputBindings.Add(new KeyBinding(LocomotiveHsCommand, new KeyGesture(Key.H, ModifierKeys.Control)));
             CommandBindings.Add(new CommandBinding(LocomotiveHsCommand, LocomotiveHsCommand_Executed, LocomotiveHsCommand_CanExecute));
