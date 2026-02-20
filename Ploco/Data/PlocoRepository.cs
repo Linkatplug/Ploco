@@ -970,6 +970,8 @@ namespace Ploco.Data
                 return false;
             }
 
+            // Force SQLite logic to release any file locks from connection pools
+            SqliteConnection.ClearAllPools();
             File.Copy(sourcePath, _databasePath, true);
             return true;
         }
@@ -1022,7 +1024,7 @@ namespace Ploco.Data
             }
 
             var header = new byte[16];
-            using var stream = File.OpenRead(path);
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             if (stream.Read(header, 0, header.Length) < header.Length)
             {
                 return false;

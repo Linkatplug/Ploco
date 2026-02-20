@@ -23,9 +23,8 @@ namespace Ploco
     {
         public static readonly RoutedUICommand LocomotiveHsCommand = new("Loc HS", "LocomotiveHsCommand", typeof(MainWindow));
         private readonly PlocoRepository _repository;
-        private readonly ObservableCollection<LocomotiveModel> _locomotives = new();
-        private readonly ObservableCollection<TileModel> _tiles = new();
-        private readonly List<LayoutPreset> _layoutPresets = new();
+        private readonly ViewModels.MainViewModel _viewModel;
+        
         private const string LayoutPresetFileName = "layout_presets.json";
         private const double MinTileWidth = 260;
         private const double MinTileHeight = 180;
@@ -38,10 +37,16 @@ namespace Ploco
         private Point _tileDragStart;
         private bool _isResizingTile;
         private readonly Dictionary<Type, Window> _modelessWindows = new();
+
         public MainWindow()
         {
             InitializeComponent();
+            _viewModel = new ViewModels.MainViewModel();
+            DataContext = _viewModel;
+            
             _repository = new PlocoRepository("ploco.db");
+            _viewModel.Initialize(_repository, PersistState, LoadState);
+            
             InputBindings.Add(new KeyBinding(LocomotiveHsCommand, new KeyGesture(Key.H, ModifierKeys.Control)));
             CommandBindings.Add(new CommandBinding(LocomotiveHsCommand, LocomotiveHsCommand_Executed, LocomotiveHsCommand_CanExecute));
             
@@ -64,12 +69,12 @@ namespace Ploco
             LoadLayoutPresets();
             RefreshPresetMenu();
             ApplyTheme(false);
-            LocomotiveList.ItemsSource = _locomotives;
-            TileCanvas.ItemsSource = _tiles;
+            LocomotiveList.ItemsSource = _viewModel.Locomotives;
+            TileCanvas.ItemsSource = _viewModel.Tiles;
             InitializeLocomotiveView();
             UpdateTileCanvasExtent();
             
-            Logger.Info($"Loaded {_locomotives.Count} locomotives and {_tiles.Count} tiles", "Application");
+            Logger.Info($"Loaded {_viewModel.Locomotives.Count} locomotives and {_viewModel.Tiles.Count} tiles", "Application");
         }
 
         private void TileScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -99,13 +104,13 @@ namespace Ploco
 
         private void LoadState()
         {
-            _locomotives.Clear();
-            _tiles.Clear();
+            _viewModel.Locomotives.Clear();
+            _viewModel.Tiles.Clear();
 
             var state = _repository.LoadState();
             foreach (var loco in state.Locomotives.OrderBy(l => l.SeriesName).ThenBy(l => l.Number))
             {
-                _locomotives.Add(loco);
+                _viewModel.Locomotives.Add(loco);
             }
 
             foreach (var tile in state.Tiles)
@@ -115,7 +120,7 @@ namespace Ploco
                 {
                     EnsureTrackOffsets(track);
                 }
-                _tiles.Add(tile);
+                _viewModel.Tiles.Add(tile);
             }
 
             UpdatePoolVisibility();
@@ -125,11 +130,11 @@ namespace Ploco
         private void PersistState()
         {
             // Filter out ghost locomotives from tracks before saving
-            var locomotivesToSave = _locomotives.Where(l => !l.IsForecastGhost).ToList();
+            var locomotivesToSave = _viewModel.Locomotives.Where(l => !l.IsForecastGhost).ToList();
             
             // Create a clean copy of tiles without ghosts
             var tilesToSave = new List<TileModel>();
-            foreach (var tile in _tiles)
+            foreach (var tile in _viewModel.Tiles)
             {
                 var tileCopy = new TileModel
                 {
@@ -189,7 +194,7 @@ namespace Ploco
 
         private void InitializeLocomotiveView()
         {
-            var view = CollectionViewSource.GetDefaultView(_locomotives);
+            var view = CollectionViewSource.GetDefaultView(_viewModel.Locomotives);
             view.SortDescriptions.Clear();
             view.SortDescriptions.Add(new System.ComponentModel.SortDescription(nameof(LocomotiveModel.Number), System.ComponentModel.ListSortDirection.Ascending));
         }
@@ -197,7 +202,7 @@ namespace Ploco
         private List<RollingStockSeries> BuildSeriesState()
         {
             var series = new Dictionary<int, RollingStockSeries>();
-            foreach (var loco in _locomotives)
+            foreach (var loco in _viewModel.Locomotives)
             {
                 if (!series.ContainsKey(loco.SeriesId))
                 {
@@ -258,12 +263,12 @@ namespace Ploco
             {
                 Name = name,
                 Type = type,
-                X = 20 + _tiles.Count * 30,
-                Y = 20 + _tiles.Count * 30
+                X = 20 + _viewModel.Tiles.Count * 30,
+                Y = 20 + _viewModel.Tiles.Count * 30
             };
             EnsureDefaultTracks(tile);
             ApplyGaragePresets(tile);
-            _tiles.Add(tile);
+            _viewModel.Tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             PersistState();
             UpdateTileCanvasExtent();
@@ -275,8 +280,8 @@ namespace Ploco
             {
                 Name = dialog.PlaceName,
                 Type = TileType.ArretLigne,
-                X = 20 + _tiles.Count * 30,
-                Y = 20 + _tiles.Count * 30
+                X = 20 + _viewModel.Tiles.Count * 30,
+                Y = 20 + _viewModel.Tiles.Count * 30
             };
 
             var track = new TrackModel
@@ -292,7 +297,7 @@ namespace Ploco
 
             tile.Tracks.Add(track);
             tile.RefreshTrackCollections();
-            _tiles.Add(tile);
+            _viewModel.Tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             _repository.AddHistory("LineTrackAdded", $"Ajout de la voie {track.Name} dans {tile.DisplayTitle}.");
 
@@ -302,7 +307,7 @@ namespace Ploco
             var locomotiveNumbers = ParseLocomotiveNumbers(dialog.LocomotiveNumbers, invalidLocos);
             foreach (var number in locomotiveNumbers)
             {
-                var loco = _locomotives.FirstOrDefault(l => l.Number == number);
+                var loco = _viewModel.Locomotives.FirstOrDefault(l => l.Number == number);
                 if (loco == null)
                 {
                     missingLocos.Add(number.ToString());
@@ -325,7 +330,7 @@ namespace Ploco
                 var hsNumbers = ParseLocomotiveNumbers(dialog.HsLocomotiveNumbers, invalidHsLocos);
                 foreach (var number in hsNumbers)
                 {
-                    var loco = _locomotives.FirstOrDefault(l => l.Number == number);
+                    var loco = _viewModel.Locomotives.FirstOrDefault(l => l.Number == number);
                     if (loco == null)
                     {
                         missingHsLocos.Add(number.ToString());
@@ -377,8 +382,8 @@ namespace Ploco
             {
                 Name = name,
                 Type = TileType.RollingLine,
-                X = 20 + _tiles.Count * 30,
-                Y = 20 + _tiles.Count * 30
+                X = 20 + _viewModel.Tiles.Count * 30,
+                Y = 20 + _viewModel.Tiles.Count * 30
             };
             var numbers = PromptRollingLineNumbers(DefaultRollingLineCount);
             if (numbers == null)
@@ -388,7 +393,7 @@ namespace Ploco
 
             tile.RollingLineCount = numbers.Count;
             NormalizeRollingLineTracks(tile, numbers);
-            _tiles.Add(tile);
+            _viewModel.Tiles.Add(tile);
             _repository.AddHistory("TileCreated", $"Création du lieu {tile.DisplayTitle}.");
             _repository.AddHistory("RollingLineAdded", $"Lignes {FormatRollingLineRange(numbers)} ajoutées dans {tile.DisplayTitle}.");
             PersistState();
@@ -411,7 +416,7 @@ namespace Ploco
                     loco.AssignedTrackId = null;
                 }
             }
-            _tiles.Remove(tile);
+            _viewModel.Tiles.Remove(tile);
             _repository.AddHistory("TileDeleted", $"Suppression du lieu {tile.DisplayTitle}.");
             UpdatePoolVisibility();
             PersistState();
@@ -503,7 +508,7 @@ namespace Ploco
             var track = GetTrackFromSender(sender);
             if (track != null)
             {
-                var tile = _tiles.FirstOrDefault(t => t.Tracks.Contains(track));
+                var tile = _viewModel.Tiles.FirstOrDefault(t => t.Tracks.Contains(track));
                 if (tile == null)
                 {
                     return;
@@ -578,7 +583,7 @@ namespace Ploco
             var track = GetTrackFromSender(sender);
             if (track != null)
             {
-                var tile = _tiles.FirstOrDefault(t => t.Tracks.Contains(track));
+                var tile = _viewModel.Tiles.FirstOrDefault(t => t.Tracks.Contains(track));
                 if (tile == null)
                 {
                     return;
@@ -684,7 +689,7 @@ namespace Ploco
 
         private void RemoveLocomotiveFromTrack(LocomotiveModel loco)
         {
-            var track = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+            var track = _viewModel.Tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
             if (track != null)
             {
                 track.Locomotives.Remove(loco);
@@ -798,7 +803,7 @@ namespace Ploco
                 }
             }
 
-            var currentTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+            var currentTrack = _viewModel.Tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
             if (currentTrack != null)
             {
                 var currentIndex = currentTrack.Locomotives.IndexOf(loco);
@@ -1019,7 +1024,7 @@ namespace Ploco
         {
             Logger.Debug($"RemoveForecastGhostsFor: searching for ghosts of loco Id={loco.Id} Number={loco.Number}", "Forecast");
             
-            int removedCount = PrevisionnelLogicHelper.RemoveForecastGhostsFor(loco, _tiles);
+            int removedCount = PrevisionnelLogicHelper.RemoveForecastGhostsFor(loco, _viewModel.Tiles);
             
             if (removedCount > 0)
             {
@@ -1062,7 +1067,7 @@ namespace Ploco
             }
 
             // Show rolling line selection dialog
-            var dialog = new RollingLineSelectionDialog(_tiles) { Owner = this };
+            var dialog = new RollingLineSelectionDialog(_viewModel.Tiles) { Owner = this };
             if (dialog.ShowDialog() != true || dialog.SelectedTrack == null)
             {
                 Logger.Debug($"Forecast placement cancelled by user for loco Id={loco.Id} Number={loco.Number}", "Forecast");
@@ -1096,7 +1101,7 @@ namespace Ploco
 
             Logger.Debug($"Created ghost Id={ghost.Id} Number={ghost.Number} for source loco Id={loco.Id} Number={loco.Number}, Status={loco.Status}", "Forecast");
 
-            // Add ghost ONLY to the target track, NOT to _locomotives
+            // Add ghost ONLY to the target track, NOT to _viewModel.Locomotives
             targetTrack.Locomotives.Add(ghost);
 
             _repository.AddHistory("ForecastPlacement", 
@@ -1154,16 +1159,9 @@ namespace Ploco
             }
 
             // Find the target track primarily by looking for where the ghost is currently located
-            // This is safely robust since track IDs might be out of sync after an unsaved Tile creation
-            var targetTrack = _tiles.SelectMany(t => t.Tracks)
-                .FirstOrDefault(t => t.Locomotives.Any(l => l.IsForecastGhost && l.ForecastSourceLocomotiveId == loco.Id));
-
-            if (targetTrack == null && targetTrackId != null)
-            {
-                // Fallback to ID if ghost wasn't found for some reason
-                targetTrack = _tiles.SelectMany(t => t.Tracks)
-                    .FirstOrDefault(t => t.Id == targetTrackId);
-            }
+            // This is safely robust since track IDs and Locomotive IDs might be out of sync after a DB save
+            var targetTrack = _viewModel.Tiles.SelectMany(t => t.Tracks)
+                .FirstOrDefault(t => t.Locomotives.Any(l => PrevisionnelLogicHelper.IsGhostOf(loco, l)));
 
             if (targetTrack == null)
             {
@@ -1262,7 +1260,7 @@ namespace Ploco
                 return;
             }
 
-            var lineasCandidates = _locomotives
+            var lineasCandidates = _viewModel.Locomotives
                 .Where(item => LocomotiveStateHelper.IsEligibleForSwap(loco, item))
                 .OrderBy(item => item.Number)
                 .ToList();
@@ -1285,7 +1283,7 @@ namespace Ploco
 
         private void ApplySwap(LocomotiveModel sibelitLoco, LocomotiveModel lineasLoco)
         {
-            var track = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(sibelitLoco));
+            var track = _viewModel.Tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(sibelitLoco));
             var trackIndex = track?.Locomotives.IndexOf(sibelitLoco) ?? -1;
             var trackOffset = sibelitLoco.AssignedTrackOffsetX;
 
@@ -1515,7 +1513,7 @@ namespace Ploco
 
         private void UpdatePoolVisibility()
         {
-            foreach (var loco in _locomotives)
+            foreach (var loco in _viewModel.Locomotives)
             {
                 loco.IsVisibleInActivePool = string.Equals(loco.Pool, "Sibelit", StringComparison.OrdinalIgnoreCase)
                                              && loco.AssignedTrackId == null;
@@ -1526,40 +1524,17 @@ namespace Ploco
 
         private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
         {
-            PersistState();
-            var dialog = new SaveFileDialog
-            {
-                Filter = "Base de données Ploco (*.db)|*.db|Tous les fichiers (*.*)|*.*",
-                FileName = "ploco.db"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                _repository.CopyDatabaseTo(dialog.FileName);
-            }
+            _viewModel.SaveDatabaseCommand.Execute(null);
         }
 
         private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "Base de données Ploco (*.db)|*.db|Tous les fichiers (*.*)|*.*"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                if (!_repository.ReplaceDatabaseWith(dialog.FileName))
-                {
-                    MessageBox.Show("Le fichier sélectionné n'est pas une base SQLite valide.", "Chargement", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                _repository.Initialize();
-                LoadState();
-            }
+            _viewModel.LoadDatabaseCommand.Execute(null);
         }
 
         private void MenuItem_PoolManagement_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new PoolTransferWindow(_locomotives)
+            var dialog = new PoolTransferWindow(_viewModel.Locomotives)
             {
                 Owner = this
             };
@@ -1578,7 +1553,7 @@ namespace Ploco
 
         private void MenuItem_TapisT13_Click(object sender, RoutedEventArgs e)
         {
-            OpenModelessWindow(() => new TapisT13Window(_locomotives, _tiles));
+            OpenModelessWindow(() => new TapisT13Window(_viewModel.Locomotives, _viewModel.Tiles));
         }
 
         private void MenuItem_PlanningPdf_Click(object sender, RoutedEventArgs e)
@@ -1588,7 +1563,7 @@ namespace Ploco
 
         private void MenuItem_DatabaseManagement_Click(object sender, RoutedEventArgs e)
         {
-            OpenModelessWindow(() => new DatabaseManagementWindow(_repository, _locomotives, _tiles));
+            OpenModelessWindow(() => new DatabaseManagementWindow(_repository, _viewModel.Locomotives, _viewModel.Tiles));
         }
 
         private void MenuItem_ResetLocomotives_Click(object sender, RoutedEventArgs e)
@@ -1601,12 +1576,12 @@ namespace Ploco
 
             Logger.Warning("User initiated locomotive reset", "Reset");
 
-            foreach (var track in _tiles.SelectMany(tile => tile.Tracks))
+            foreach (var track in _viewModel.Tiles.SelectMany(tile => tile.Tracks))
             {
                 track.Locomotives.Clear();
             }
 
-            foreach (var loco in _locomotives)
+            foreach (var loco in _viewModel.Locomotives)
             {
                 loco.AssignedTrackId = null;
                 loco.AssignedTrackOffsetX = null;
@@ -1621,7 +1596,7 @@ namespace Ploco
             PersistState();
             RefreshTapisT13();
             
-            Logger.Info($"All locomotives reset successfully ({_locomotives.Count} locomotives)", "Reset");
+            Logger.Info($"All locomotives reset successfully ({_viewModel.Locomotives.Count} locomotives)", "Reset");
         }
 
         private void MenuItem_ResetTiles_Click(object sender, RoutedEventArgs e)
@@ -1634,7 +1609,7 @@ namespace Ploco
 
             Logger.Warning("User initiated tile reset", "Reset");
             
-            foreach (var tile in _tiles.ToList())
+            foreach (var tile in _viewModel.Tiles.ToList())
             {
                 foreach (var track in tile.Tracks)
                 {
@@ -1647,7 +1622,7 @@ namespace Ploco
                 }
             }
 
-            _tiles.Clear();
+            _viewModel.Tiles.Clear();
             _repository.AddHistory("ResetTiles", "Suppression de toutes les tuiles.");
             UpdatePoolVisibility();
             PersistState();
@@ -1662,7 +1637,7 @@ namespace Ploco
             {
                 Logger.Info("Opening Import window", "Menu");
                 
-                var importWindow = new ImportWindow(_locomotives, () =>
+                var importWindow = new ImportWindow(_viewModel.Locomotives, () =>
                 {
                     // Callback when import is complete
                     // Refresh the UI to show updated pools
@@ -1786,12 +1761,12 @@ namespace Ploco
             }
 
             var preset = BuildLayoutPreset(name);
-            var existing = _layoutPresets.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+            var existing = _viewModel.LayoutPresets.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
-                _layoutPresets.Remove(existing);
+                _viewModel.LayoutPresets.Remove(existing);
             }
-            _layoutPresets.Add(preset);
+            _viewModel.LayoutPresets.Add(preset);
             SaveLayoutPresets();
             RefreshPresetMenu();
             _repository.AddHistory("LayoutPresetSaved", $"Preset enregistré : {name}.");
@@ -1824,7 +1799,7 @@ namespace Ploco
                 return;
             }
 
-            _layoutPresets.Remove(preset);
+            _viewModel.LayoutPresets.Remove(preset);
             SaveLayoutPresets();
             RefreshPresetMenu();
             _repository.AddHistory("LayoutPresetDeleted", $"Preset supprimé : {preset.Name}.");
@@ -2083,7 +2058,7 @@ namespace Ploco
                     return false;
                 }
                 
-                var sourceTrack = _tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
+                var sourceTrack = _viewModel.Tiles.SelectMany(t => t.Tracks).FirstOrDefault(t => t.Locomotives.Contains(loco));
                 
                 if (sourceTrack != null && sourceTrack.Kind == TrackKind.RollingLine)
                 {
@@ -2200,7 +2175,7 @@ namespace Ploco
             while (hasOverlap)
             {
                 hasOverlap = false;
-                foreach (var other in _tiles)
+                foreach (var other in _viewModel.Tiles)
                 {
                     if (ReferenceEquals(other, tile))
                     {
@@ -2288,7 +2263,7 @@ namespace Ploco
 
         private void LoadLayoutPresets()
         {
-            _layoutPresets.Clear();
+            _viewModel.LayoutPresets.Clear();
             if (File.Exists(LayoutPresetFileName))
             {
                 try
@@ -2297,19 +2272,22 @@ namespace Ploco
                     var presets = JsonSerializer.Deserialize<List<LayoutPreset>>(json, GetPresetSerializerOptions());
                     if (presets != null)
                     {
-                        _layoutPresets.AddRange(presets);
+                        foreach (var preset in presets)
+                        {
+                            _viewModel.LayoutPresets.Add(preset);
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.Error("Erreur lors de la lecture du fichier LayoutPreset", ex, "Layout");
-                    _layoutPresets.Clear();
+                    _viewModel.LayoutPresets.Clear();
                 }
             }
 
-            if (_layoutPresets.All(p => !string.Equals(p.Name, "Défaut", StringComparison.OrdinalIgnoreCase)))
+            if (_viewModel.LayoutPresets.All(p => !string.Equals(p.Name, "Défaut", StringComparison.OrdinalIgnoreCase)))
             {
-                _layoutPresets.Add(BuildDefaultPreset());
+                _viewModel.LayoutPresets.Add(BuildDefaultPreset());
             }
 
             SaveLayoutPresets();
@@ -2317,7 +2295,7 @@ namespace Ploco
 
         private void SaveLayoutPresets()
         {
-            var json = JsonSerializer.Serialize(_layoutPresets, GetPresetSerializerOptions());
+            var json = JsonSerializer.Serialize(_viewModel.LayoutPresets, GetPresetSerializerOptions());
             File.WriteAllText(LayoutPresetFileName, json);
         }
 
@@ -2330,7 +2308,7 @@ namespace Ploco
 
             ViewPresetsMenu.Items.Clear();
             ViewPresetsDeleteMenu.Items.Clear();
-            foreach (var preset in _layoutPresets.OrderBy(p => p.Name))
+            foreach (var preset in _viewModel.LayoutPresets.OrderBy(p => p.Name))
             {
                 var item = new MenuItem
                 {
@@ -2355,7 +2333,7 @@ namespace Ploco
 
         private LayoutPreset BuildLayoutPreset(string name)
         {
-            var tiles = _tiles
+            var tiles = _viewModel.Tiles
                 .Where(tile => tile.Type != TileType.ArretLigne)
                 .Select(tile => new LayoutTile
                 {
@@ -2443,7 +2421,7 @@ namespace Ploco
 
         private void ApplyLayoutPreset(LayoutPreset preset)
         {
-            var removableTiles = _tiles.Where(tile => tile.Type != TileType.ArretLigne).ToList();
+            var removableTiles = _viewModel.Tiles.Where(tile => tile.Type != TileType.ArretLigne).ToList();
             foreach (var tile in removableTiles)
             {
                 foreach (var track in tile.Tracks)
@@ -2455,7 +2433,7 @@ namespace Ploco
                         loco.AssignedTrackOffsetX = null;
                     }
                 }
-                _tiles.Remove(tile);
+                _viewModel.Tiles.Remove(tile);
             }
 
             foreach (var layoutTile in preset.Tiles.Where(t => t.Type != TileType.ArretLigne))
@@ -2482,7 +2460,7 @@ namespace Ploco
                     });
                 }
                 tile.RefreshTrackCollections();
-                _tiles.Add(tile);
+                _viewModel.Tiles.Add(tile);
             }
             UpdateTileCanvasExtent();
         }
@@ -2494,15 +2472,15 @@ namespace Ploco
                 return;
             }
 
-            if (!_tiles.Any())
+            if (!_viewModel.Tiles.Any())
             {
                 TileCanvas.Width = 0;
                 TileCanvas.Height = 0;
                 return;
             }
 
-            var maxX = _tiles.Max(tile => tile.X + tile.Width);
-            var maxY = _tiles.Max(tile => tile.Y + tile.Height);
+            var maxX = _viewModel.Tiles.Max(tile => tile.X + tile.Width);
+            var maxY = _viewModel.Tiles.Max(tile => tile.Y + tile.Height);
             
             TileCanvas.Width = maxX + CanvasPadding;
             TileCanvas.Height = maxY + CanvasPadding;
@@ -2510,15 +2488,12 @@ namespace Ploco
 
         private Point GetDropPositionInWorkspace(MouseEventArgs e)
         {
-            if (TileScrollViewer == null || TileCanvas == null)
+            if (TileCanvas == null)
             {
                 return e.GetPosition(null);
             }
 
-            var viewportPosition = e.GetPosition(TileScrollViewer);
-            return new Point(
-                viewportPosition.X + TileScrollViewer.HorizontalOffset,
-                viewportPosition.Y + TileScrollViewer.VerticalOffset);
+            return e.GetPosition(TileCanvas);
         }
 
         private static JsonSerializerOptions GetPresetSerializerOptions()
@@ -2531,38 +2506,12 @@ namespace Ploco
             return options;
         }
 
-        private sealed class LayoutPreset
-        {
-            public string Name { get; set; } = string.Empty;
-            public List<LayoutTile> Tiles { get; set; } = new();
-        }
-
-        private sealed class LayoutTile
-        {
-            public string Name { get; set; } = string.Empty;
-            public TileType Type { get; set; }
-            public double X { get; set; }
-            public double Y { get; set; }
-            public double Width { get; set; }
-            public double Height { get; set; }
-            public List<LayoutTrack> Tracks { get; set; } = new();
-        }
-
-        private sealed class LayoutTrack
-        {
-            public string Name { get; set; } = string.Empty;
-            public TrackKind Kind { get; set; }
-            public string? LeftLabel { get; set; }
-            public string? RightLabel { get; set; }
-            public bool IsLeftBlocked { get; set; }
-            public bool IsRightBlocked { get; set; }
-        }
 
         private void RefreshLocomotivesDisplay()
         {
             // Force complete refresh by reassigning ItemsSource
             LocomotiveList.ItemsSource = null;
-            LocomotiveList.ItemsSource = _locomotives;
+            LocomotiveList.ItemsSource = _viewModel.Locomotives;
             
             // Re-initialize the view (sort, etc.)
             InitializeLocomotiveView();
@@ -2572,7 +2521,7 @@ namespace Ploco
             UpdatePoolVisibility();
             
             // Refresh all tiles - need to remove locomotives that are no longer in Sibelit
-            foreach (var tile in _tiles)
+            foreach (var tile in _viewModel.Tiles)
             {
                 foreach (var track in tile.Tracks)
                 {

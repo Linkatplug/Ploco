@@ -840,11 +840,6 @@
                                     LineTemplate="{StaticResource LineTileTemplate}"
                                     RollingLineTemplate="{StaticResource RollingLineTileTemplate}"/>
 
-        <!-- Fix WPF Data Binding warnings: "Cannot find source for binding with reference 'RelativeSource FindAncestor, AncestorType='System.Windows.Controls.ItemsControl'" -->
-        <Style TargetType="ListBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
     </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
@@ -909,6 +904,8 @@
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Visibility"
                                         Value="{Binding IsVisibleInActivePool, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
                             </Style>
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
@@ -951,7 +948,9 @@
                               VerticalScrollBarVisibility="Auto"
                               PanningMode="Both"
                               SizeChanged="TileScrollViewer_SizeChanged">
-                    <ItemsControl x:Name="TileCanvas">
+                    <ItemsControl x:Name="TileCanvas"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Top">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <Canvas />
