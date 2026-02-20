@@ -27,7 +27,7 @@ namespace Ploco.Dialogs
 {
     public partial class PlanningPdfWindow : Window
     {
-        private readonly PlocoRepository _repository;
+        private readonly IPlocoRepository _repository;
         private readonly ObservableCollection<PdfPageViewModel> _pages = new();
         private PdfDocumentModel? _document;
         private readonly Dictionary<int, PdfTemplateCalibrationModel> _calibrations = new();
@@ -42,7 +42,7 @@ namespace Ploco.Dialogs
         private CalibrationStep _calibrationStep = CalibrationStep.None;
         private bool _showCalibrationLines = true;
 
-        public PlanningPdfWindow(PlocoRepository repository)
+        public PlanningPdfWindow(IPlocoRepository repository)
         {
             InitializeComponent();
             _repository = repository;

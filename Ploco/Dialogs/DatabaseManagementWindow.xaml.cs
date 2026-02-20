@@ -12,14 +12,14 @@ namespace Ploco.Dialogs
 {
     public partial class DatabaseManagementWindow : Window, IRefreshableWindow
     {
-        private readonly PlocoRepository _repository;
+        private readonly IPlocoRepository _repository;
         private readonly IEnumerable<LocomotiveModel> _locomotives;
         private readonly IEnumerable<TileModel> _tiles;
         private readonly ObservableCollection<TableSummary> _summaries = new();
         private readonly ObservableCollection<HistoryEntry> _history = new();
         private readonly ObservableCollection<LocomotiveStateRow> _locomotiveStates = new();
 
-        public DatabaseManagementWindow(PlocoRepository repository, IEnumerable<LocomotiveModel> locomotives, IEnumerable<TileModel> tiles)
+        public DatabaseManagementWindow(IPlocoRepository repository, IEnumerable<LocomotiveModel> locomotives, IEnumerable<TileModel> tiles)
         {
             InitializeComponent();
             _repository = repository;

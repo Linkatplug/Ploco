@@ -1,0 +1,97 @@
+using System;
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Ploco.Models;
+
+namespace Ploco.ViewModels
+{
+    public partial class MainViewModel : ViewModelBase
+    {
+        // Données d'état qui étaient auparavant dans le code-behind de MainWindow
+        
+        [ObservableProperty]
+        private ObservableCollection<LocomotiveModel> _locomotives = new();
+
+        [ObservableProperty]
+        private ObservableCollection<TileModel> _tiles = new();
+
+        [ObservableProperty]
+        private ObservableCollection<LayoutPreset> _layoutPresets = new();
+
+        // Référence au repository
+        private readonly Ploco.Data.IPlocoRepository _repository;
+
+        // Événements pour indiquer à la vue qu'elle doit mettre à jour son UI (semi-MVVM temporaire)
+        public event Action? OnStateLoaded;
+        public event Action? OnStatePersisted;
+
+        public MainViewModel(Ploco.Data.IPlocoRepository repository)
+        {
+            _repository = repository;
+        }
+
+        public void InitializeEvents(Action persistStateCallback, Action loadStateCallback)
+        {
+            OnStatePersisted = persistStateCallback;
+            OnStateLoaded = loadStateCallback;
+        }
+
+        // --- Commandes ---
+
+        [RelayCommand]
+        public void SaveDatabase()
+        {
+            OnStatePersisted?.Invoke();
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Base de données Ploco (*.db)|*.db|Tous les fichiers (*.*)|*.*",
+                FileName = "ploco.db"
+            };
+
+            if (dialog.ShowDialog() == true && _repository != null)
+            {
+                _repository.CopyDatabaseTo(dialog.FileName);
+            }
+        }
+
+        [RelayCommand]
+        public void LoadDatabase()
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Base de données Ploco (*.db)|*.db|Tous les fichiers (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() == true && _repository != null)
+            {
+                if (!_repository.ReplaceDatabaseWith(dialog.FileName))
+                {
+                    System.Windows.MessageBox.Show("Le fichier sélectionné n'est pas une base SQLite valide.", "Chargement", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                _repository.Initialize();
+                OnStateLoaded?.Invoke();
+            }
+        }
+
+        [RelayCommand]
+        public void OpenLogsFolder()
+        {
+            try
+            {
+                var logsDirectory = Helpers.Logger.LogsDirectory;
+                Helpers.Logger.Info($"Opening logs folder: {logsDirectory}", "Menu");
+                System.Diagnostics.Process.Start("explorer.exe", logsDirectory);
+            }
+            catch (Exception ex)
+            {
+                Helpers.Logger.Error("Failed to open logs folder", ex, "Menu");
+                System.Windows.MessageBox.Show($"Impossible d'ouvrir le dossier de logs.\n\nChemin: {Helpers.Logger.LogsDirectory}\n\nErreur: {ex.Message}", 
+                    "Erreur", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+    }
+}
