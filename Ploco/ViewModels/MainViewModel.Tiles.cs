@@ -77,6 +77,7 @@ namespace Ploco.ViewModels
             }
             Tiles.Remove(tile);
             _repository.AddHistory("TileDeleted", $"Suppression du lieu {tile.DisplayTitle}.");
+            UpdatePoolVisibility();
             OnStatePersisted?.Invoke();
             OnWorkspaceChanged?.Invoke();
         }
@@ -359,6 +360,7 @@ namespace Ploco.ViewModels
             
             loco.AssignedTrackId = targetTrack.Id;
             Helpers.Logger.Debug($"Locomotive added to target track {targetTrack.Name} at position {targetTrack.Locomotives.IndexOf(loco)}", "Movement");
+            UpdatePoolVisibility();
             OnStatePersisted?.Invoke();
             OnWorkspaceChanged?.Invoke();
         }
@@ -411,6 +413,11 @@ namespace Ploco.ViewModels
 
         internal void EnsureDefaultTracks(TileModel tile)
         {
+            if (string.Equals(tile.Name, "Anvers Nord", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             if (!tile.Tracks.Any(t => t.Kind == TrackKind.Main))
             {
                 tile.Tracks.Add(CreateDefaultTrack(tile));
@@ -441,8 +448,17 @@ namespace Ploco.ViewModels
                 {
                     if (!tile.Tracks.Any(t => t.Kind == TrackKind.Zone && t.Name == "Prête Lineas")) tile.Tracks.Add(new TrackModel { Name = "Prête Lineas", Kind = TrackKind.Zone });
                 }
-                tile.RefreshTrackCollections();
             }
+
+            if (tile.Name.Equals("Anvers Nord", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!tile.Tracks.Any(t => t.Kind == TrackKind.Zone && t.Name == "917"))
+                {
+                    tile.Tracks.Add(new TrackModel { Name = "917", Kind = TrackKind.Zone, LeftLabel = "BLOCK", RightLabel = "BIF" });
+                }
+            }
+            
+            tile.RefreshTrackCollections();
         }
 
         private static List<int> ResolveRollingLineNumbers(TileModel tile)

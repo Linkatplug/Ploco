@@ -93,5 +93,36 @@ namespace Ploco.ViewModels
                     "Erreur", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
+
+        public Action? RequestLocomotiveListRefresh { get; set; }
+
+        public void UpdatePoolVisibility()
+        {
+            foreach (var tile in Tiles)
+            {
+                foreach (var track in tile.Tracks)
+                {
+                    var locomotivesToRemove = track.Locomotives
+                        .Where(l => !l.IsForecastGhost && !string.Equals(l.Pool, "Sibelit", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    foreach (var loco in locomotivesToRemove)
+                    {
+                        track.Locomotives.Remove(loco);
+                        loco.AssignedTrackId = null;
+                        loco.AssignedTrackOffsetX = null;
+                        Helpers.Logger.Info($"Removed locomotive {loco.Number} from track {track.Name} (pool changed to {loco.Pool})", "RefreshDisplay");
+                    }
+                }
+            }
+
+            foreach (var loco in Locomotives)
+            {
+                loco.IsVisibleInActivePool = string.Equals(loco.Pool, "Sibelit", StringComparison.OrdinalIgnoreCase)
+                                             && loco.AssignedTrackId == null;
+            }
+
+            RequestLocomotiveListRefresh?.Invoke();
+        }
     }
 }

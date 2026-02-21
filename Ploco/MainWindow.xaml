@@ -3,7 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ploco.Converters"
         xmlns:helpers="clr-namespace:Ploco.Helpers"
-        Title="Ploco - Gestion de parcs locomotives - 1.0.6-beta3.2_build.001" Height="800" Width="1200"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:behaviors="clr-namespace:Ploco.Behaviors"
+        Title="Ploco - Gestion de parcs locomotives - 1.0.6-beta3.3_build.001" Height="800" Width="1200"
         Icon="pack://application:,,,/img/train_logo.ico"
         Background="{DynamicResource AppBackgroundBrush}"
         Loaded="Window_Loaded" Closing="Window_Closing">
@@ -161,10 +163,12 @@
             <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="180"
                     AllowDrop="True"
-                    Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <b:Interaction.Behaviors>
+                    <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                </b:Interaction.Behaviors>
                 <Grid>
                     <StackPanel>
                         <Grid>
@@ -190,10 +194,11 @@
                                              DataContext="{Binding MainTrack}"
                                              ItemsSource="{Binding Locomotives}"
                                              Style="{StaticResource DropListBoxStyle}"
-                                             AllowDrop="True"
-                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                             Drop="TrackLocomotives_Drop">
+                                             AllowDrop="True">
+                                        <b:Interaction.Behaviors>
+                                            <behaviors:LocomotiveDragBehavior />
+                                            <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                                        </b:Interaction.Behaviors>
                                         <ListBox.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <WrapPanel Orientation="Horizontal"/>
@@ -257,10 +262,11 @@
                                                         <ListBox x:Name="DepotOutputList"
                                                                  ItemsSource="{Binding Locomotives}"
                                                                  Style="{StaticResource DropListBoxStyle}"
-                                                                 AllowDrop="True"
-                                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                                 Drop="TrackLocomotives_Drop">
+                                                                 AllowDrop="True">
+                                                            <b:Interaction.Behaviors>
+                                                                <behaviors:LocomotiveDragBehavior />
+                                                                <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                                                            </b:Interaction.Behaviors>
                                                             <ListBox.ItemsPanel>
                                                                 <ItemsPanelTemplate>
                                                                     <Canvas />
@@ -337,10 +343,12 @@
             <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="180"
                     AllowDrop="True"
-                    Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <b:Interaction.Behaviors>
+                    <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                </b:Interaction.Behaviors>
                 <Grid>
                     <StackPanel>
                         <Grid>
@@ -377,10 +385,11 @@
                                                  DataContext="{Binding MainTrack}"
                                                  ItemsSource="{Binding Locomotives}"
                                                  Style="{StaticResource DropListBoxStyle}"
-                                                 AllowDrop="True"
-                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                 Drop="TrackLocomotives_Drop">
+                                                 AllowDrop="True">
+                                            <b:Interaction.Behaviors>
+                                                <behaviors:LocomotiveDragBehavior />
+                                                <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                                            </b:Interaction.Behaviors>
                                             <ListBox.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <WrapPanel Orientation="Horizontal"/>
@@ -535,10 +544,11 @@
                                                         <ListBox x:Name="GarageZoneList"
                                                                  ItemsSource="{Binding Locomotives}"
                                                                  Style="{StaticResource DropListBoxStyle}"
-                                                                 AllowDrop="True"
-                                                                 PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                                 PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                                 Drop="TrackLocomotives_Drop">
+                                                                 AllowDrop="True">
+                                                            <b:Interaction.Behaviors>
+                                                                <behaviors:LocomotiveDragBehavior />
+                                                                <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                                                            </b:Interaction.Behaviors>
                                                             <ListBox.ItemsPanel>
                                                                 <ItemsPanelTemplate>
                                                                     <Canvas />
@@ -615,10 +625,12 @@
             <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="180"
                     AllowDrop="True"
-                    Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <b:Interaction.Behaviors>
+                    <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                </b:Interaction.Behaviors>
                 <Grid>
                     <StackPanel>
                         <Grid>
@@ -660,10 +672,11 @@
                                                     <ListBox x:Name="LineTrackList"
                                                              ItemsSource="{Binding Locomotives}"
                                                              Style="{StaticResource DropListBoxStyle}"
-                                                             AllowDrop="True"
-                                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove"
-                                                             Drop="TrackLocomotives_Drop">
+                                                             AllowDrop="True">
+                                                        <b:Interaction.Behaviors>
+                                                            <behaviors:LocomotiveDragBehavior />
+                                                            <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                                                        </b:Interaction.Behaviors>
                                                         <ListBox.ItemsPanel>
                                                             <ItemsPanelTemplate>
                                                                 <Canvas />
@@ -739,10 +752,12 @@
             <Border Background="{DynamicResource TileBackgroundBrush}" BorderBrush="{DynamicResource TileBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="8" Width="{Binding Width}" Height="{Binding Height}" MinWidth="260" MinHeight="200"
                     AllowDrop="True"
-                    Drop="Tile_Drop"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
                     MouseMove="Tile_MouseMove"
                     MouseLeftButtonUp="Tile_MouseLeftButtonUp">
+                <b:Interaction.Behaviors>
+                    <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                </b:Interaction.Behaviors>
                 <Grid>
                     <StackPanel>
                         <Grid>
@@ -766,10 +781,10 @@
                                     <DataTemplate>
                                         <Border BorderBrush="{DynamicResource TrackBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="3" Margin="0,2,0,2"
                                                 AllowDrop="True"
-                                                Background="Transparent"
-                                                DragOver="RollingLineRow_DragOver"
-                                                DragLeave="RollingLineRow_DragLeave"
-                                                Drop="RollingLineRow_Drop">
+                                                Background="Transparent">
+                                            <b:Interaction.Behaviors>
+                                                <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" IsRollingLineRow="True" />
+                                            </b:Interaction.Behaviors>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="40"/>
@@ -781,9 +796,10 @@
                                                              ItemsSource="{Binding Locomotives}"
                                                              Style="{StaticResource RollingLineDropListStyle}"
                                                              AllowDrop="False"
-                                                             HorizontalAlignment="Left"
-                                                             PreviewMouseLeftButtonDown="TrackLocomotives_PreviewMouseLeftButtonDown"
-                                                             PreviewMouseMove="TrackLocomotives_PreviewMouseMove">
+                                                             HorizontalAlignment="Left">
+                                                        <b:Interaction.Behaviors>
+                                                            <behaviors:LocomotiveDragBehavior />
+                                                        </b:Interaction.Behaviors>
                                                         <ListBox.ItemsPanel>
                                                             <ItemsPanelTemplate>
                                                                 <WrapPanel Orientation="Horizontal"/>
@@ -906,10 +922,11 @@
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                  ScrollViewer.CanContentScroll="False"
-                                 AllowDrop="True"
-                                 Drop="LocomotiveList_Drop"
-                                 PreviewMouseLeftButtonDown="LocomotiveList_PreviewMouseLeftButtonDown"
-                                 PreviewMouseMove="LocomotiveList_PreviewMouseMove">
+                                 AllowDrop="True">
+                        <b:Interaction.Behaviors>
+                            <behaviors:LocomotiveDragBehavior />
+                            <behaviors:LocomotiveDropBehavior Command="{Binding Data.DropLocomotiveCommand, Source={StaticResource DataContextProxy}}" />
+                        </b:Interaction.Behaviors>
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel />
